@@ -35,7 +35,7 @@ def get_dataset(dataset_name='435034'):
     :return:
     """
     if dataset_name in ['435008', '1798', '435034']:
-        qsar_dataset = QSARDataset(root='../../dataset/qsar',
+        qsar_dataset = QSARDataset(root='../dataset/qsar',
                                    dataset=dataset_name,
                                    pre_transform=ToXAndPAndEdgeAttrForDeg(),
                                    )
@@ -49,8 +49,8 @@ def get_dataset(dataset_name='435034'):
             root='../../dataset/d4_docking/',
             subset_name=dataset_name,
             data_file=
-            '../../dataset/d4_docking/d4_docking_rs.csv',
-            idx_file='../../dataset/d4_docking/rs/split0.npy',
+            '../dataset/d4_docking/d4_docking_rs.csv',
+            idx_file='../dataset/d4_docking/rs/split0.npy',
             D=3,
             pre_transform=ToXAndPAndEdgeAttrForDeg(),
         )
