@@ -1,0 +1,6 @@
+name,smiles,center_atom_id
+alkane_primary,CC,1
+alkane_secondary,CCC,1
+alkane_tertiary,C(C)(C)(C)[H],0
+alkane_quaternary,C(C)(C)(C)C,0
+sulfone,C[S](C)(=O)=O,1

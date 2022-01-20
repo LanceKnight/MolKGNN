@@ -1,0 +1,8 @@
+name,smiles,center_atom_id
+C-O*-H,CO[H],1
+C#C*C,C#CC,1
+C-O*-C,COC,1
+C-C*#N,CC#N,1
+C-N*=O,CN=O,1
+C-S*-H,CS[H],1
+C-S*-C,CSC,1

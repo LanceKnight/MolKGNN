@@ -1,0 +1,15 @@
+name,smiles,center_atom_id
+alkene,CC=CC,1
+arene,Cc1ccccc1,1
+aldehyde,CC(=O)[H],1
+ketone,CC(=O)C,1
+acyl_fluoride,CC(=O)F,1
+acyl_cloride,CC(=O)Cl,1
+acyl_bromide,CC(=O)Br,1
+acyl_iodide,CC(=O)I,1
+amine,C[N](C)C,1
+nitro,C[N+](=O)O,1
+sulfoxide,C[S](C)=O,1
+thial,CC(=S)[H],1
+thioketone,CC(=S)C,1
+phosphine,C[P](C)C,1
