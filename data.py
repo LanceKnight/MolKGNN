@@ -46,7 +46,7 @@ def get_dataset(dataset_name='435034'):
         }
     elif dataset_name in ['CHIRAL1', 'DIFF5']:
         d4_dchp_dataset = D4DCHPDataset(
-            root='../../dataset/d4_docking/',
+            root='../dataset/d4_docking/',
             subset_name=dataset_name,
             data_file=
             '../dataset/d4_docking/d4_docking_rs.csv',
@@ -104,7 +104,7 @@ class DataLoaderModule(LightningDataModule):
 
     def setup(self, stage: str = None):
         split_idx = self.dataset['dataset'].get_idx_split()
-        print(f'split_idx:{split_idx}')
+        # print(f'split_idx:{split_idx}')
 
         self.dataset_train = self.dataset['dataset'][split_idx["train"]]
         print(f'training len:{len(self.dataset_train)})')
@@ -164,14 +164,14 @@ class DataLoaderModule(LightningDataModule):
         val_loader = DataLoader(
             self.dataset_val,
             batch_size=len(self.dataset_val),
-            shuffle=True,
+            shuffle=False,
             num_workers=self.num_workers,
         )
         print(f'dataset_train:{self.dataset_train[0]}')
         train_loader = DataLoader(
             self.dataset_train,
             batch_size=len(self.dataset_train),
-            shuffle=True,
+            shuffle=False,
             num_workers=self.num_workers,
         )
         return val_loader, train_loader
