@@ -87,33 +87,25 @@ class MolGCN(MessagePassing):
             edge_index = kwargv['data'].edge_index
             edge_attr = kwargv['data'].edge_attr
             p = kwargv['data'].p
-            x_focal_deg1 = kwargv['data'].x_focal_deg1
             p_focal_deg1 = kwargv['data'].p_focal_deg1
-            nei_x_deg1 = kwargv['data'].nei_x_deg1
             nei_p_deg1 = kwargv['data'].nei_p_deg1
             nei_edge_attr_deg1 = kwargv['data'].nei_edge_attr_deg1
             selected_index_deg1 = kwargv['data'].selected_index_deg1
             nei_index_deg1 = kwargv['data'].nei_index_deg1
 
-            x_focal_deg2 = kwargv['data'].x_focal_deg2
             p_focal_deg2 = kwargv['data'].p_focal_deg2
-            nei_x_deg2 = kwargv['data'].nei_x_deg2
             nei_p_deg2 = kwargv['data'].nei_p_deg2
             nei_edge_attr_deg2 = kwargv['data'].nei_edge_attr_deg2
             selected_index_deg2 = kwargv['data'].selected_index_deg2
             nei_index_deg2 = kwargv['data'].nei_index_deg2
 
-            x_focal_deg3 = kwargv['data'].x_focal_deg3
             p_focal_deg3 = kwargv['data'].p_focal_deg3
-            nei_x_deg3 = kwargv['data'].nei_x_deg3
             nei_p_deg3 = kwargv['data'].nei_p_deg3
             nei_edge_attr_deg3 = kwargv['data'].nei_edge_attr_deg3
             selected_index_deg3 = kwargv['data'].selected_index_deg3
             nei_index_deg3 = kwargv['data'].nei_index_deg3
 
-            x_focal_deg4 = kwargv['data'].x_focal_deg4
             p_focal_deg4 = kwargv['data'].p_focal_deg4
-            nei_x_deg4 = kwargv['data'].nei_x_deg4
             nei_p_deg4 = kwargv['data'].nei_p_deg4
             nei_edge_attr_deg4 = kwargv['data'].nei_edge_attr_deg4
             selected_index_deg4 = kwargv['data'].selected_index_deg4
@@ -126,45 +118,33 @@ class MolGCN(MessagePassing):
             edge_attr = kwargv['edge_attr']
             p = kwargv['p']
 
-            x_focal_deg1 = kwargv['x_focal_deg1']
             p_focal_deg1 = kwargv['p_focal_deg1']
-            nei_x_deg1 = kwargv['nei_x_deg1']
             nei_p_deg1 = kwargv['nei_p_deg1']
             nei_edge_attr_deg1 = kwargv['nei_edge_attr_deg1']
             selected_index_deg1 = kwargv['selected_index_deg1']
             nei_index_deg1 = kwargv['nei_index_deg1']
 
-            x_focal_deg2 = kwargv['x_focal_deg2']
             p_focal_deg2 = kwargv['p_focal_deg2']
-            nei_x_deg2 = kwargv['nei_x_deg2']
             nei_p_deg2 = kwargv['nei_p_deg2']
             nei_edge_attr_deg2 = kwargv['nei_edge_attr_deg2']
             selected_index_deg2 = kwargv['selected_index_deg2']
             nei_index_deg2 = kwargv['nei_index_deg2']
 
-            x_focal_deg3 = kwargv['x_focal_deg3']
             p_focal_deg3 = kwargv['p_focal_deg3']
-            nei_x_deg3 = kwargv['nei_x_deg3']
             nei_p_deg3 = kwargv['nei_p_deg3']
             nei_edge_attr_deg3 = kwargv['nei_edge_attr_deg3']
             selected_index_deg3 = kwargv['selected_index_deg3']
             nei_index_deg3 = kwargv['nei_index_deg3']
 
-            x_focal_deg4 = kwargv['x_focal_deg4']
             p_focal_deg4 = kwargv['p_focal_deg4']
-            nei_x_deg4 = kwargv['nei_x_deg4']
             nei_p_deg4 = kwargv['nei_p_deg4']
             nei_edge_attr_deg4 = kwargv['nei_edge_attr_deg4']
             selected_index_deg4 = kwargv['selected_index_deg4']
             nei_index_deg4 = kwargv['nei_index_deg4']
 
             data = Data(x=x, p=p, edge_index=edge_index, edge_attr=edge_attr,
-                        x_focal_deg1=x_focal_deg1, x_focal_deg2=x_focal_deg2,
-                        x_focal_deg3=x_focal_deg3, x_focal_deg4=x_focal_deg4,
                         p_focal_deg1=p_focal_deg1, p_focal_deg2=p_focal_deg2,
                         p_focal_deg3=p_focal_deg3, p_focal_deg4=p_focal_deg4,
-                        nei_x_deg1=nei_x_deg1, nei_x_deg2=nei_x_deg2,
-                        nei_x_deg3=nei_x_deg3, nei_x_deg4=nei_x_deg4,
                         nei_p_deg1=nei_p_deg1, nei_p_deg2=nei_p_deg2,
                         nei_p_deg3=nei_p_deg3, nei_p_deg4=nei_p_deg4,
                         nei_edge_attr_deg1=nei_edge_attr_deg1,

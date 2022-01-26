@@ -590,16 +590,10 @@ class BaseKernelSetConv(Module):
             edge_attr = kwargv['data'].edge_attr
             p = kwargv['data'].p
 
-            x_focal_list = [kwargv['data'].x_focal_deg1,
-                            kwargv['data'].x_focal_deg2,
-                            kwargv['data'].x_focal_deg3,
-                            kwargv['data'].x_focal_deg4]
             p_focal_list = [kwargv['data'].p_focal_deg1,
                             kwargv['data'].p_focal_deg2,
                             kwargv['data'].p_focal_deg3,
                             kwargv['data'].p_focal_deg4]
-            nei_x_list = [kwargv['data'].nei_x_deg1, kwargv['data'].nei_x_deg2,
-                          kwargv['data'].nei_x_deg3, kwargv['data'].nei_x_deg4]
             nei_p_list = [kwargv['data'].nei_p_deg1, kwargv['data'].nei_p_deg2,
                           kwargv['data'].nei_p_deg3, kwargv['data'].nei_p_deg4]
             nei_edge_attr_list = [kwargv['data'].nei_edge_attr_deg1,
@@ -622,12 +616,8 @@ class BaseKernelSetConv(Module):
             edge_attr = kwargv['edge_attr']
             p = kwargv['p']
 
-            x_focal_list = [kwargv['x_focal_deg1'], kwargv['x_focal_deg2'],
-                            kwargv['x_focal_deg3'], kwargv['x_focal_deg4']]
             p_focal_list = [kwargv['p_focal_deg1'], kwargv['p_focal_deg2'],
                             kwargv['p_focal_deg3'], kwargv['p_focal_deg4']]
-            nei_x_list = [kwargv['nei_x_deg1'], kwargv['nei_x_deg2'],
-                          kwargv['nei_x_deg3'], kwargv['nei_x_deg4']]
             nei_p_list = [kwargv['nei_p_deg1'], kwargv['nei_p_deg2'],
                           kwargv['nei_p_deg3'], kwargv['nei_p_deg4']]
             nei_edge_attr_list = [kwargv['nei_edge_attr_deg1'],

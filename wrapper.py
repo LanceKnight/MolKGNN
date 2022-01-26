@@ -221,12 +221,13 @@ class D4DCHPDataset(InMemoryDataset):
         :param D: a integer being either 2 or 3, meaning the dimension
         """
         self.root = root
+        print(f'root:{root}')
         self.subset_name = subset_name
         self.data_file = data_file
         self.idx_file = idx_file
         self.D = D
         super(D4DCHPDataset, self).__init__(root, transform, pre_transform,
-                                          pre_filter)
+                                            pre_filter)
 
         self.data, self.slices = torch.load(self.processed_paths[0])
 
@@ -280,13 +281,14 @@ class D4DCHPDataset(InMemoryDataset):
 
         split_dict = {}
         # Delete if statement if using the full CHIRAL1 dataset
-        split_dict['train'] = [torch.tensor(x) for x in train_indices if x<
+        split_dict['train'] = [torch.tensor(x) for x in train_indices if x <
                                1000]
-        split_dict['valid'] = [torch.tensor(x) for x in val_indices if x <1000]
-        split_dict['test'] = [torch.tensor(x) for x in test_indices if x<1000]
+        split_dict['valid'] = [torch.tensor(x) for x in val_indices if
+                               x < 1000]
+        split_dict['test'] = [torch.tensor(x) for x in test_indices if
+                              x < 1000]
 
         return split_dict
-
 
 
 class QSARDataset(InMemoryDataset):
@@ -500,12 +502,11 @@ class ToXAndPAndEdgeAttrForDeg(object):
         edge_attr = data.edge_attr
         selected_index = focal_index = \
             (deg_index == deg).nonzero(as_tuple=True)[0]
-        x_focal = torch.index_select(input=x, dim=0, index=focal_index)
-        p_focal = torch.index_select(input=p, dim=0, index=focal_index)
 
+        p_focal = torch.index_select(input=p, dim=0, index=focal_index)
         num_focal = len(focal_index)
         nei_index_list_each_node = []
-        nei_x_list_each_node = []
+
         nei_p_list_each_node = []
         nei_edge_attr_list_each_node = []
 
@@ -513,8 +514,8 @@ class ToXAndPAndEdgeAttrForDeg(object):
             nei_index = self.get_neighbor_index(edge_index, focal_index[i])
             nei_index_list_each_node.append(nei_index)
 
-            nei_x = torch.index_select(x, 0, nei_index)
-            #             print(f'nei_x:{nei_x.shape}')
+            # nei_x = torch.index_select(x, 0, nei_index)
+            # #             print(f'nei_x:{nei_x.shape}')
             nei_p = torch.index_select(p, 0, nei_index)
             #             print(f'nei_p:{nei_p.shape}')
             nei_edge_attr = self.get_edge_attr_support_from_center_node(
@@ -522,37 +523,31 @@ class ToXAndPAndEdgeAttrForDeg(object):
             #             print('\n nei_edge_attr')
             #             print(nei_edge_attr)
 
-            nei_x_list_each_node.append(nei_x)
+            # nei_x_list_each_node.append(nei_x)
             nei_p_list_each_node.append(nei_p)
             nei_edge_attr_list_each_node.append(nei_edge_attr)
 
         if num_focal != 0:
             nei_index = torch.stack(nei_index_list_each_node, dim=0).reshape(
                 -1)
-            nei_x = torch.stack(nei_x_list_each_node, dim=0)
             nei_p = torch.stack(nei_p_list_each_node, dim=0)
             nei_edge_attr = torch.stack(nei_edge_attr_list_each_node, dim=0)
         else:
             nei_index = torch.Tensor()
-            nei_x = torch.Tensor()
             nei_p = torch.Tensor()
             nei_edge_attr = torch.Tensor()
 
         nei_index = nei_index.to(torch.long)
 
-        return x_focal, p_focal, nei_x, nei_p, nei_edge_attr, \
+        return p_focal, nei_p, nei_edge_attr, \
                selected_index, nei_index
 
     def __call__(self, data):
 
         deg_index = self.get_degree_index(data.x, data.edge_index)
 
-        data.x_focal_deg1 = data.x_focal_deg2 = data.x_focal_deg3 = \
-            data.x_focal_deg4 = None
         data.p_focal_deg1 = data.p_focal_deg2 = data.p_focal_deg3 = \
             data.p_focal_deg4 = None
-        data.nei_x_deg1 = data.nei_x_deg2 = data.nei_x_deg3 = \
-            data.nei_x_deg4 = None
         data.nei_p_deg1 = data.nei_p_deg2 = data.nei_p_deg3 = \
             data.nei_p_deg4 = None
         data.nei_edge_attr_deg1 = data.nei_edge_attr_deg2 = \
@@ -571,27 +566,27 @@ class ToXAndPAndEdgeAttrForDeg(object):
         # data.nei_edge_attr_deg4]
 
         deg = 1
-        data.x_focal_deg1, data.p_focal_deg1, data.nei_x_deg1, \
-        data.nei_p_deg1, data.nei_edge_attr_deg1, data.selected_index_deg1, \
-        data.nei_index_deg1 = self.convert_grpah_to_receptive_field_for_degN(
+        data.p_focal_deg1, data.nei_p_deg1, data.nei_edge_attr_deg1, \
+        data.selected_index_deg1, data.nei_index_deg1 = \
+            self.convert_grpah_to_receptive_field_for_degN(
             deg, deg_index, data)
 
         deg = 2
-        data.x_focal_deg2, data.p_focal_deg2, data.nei_x_deg2, \
-        data.nei_p_deg2, data.nei_edge_attr_deg2, data.selected_index_deg2, \
-        data.nei_index_deg2 = self.convert_grpah_to_receptive_field_for_degN(
+        data.p_focal_deg2, data.nei_p_deg2, data.nei_edge_attr_deg2,\
+        data.selected_index_deg2, data.nei_index_deg2 = \
+            self.convert_grpah_to_receptive_field_for_degN(
             deg, deg_index, data)
 
         deg = 3
-        data.x_focal_deg3, data.p_focal_deg3, data.nei_x_deg3, \
-        data.nei_p_deg3, data.nei_edge_attr_deg3, data.selected_index_deg3, \
-        data.nei_index_deg3 = self.convert_grpah_to_receptive_field_for_degN(
+        data.p_focal_deg3, data.nei_p_deg3, data.nei_edge_attr_deg3, \
+        data.selected_index_deg3, data.nei_index_deg3 = \
+            self.convert_grpah_to_receptive_field_for_degN(
             deg, deg_index, data)
 
         deg = 4
-        data.x_focal_deg4, data.p_focal_deg4, data.nei_x_deg4, \
-        data.nei_p_deg4, data.nei_edge_attr_deg4, data.selected_index_deg4, \
-        data.nei_index_deg4 = self.convert_grpah_to_receptive_field_for_degN(
+        data.p_focal_deg4, data.nei_p_deg4, data.nei_edge_attr_deg4, \
+        data.selected_index_deg4, data.nei_index_deg4 = \
+            self.convert_grpah_to_receptive_field_for_degN(
             deg, deg_index, data)
 
         return data
