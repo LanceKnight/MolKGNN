@@ -28,20 +28,39 @@ class GNNModel(pl.LightningModule):
                  tot_iterations,
                  peak_lr,
                  end_lr,
-                 loss_func=BCEWithLogitsLoss()):
+                 loss_func=BCEWithLogitsLoss(),
+                 args=None
+                 ):
         super(GNNModel, self).__init__()
+        print(f'kwargs:{args}')
+
         if gnn_type == 'gcn':
             self.gnn_model = GCNNet(input_dim, hidden_dim)
         if gnn_type == 'kgnn':
             self.gnn_model = KGNNNet(num_layers=num_layers,
-                                     num_kernel1_1hop=10,
-                                     num_kernel2_1hop=10,
-                                     num_kernel3_1hop=10,
-                                     num_kernel4_1hop=10,
-                                     num_kernel1_Nhop=10,
-                                     num_kernel2_Nhop=10,
-                                     num_kernel3_Nhop=10,
-                                     num_kernel4_Nhop=10,
+                                     # num_kernel1_1hop=kwargs['num_kernel1_1hop'],
+                                     # num_kernel2_1hop=kwargs[
+                                     #     'num_kernel2_1hop'],
+                                     # num_kernel3_1hop=kwargs[
+                                     #     'num_kernel3_1hop'],
+                                     # num_kernel4_1hop=kwargs[
+                                     #     'num_kernel4_1hop'],
+                                     # num_kernel1_Nhop=kwargs[
+                                     #     'num_kernel1_Nhop'],
+                                     # num_kernel2_Nhop=kwargs[
+                                     #     'num_kernel2_Nhop'],
+                                     # num_kernel3_Nhop=kwargs[
+                                     #     'num_kernel3_Nhop'],
+                                     # num_kernel4_Nhop=kwargs[
+                                     #     'num_kernel4_Nhop'],
+                                     num_kernel1_1hop = args.num_kernel1_1hop,
+                                     num_kernel2_1hop = args.num_kernel2_1hop,
+                                     num_kernel3_1hop = args.num_kernel3_1hop,
+                                     num_kernel4_1hop = args.num_kernel4_1hop,
+                                     num_kernel1_Nhop = args.num_kernel1_Nhop,
+                                     num_kernel2_Nhop = args.num_kernel2_Nhop,
+                                     num_kernel3_Nhop = args.num_kernel3_Nhop,
+                                     num_kernel4_Nhop = args.num_kernel4_Nhop,
                                      x_dim = input_dim,
                                      graph_embedding_dim = hidden_dim,
                                      predefined_kernelsets=False

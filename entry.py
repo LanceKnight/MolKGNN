@@ -81,7 +81,7 @@ def prepare_actual_model(args):
         model = GNNModel(gnn_type, args.num_layers, args.input_dim,
                          args.hidden_dim, args.output_dim,
                          args.warmup_iterations, args.tot_iterations,
-                         args.peak_lr, args.end_lr)
+                         args.peak_lr, args.end_lr, args=args)
     return model
 
 
