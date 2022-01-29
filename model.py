@@ -132,15 +132,20 @@ class GNNModel(pl.LightningModule):
         true_y = batch_data.y.view(-1)
 
         # Get metrics
+        results = {}
         loss = self.loss_func(pred_y, true_y.float())
+        results['loss'] = loss
         numpy_prediction = pred_y.detach().cpu().numpy()
         numpy_y = true_y.cpu().numpy()
-        logAUC = calculate_logAUC(numpy_y, numpy_prediction)
-        ppv = calculate_ppv(numpy_y, numpy_prediction)
+        # logAUC = calculate_logAUC(numpy_y, numpy_prediction)
+        # results['logAUC'] = logAUC
+        # ppv = calculate_ppv(numpy_y, numpy_prediction)
+        # results['ppv'] = ppv
         accuracy = calculate_accuracy(numpy_y, numpy_prediction)
+        results['accuracy'] = accuracy
 
-        return {"loss": loss, "logAUC": logAUC, "ppv": ppv,
-                "accuracy":accuracy}
+        return results
+
 
 
     def training_epoch_end(self, train_step_outputs):
@@ -179,18 +184,25 @@ class GNNModel(pl.LightningModule):
         true_y = batch_data.y.view(-1)
         # print(f'y_pred.shape:{y_pred.shape} y_true:{y_true.shape}')
 
+        # Get metrics
+        results = {}
         loss = self.loss_func(pred_y, true_y.float())
+        results['loss'] = loss
         numpy_prediction = pred_y.detach().cpu().numpy()
         numpy_y = true_y.cpu().numpy()
-        logAUC = calculate_logAUC(numpy_y, numpy_prediction)
-        ppv = calculate_ppv(numpy_y, numpy_prediction)
+        # logAUC = calculate_logAUC(numpy_y, numpy_prediction)
+        # results['logAUC'] = logAUC
+        # ppv = calculate_ppv(numpy_y, numpy_prediction)
+        # results['ppv'] = ppv
         accuracy = calculate_accuracy(numpy_y, numpy_prediction)
-        return {
-            'loss': loss,
-            'logAUC': logAUC,
-            'ppv': ppv,
-            'accuracy':accuracy
-        }
+        results['accuracy'] = accuracy
+        return results
+        # return {
+        #     'loss': loss,
+        #     'logAUC': logAUC,
+        #     'ppv': ppv,
+        #     'accuracy':accuracy
+        # }
 
     def validation_epoch_end(self, valid_step_outputs):
         """
