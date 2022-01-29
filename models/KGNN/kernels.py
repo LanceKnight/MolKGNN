@@ -212,15 +212,38 @@ class KernelConv(Module):
         # #         print(sc)
         return sc
 
+    def mem_size(self, ten):
+        return ten.element_size() * ten.nelement()
+
     def get_support_attribute_score(self, x_nei, x_support):
-        #         print(f'x_nei:{x_nei.shape}')
-        #         print(f'x_suppport:{x_support.shape}')
+        # print('===start==')
+        # print(f'before x_nei:{x_nei.shape} numel: '
+        #       f'{torch.numel(x_nei)/1000000}M mem:'
+        #       f'{self.mem_size(x_nei)/1000000} '
+        #       f'MB')
+        # print(f'before x_suppport:{x_support.shape} numel:'
+        #       f' {torch.numel(x_support)/1000000}M mem:'
+        #       f'{self.mem_size(x_support)/1000000}MB')
+
+        # ====================
         x_nei = x_nei.unsqueeze(0).unsqueeze(0).expand(
             x_support.shape[0], x_support.shape[1], x_nei.shape[0],
             x_nei.shape[1], x_nei.shape[2])
         x_support = x_support.unsqueeze(2).expand(x_nei.shape)
-
         sc = self.arctan_sc(x_nei, x_support, dim=(-2, -1))
+
+
+        # =====================
+
+
+        # print(f'after x_nei shape:{x_nei.shape}, numel:'
+        #       f'{torch.numel(x_nei)/1000000}M mem:'
+        #       f'{self.mem_size(x_nei)/1000000}MB')
+        # print(f'x_support shape:{x_support.shape}, numel:'
+        #       f'{torch.numel(x_support)/1000000}M mem:'
+        #       f'{self.mem_size(x_support)/(1024*1024)}MB')
+        # print(f'sc shape:{sc.shape}')
+        # print('===end==')
         return sc
 
     def get_center_attribute_score(self, x_focal, x_center):
@@ -280,6 +303,8 @@ class KernelConv(Module):
         best_support_attr_sc, best_support_attr_sc_index = torch.max(
             support_attr_sc, dim=1)
 
+
+
         # Calculate the angle score
         # permuted_p_support = self.permute(p_support)
         # permuted_p_support = permuted_p_support.unsqueeze(2).expand(
@@ -299,7 +324,6 @@ class KernelConv(Module):
         # best_p_support = best_p_support.squeeze(1)
         # length_sc = self.get_length_score(p_neighbor,
         #                                   best_p_support) / max_atan
-
 
         # Calculate the center attribute score
         center_attr_sc = self.get_center_attribute_score(x_focal,
@@ -327,8 +351,14 @@ class KernelConv(Module):
                      + edge_attr_support_sc *
                      self.edge_attr_support_sc_weight) / 3
 
+        # Clear GPU memory cache. The alignment creates lots tensors that
+        # won't be used (only the best alignment is used) and consumes lots
+        # of GPU memory to store them. Hence a cleanup is needed.
 
 
+
+
+        sc = torch.tensor([1])
         return sc
         # return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, \
         #        edge_attr_support_sc
