@@ -79,6 +79,9 @@ class GNNModel(pl.LightningModule):
 
     def forward(self, data):
         graph_embedding = self.gnn_model(data)
+
+        print(f'model.py::smiles:{data.smiles}\n graph_embedding'
+              f':{graph_embedding}')
         prediction = self.linear(graph_embedding)
 
         return prediction, graph_embedding

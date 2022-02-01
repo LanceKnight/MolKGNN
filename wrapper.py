@@ -152,10 +152,10 @@ def smiles2graph(D, smiles):
         edge_attr_list.append(bond_attr)
     #         print(f'j:{j} j:{i} bond_attr:{bond_attr}')
 
-    x = torch.tensor(atom_attr)
-    p = torch.tensor(atom_pos)
+    x = torch.tensor(atom_attr, dtype=torch.double)
+    p = torch.tensor(atom_pos, dtype=torch.double)
     edge_index = torch.tensor(edge_list).t().contiguous()
-    edge_attr = torch.tensor(edge_attr_list)
+    edge_attr = torch.tensor(edge_attr_list, dytpe=torch.double)
 
     # graphormer-specific features
     # adj = torch.zeros([N, N], dtype=torch.bool)
@@ -239,8 +239,8 @@ class D4DCHPDataset(InMemoryDataset):
         data_smiles_list = []
         data_list = []
         data_df = pd.read_csv(self.data_file)
-        smiles_list = list(data_df['smiles'])[0:1000]
-        labels_list = list(data_df['labels'])[0:1000]
+        smiles_list = list(data_df['smiles'])[0:12]
+        labels_list = list(data_df['labels'])[0:12]
 
         for i, smi in tqdm(enumerate(smiles_list)):
             label = labels_list[i]

@@ -106,15 +106,49 @@ class KernelConv(Module):
         return self.num_kernels
 
     def permute(self, x):
-        #         print('permute')
-        #         print('x')
-        #         print(x.shape)
-        rows = x.shape[1]
-        l = [x[:, torch.tensor(permute), :]
-             for permute in list(permutations(range(rows)))]
+        """
+        Get the possible permutations given a set of neighbors in a kernel.
+
+        For 1 neighbor, there is only 1 permutation
+        For 2 neighbors, there are 2 permutations
+        For 3 neighbors, there are 6 permutations
+        For 4 neighbors, there are 24 permutations. However, if we consider
+        chirality, only 12 of the permuations are allowed. See [1] for
+        detailed explanation.
+
+        References
+        [1]Pattanaik, L., Ganea, O.-E., Coley, I., Jensen, K. F., Green, W. H.,
+        and Coley, C. W., “Message Passing Networks for Molecules with
+        Tetrahedral Chirality”, <i>arXiv e-prints</i>, 2020.
+        :param x: the matrix containing the neighbor. Size is [num_kernels,
+        degree, dimension]
+        :return: a tensor of size [num_kernels, num_permutations, degree,
+        dimension]
+        """
+
+        # print(f'kernels.py::x.shape:{x.shape}')
+        degree = x.shape[1]
+        if degree != 4:
+            l = [x[:, torch.tensor(permute), :]
+                 for permute in list(permutations(range(degree)))]
+        else:
+            d4_permutations = [(0, 1, 2, 3),
+                               (0, 2, 3, 1),
+                               (0, 3, 1, 2),
+                               (1, 0, 3, 2),
+                               (1, 2, 0, 3),
+                               (1, 3, 2, 0),
+                               (2, 0, 1, 3),
+                               (2, 1, 3, 0),
+                               (2, 3, 0, 1),
+                               (3, 0, 2, 1),
+                               (3, 1, 0, 2),
+                               (3, 2, 1, 0)
+                               ]
+            l = [x[:, torch.tensor(permute), :]
+                 for permute in d4_permutations]
         output = torch.stack(l, dim=1)
-        #         print('permuted')
-        #         print(output.shape)
+        # print(f'output:{output}')
         return output
 
     def intra_angle(self, p):
@@ -226,13 +260,18 @@ class KernelConv(Module):
         #       f'{self.mem_size(x_support)/1000000}MB')
 
         # ====================
+        # Debugging
+        deg = x_support.shape[-2]
+        if deg == 4:
+            print(f'kernels.py::\nx_nei:\n{x_nei}\nx_support:\n{x_support}')
+
+
         x_nei = x_nei.unsqueeze(0).unsqueeze(0).expand(
             x_support.shape[0], x_support.shape[1], x_nei.shape[0],
             x_nei.shape[1], x_nei.shape[2])
         x_support = x_support.unsqueeze(2).expand(x_nei.shape)
         sc = self.arctan_sc(x_nei, x_support, dim=(-2, -1))
-
-
+        print(f'kernels.py::sc:{sc}')
         # =====================
 
 
@@ -289,6 +328,9 @@ class KernelConv(Module):
         edge_attr_support = self.edge_attr_support
         p_support = self.p_support
 
+        # Just for debugging
+        deg = p_support.shape[-2]
+
         # Because every sub-score is calculated using actan function,
         # which peaks at pi/2, so this max_atn is used to normalized the
         # score so it is in [0,1]
@@ -303,6 +345,10 @@ class KernelConv(Module):
         best_support_attr_sc, best_support_attr_sc_index = torch.max(
             support_attr_sc, dim=1)
 
+        # Debug
+        if deg ==4:
+            print(f'best_support_attr_sc:{best_support_attr_sc}\n '
+                  f'best_support_attr_sc_index:{best_support_attr_sc_index}')
 
 
         # Calculate the angle score
@@ -342,6 +388,15 @@ class KernelConv(Module):
             edge_attr_neighbor, best_edge_attr_support) / max_atan
         support_attr_sc = best_support_attr_sc
 
+        # # For debugging
+        # if (deg == 4):
+        #     print(f'kernels.py::x_support:{x_support}')
+
+            # print(f'kernels.py::\nsupport_attr_sc'
+            #       f':{support_attr_sc}\ncenter_attr_sc:'
+            #       # f'{center_attr_sc}\nedge_attr_support_sc:'
+            #       # f'{edge_attr_support_sc}'
+            #       )
 
         sc = (
                      # length_sc * self.length_sc_weight
@@ -351,14 +406,7 @@ class KernelConv(Module):
                      + edge_attr_support_sc *
                      self.edge_attr_support_sc_weight) / 3
 
-        # Clear GPU memory cache. The alignment creates lots tensors that
-        # won't be used (only the best alignment is used) and consumes lots
-        # of GPU memory to store them. Hence a cleanup is needed.
 
-
-
-
-        sc = torch.tensor([1])
         return sc
         # return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, \
         #        edge_attr_support_sc
@@ -377,7 +425,8 @@ class KernelConv(Module):
             p_neighbor = kwargv['p_neighbor']
             edge_attr_neighbor = kwargv['edge_attr_neighbor']
 
-        # Check if neighborhood and kernel agrees in degree
+        # Check if neighborhood and kernel agrees in space dimension (i.e.,
+        # 2D or 3D).
         if (p_focal.shape[-1] != self.p_support.shape[-1]):
             raise Exception(
                 f'data coordinates is of {p_focal.shape[-1]}D, but the '
@@ -552,6 +601,19 @@ class BaseKernelSetConv(Module):
 
     def convert_graph_to_receptive_field(self, deg, x, p, edge_index,
                                          edge_attr, selected_index, nei_index):
+        """
+        Convert a graph into receptive fields for a certain degree. Return
+        None if there is no nodes with that degree.
+
+        :param deg:
+        :param x:
+        :param p:
+        :param edge_index:
+        :param edge_attr:
+        :param selected_index:
+        :param nei_index:
+        :return:
+        """
 
         x_focal = self.get_focal_nodes_of_degree(
             x=x, p=p, selected_index=selected_index)
@@ -725,54 +787,59 @@ class BaseKernelSetConv(Module):
                 # print('edge_attr_neighbor')
                 # print(edge_attr_neighbor.shape)
 
-                # print('===fixed_degree_sc===')
+                # Depanding on whether fixed kernels are used, choose the
+                # correct KernelConv to use (either fixed_kernelConv,
+                # trainable_kernel_conv, or both)
                 if self.fixed_kernelconv_set[deg - 1] is not None:
                     fixed_degree_sc = self.fixed_kernelconv_set[deg - 1](
                         data=data)
                     if self.trainable_kernelconv_set[deg - 1] is not None:
-                        # print('---trainable_degree_sc---')
                         trainable_degree_sc = self.trainable_kernelconv_set[
                             deg - 1](data=data)
-                        # print(f'trianable_degree_sc {
-                        # trainable_degree_sc.shape}')
                         degree_sc = torch.cat(
                             [fixed_degree_sc, trainable_degree_sc])
                     else:
                         degree_sc = fixed_degree_sc
                 else:
-
                     if self.trainable_kernelconv_set[deg - 1] is not None:
-                        # print('---trainable_degree_sc---')
                         trainable_degree_sc = self.trainable_kernelconv_set[
                             deg - 1](data=data)
-                        # print(f'trianable_degree_sc {
-                        # trainable_degree_sc.shape}')
                         degree_sc = trainable_degree_sc
-
+                        if deg == 4:
+                            print(f'kernels.py::deg4 degree_sc:{degree_sc}')
                     else:
                         raise Exception(
                             f'kernels.py::BaseKernelSet:both fixed and '
                             f'trainable kernelconv_set are None for degree {deg}')
 
+                # Fill a zero tensor will score for each degree in
+                # corresponding positions
                 zeros[
                 start_row_id:start_row_id + self.num_kernel_list[deg - 1],
                 start_col_id:start_col_id + x_focal.shape[0]] = degree_sc
 
+                # Update the start_row_id and start_col_id so that next
+                # iteration can use those to find correct position for
+                # filling the zero tensor with score for each degree
                 index_list.append(selected_index)
                 start_row_id += self.num_kernel_list[deg - 1]
                 start_col_id += x_focal.shape[0]
+                #
+                # if(deg == 4):
+                #     torch.set_printoptions(profile="full")
+                #     print(f'kernels.py::shape:{zeros.shape} zeros:{zeros}')
             else:
-
                 start_row_id += self.num_kernel_list[deg - 1]
 
+        # Reorder the output score tensor so that its rows correspond to the
+        # original index in the feature matrix x. Score tensor has shape
+        # [num_nodes, num_total_kernels]
         sc = zeros
-
         index_list = torch.cat(index_list)
-
         new_index = self.get_reorder_index(index_list)
-
         sc = sc[:, new_index]
         sc = sc.T
+        # print(f'\n kernels.py::sc: shape:{sc.shape}\n{sc}')
 
         # print(f'sc:{sc}')
         if (save_score == True):
@@ -798,7 +865,8 @@ class KernelSetConv(BaseKernelSetConv):
         x_support = torch.tensor(
             [[6.0000, 12.0110, 1.7000, 4.0000, 4.0000]]).unsqueeze(0)
 
-        edge_attr_support = torch.tensor([[2]], dtype=torch.float).unsqueeze(0)
+        edge_attr_support = torch.tensor([[2]],
+                                         dtype=torch.double).unsqueeze(0)
 
         kernel1_std = Data(p_support=p_support, x_support=x_support,
                            x_center=x_center,
@@ -818,7 +886,7 @@ class KernelSetConv(BaseKernelSetConv):
             [[6.0000, 12.0110, 1.7000, 4.0000, 4.0000]]).unsqueeze(0)
 
         edge_attr_support = torch.tensor(
-            [[2], [1], [1]], dtype=torch.float).unsqueeze(0)
+            [[2], [1], [1]], dtype=torch.double).unsqueeze(0)
 
         kernel3_std = Data(p_support=p_support, x_support=x_support,
                            x_center=x_center,

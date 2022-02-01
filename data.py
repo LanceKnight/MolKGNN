@@ -44,13 +44,20 @@ def get_dataset(dataset_name='435034'):
             'dataset': qsar_dataset,
             'num_samples': len(qsar_dataset),
         }
-    elif dataset_name in ['CHIRAL1', 'DIFF5']:
+    elif dataset_name in ['CHIRAL1', 'DIFF5', "dummy"]:
+        if dataset_name == 'CHIRAL1':
+            data_file =  '../dataset/d4_docking/d4_docking_rs.csv'
+            index_file = '../dataset/d4_docking/rs/split0.npy'
+        elif dataset_name == 'dummy':
+            data_file = '../dataset/d4_docking/dummy/dummy.csv'
+            index_file = '../dataset/d4_docking/dummy/split.npy'
+
+
         d4_dchp_dataset = D4DCHPDataset(
             root='../dataset/d4_docking/',
             subset_name=dataset_name,
-            data_file=
-            '../dataset/d4_docking/d4_docking_rs.csv',
-            idx_file='../dataset/d4_docking/rs/split0.npy',
+            data_file= data_file,
+            idx_file=index_file,
             D=3,
             pre_transform=ToXAndPAndEdgeAttrForDeg(),
         )
@@ -87,7 +94,7 @@ class DataLoaderModule(LightningDataModule):
             num_workers,
             batch_size,
             seed,
-            enable_oversampling_with_replacement=True,
+            enable_oversampling_with_replacement=False,
             *args,
             **kwargs,
     ):
@@ -125,6 +132,7 @@ class DataLoaderModule(LightningDataModule):
             f'{num_train_active}')
 
         if self.enable_oversampling_with_replacement:
+            print('data.py::with resampling')
             # Sample weights equal the inverse of number of samples
             train_sampler_weight = torch.tensor([(1. / num_train_inactive)
                                                  if data.y == 0
@@ -147,6 +155,7 @@ class DataLoaderModule(LightningDataModule):
                 num_workers=self.num_workers,
             )
         else:  # Regular sampling without oversampling
+            print('data.py::no resampling')
             print(f'dataset_train:{self.dataset_train[0]}')
             train_loader = DataLoader(
                 self.dataset_train,

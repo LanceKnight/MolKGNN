@@ -208,7 +208,7 @@ if __name__ == '__main__':
     # argument is that model specific arguments depends on it
 
     task = Task.init(project_name=f"Tests/{gnn_type}",
-                     task_name="improving_performance",
-                     tags=[gnn_type, "debug"])
+                     task_name="improving_dummy_performance",
+                     tags=[gnn_type, "debug", "dummy"])
     logger = task.get_logger()
     main(gnn_type)
