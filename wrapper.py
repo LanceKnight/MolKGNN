@@ -154,8 +154,10 @@ def smiles2graph(D, smiles):
 
     x = torch.tensor(atom_attr, dtype=torch.double)
     p = torch.tensor(atom_pos, dtype=torch.double)
+
+
     edge_index = torch.tensor(edge_list).t().contiguous()
-    edge_attr = torch.tensor(edge_attr_list, dytpe=torch.double)
+    edge_attr = torch.tensor(edge_attr_list, dtype=torch.double)
 
     # graphormer-specific features
     # adj = torch.zeros([N, N], dtype=torch.bool)
@@ -239,8 +241,8 @@ class D4DCHPDataset(InMemoryDataset):
         data_smiles_list = []
         data_list = []
         data_df = pd.read_csv(self.data_file)
-        smiles_list = list(data_df['smiles'])[0:12]
-        labels_list = list(data_df['labels'])[0:12]
+        smiles_list = list(data_df['smiles'])[0:32]
+        labels_list = list(data_df['labels'])[0:32]
 
         for i, smi in tqdm(enumerate(smiles_list)):
             label = labels_list[i]
@@ -504,6 +506,13 @@ class ToXAndPAndEdgeAttrForDeg(object):
             (deg_index == deg).nonzero(as_tuple=True)[0]
 
         p_focal = torch.index_select(input=p, dim=0, index=focal_index)
+
+        # Debug
+        # if deg == 2:
+        #     print(f'convert():p:{p}')
+        #     print(f'convert():focal_index:{focal_index}')
+        #     print(f"convert():p_focal:{p_focal}")
+
         num_focal = len(focal_index)
         nei_index_list_each_node = []
 
@@ -576,6 +585,11 @@ class ToXAndPAndEdgeAttrForDeg(object):
         data.selected_index_deg2, data.nei_index_deg2 = \
             self.convert_grpah_to_receptive_field_for_degN(
             deg, deg_index, data)
+
+        # # Debug
+        # print(f'wrapper.py==================')
+        # print(f'wrapper.py::smiles:{data.smiles}')
+        # print(f'wrapper.py::p_focal:{data.p_focal_deg2}')
 
         deg = 3
         data.p_focal_deg3, data.nei_p_deg3, data.nei_edge_attr_deg3, \

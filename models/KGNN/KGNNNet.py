@@ -2,7 +2,7 @@ from .KernelLayer import MolGCN
 from lr import PolynomialDecayLR
 
 import torch
-from torch.nn import  Linear
+from torch.nn import Linear, Sigmoid
 from torch_geometric.nn import global_mean_pool
 from torch.optim import Adam
 
@@ -120,8 +120,8 @@ class KGNNNet(torch.nn.Module):
                                        nei_index_deg4=nei_index_deg4,
                                        save_score=save_score)
 
-        graph_representation = self.graph_embedding_linear(self.pool(
-            node_representation, batch))
+        graph_representation = self.graph_embedding_linear(
+            self.pool(node_representation, batch))
 
         return graph_representation
 

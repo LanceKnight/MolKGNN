@@ -69,7 +69,8 @@ class GNNModel(pl.LightningModule):
             raise ValueError("model.py::GNNModel: GNN model type is not "
                              "defined.")
 
-        self.linear = Linear(hidden_dim, output_dim)
+        self.linear = Linear(hidden_dim, hidden_dim)
+        self.lin2 = Linear(hidden_dim, output_dim)
         self.activate_func = Sigmoid()  # Not used
         self.warmup_iterations = warmup_iterations
         self.tot_iterations = tot_iterations
@@ -79,10 +80,11 @@ class GNNModel(pl.LightningModule):
 
     def forward(self, data):
         graph_embedding = self.gnn_model(data)
-
-        print(f'model.py::smiles:{data.smiles}\n graph_embedding'
+        prediction = self.lin2(self.activate_func(self.linear(
+            graph_embedding)))
+        print(f'model.py::smiles:{data.smiles}\n prediction:\n{prediction}\n '
+              f'graph_embedding'
               f':{graph_embedding}')
-        prediction = self.linear(graph_embedding)
 
         return prediction, graph_embedding
 
@@ -133,7 +135,7 @@ class GNNModel(pl.LightningModule):
         pred_y, _ = self(batch_data)
         pred_y = pred_y.view(-1)
         true_y = batch_data.y.view(-1)
-
+        print(f"models.py::true_y:{true_y}")
         # Get metrics
         results = {}
         loss = self.loss_func(pred_y, true_y.float())
