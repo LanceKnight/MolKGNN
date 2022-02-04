@@ -82,9 +82,11 @@ class GNNModel(pl.LightningModule):
         graph_embedding = self.gnn_model(data)
         prediction = self.lin2(self.activate_func(self.linear(
             graph_embedding)))
-        print(f'model.py::smiles:{data.smiles}\n prediction:\n{prediction}\n '
-              f'graph_embedding'
-              f':{graph_embedding}')
+
+        # # Debug
+        print(f'model.py::smiles:{data.smiles}\n ')
+        # print(f'prediction:\n{prediction}\n ')
+        # print(f'graph_embedding:\n:{graph_embedding}')
 
         return prediction, graph_embedding
 
@@ -150,8 +152,6 @@ class GNNModel(pl.LightningModule):
         results['accuracy'] = accuracy
 
         return results
-
-
 
     def training_epoch_end(self, train_step_outputs):
         """

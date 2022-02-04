@@ -562,6 +562,7 @@ class KernelConv(Module):
 
     def calculate_total_score(self, x_focal, p_focal, x_neighbor, p_neighbor,
                               edge_attr_neighbor):
+        a = time.time()
         # Calibrate neighbor coordinates
         # Calibrated coordinates = original coordinates - center coordinates
         p_neighbor = p_neighbor - p_focal.unsqueeze(1)
@@ -574,8 +575,8 @@ class KernelConv(Module):
 
         # Just for debugging
         deg = p_support.shape[-2]
-        if deg == 4:
-            print(f'total_score():deg:{deg}-------------------')
+        # if deg == 4:
+        #     print(f'total_score():deg:{deg}-------------------')
             # print(f'total_score():x_focal:{x_focal}')
             # print(f'total_score():x_neighbor:{x_neighbor}')
 
@@ -656,19 +657,23 @@ class KernelConv(Module):
                                                      x_neighbor,
                                                      best_p_support
                                                      )
-            print(f'chirality sign: support_attr_sc:{support_attr_sc.shape}')
-            print(f'chirality sign: chirality_sign:{chirality_sign.shape}')
+            # print(f'chirality sign: support_attr_sc:{support_attr_sc.shape}')
+            # print(f'chirality sign: chirality_sign:{chirality_sign.shape}')
             support_attr_sc = support_attr_sc * chirality_sign
 
 
         # Debug
         if (deg == 4):
-            # print(f'kernels.py::length:{length_sc}')
-            # print(f'kernels.py::angle:{angle_sc}')
+        #     # print(f'kernels.py::length:{length_sc}')
+        #     # print(f'kernels.py::angle:{angle_sc}')
+            print(f'==============')
             print(f'kernels.py::support_attr_sc:{support_attr_sc}')
             print(f'kernels.py::center_attr_sc:{center_attr_sc}')
             print(f'kernels.py::edge_attr_support_sc:'
                   f'{edge_attr_support_sc}')
+            print(f'kernels:----------')
+            print(f'x_center:\n{x_center}')
+            print(f'x_support:\n{x_support}')
 
 
 
@@ -680,8 +685,9 @@ class KernelConv(Module):
                  + center_attr_sc * self.center_attr_sc_weight
                  + edge_attr_support_sc * self.edge_attr_support_sc_weight
                  # + position_sc * self.length_sc_weight
-             ) / 3
-
+             ) / (self.support_attr_sc_weight+self.center_attr_sc_weight +
+                  self.edge_attr_support_sc_weight)
+        b = time.time()
         return sc
         # return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, \
         #        edge_attr_support_sc
@@ -1080,9 +1086,7 @@ class BaseKernelSetConv(Module):
                         trainable_degree_sc = self.trainable_kernelconv_set[
                             deg - 1](data=data)
                         degree_sc = trainable_degree_sc
-                        if deg == 4:
-                            print(f'kernels.py::deg{deg} degree_sc'
-                                  f':{degree_sc}')
+
                     else:
                         raise Exception(
                             f'kernels.py::BaseKernelSet:both fixed and '
@@ -1116,13 +1120,9 @@ class BaseKernelSetConv(Module):
         new_index = self.get_reorder_index(index_list)
         sc = sc[:, new_index]
         sc = sc.T
-        # print(f'\n kernels.py::sc: shape:{sc.shape}\n{sc}')
 
-        # print(f'sc:{sc}')
         if (save_score == True):
             self.save_score(sc)  # save scores for analysis
-        # end = time.time()
-        # print(f'BaseKernelSetConv time:{end -start}')
         return sc
 
 

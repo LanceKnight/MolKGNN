@@ -95,12 +95,12 @@ def actual_training(model, data_module, args):
     )
 
     # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
-    # print(f'dir:{actual_training_checkpoint_dir}')
-    # if not args.test and not args.validate and os.path.exists(
-    #         f'{actual_training_checkpoint_dir}/last.ckpt'):
-    #     print('Resuming from actual training checkpoint')
-    #     args.resume_from_checkpoint = actual_training_checkpoint_dir + \
-    #                                   '/last.ckpt'
+    print(f'dir:{actual_training_checkpoint_dir}')
+    if not args.test and not args.validate and os.path.exists(
+            f'{actual_training_checkpoint_dir}/last.ckpt'):
+        print('Resuming from actual training checkpoint')
+        args.resume_from_checkpoint = actual_training_checkpoint_dir + \
+                                      '/last.ckpt'
 
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks.append(actual_training_checkpoint_callback)
