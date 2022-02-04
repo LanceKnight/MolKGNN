@@ -3,7 +3,7 @@ from torch.optim import Adam
 from torch_geometric.nn import GCNConv, global_mean_pool
 import pytorch_lightning as pl
 from lr import PolynomialDecayLR
-import pytorch_warmup as warmup
+# import pytorch_warmup as warmup
 
 
 class GCNNet(torch.nn.Module):
