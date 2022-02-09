@@ -63,7 +63,7 @@ class KernelConv(Module):
                     'number of support num_supports or feature dimension '
                     'node_attr_dim is not specified')
             else:
-                init_kernel = Data(x_center=torch.randn(L, 1, node_attr_dim),
+                init_kernel = Data(x_center=torch.randn(L, node_attr_dim),
                                    x_support=torch.randn(L, num_supports,
                                                          node_attr_dim),
                                    edge_attr_support=torch.randn(L,
@@ -121,12 +121,10 @@ class KernelConv(Module):
         and Coley, C. W., “Message Passing Networks for Molecules with
         Tetrahedral Chirality”, <i>arXiv e-prints</i>, 2020.
         :param x: the matrix containing the neighbor. Size is [num_kernels,
-        degree, dimension]
+        degree, dim]
         :return: a tensor of size [num_kernels, num_permutations, degree,
         dimension]
         """
-
-        # print(f'kernels.py::x.shape:{x.shape}')
         degree = x.shape[1]
         if degree != 4:
             l = [x[:, torch.tensor(permute), :]
@@ -377,6 +375,8 @@ class KernelConv(Module):
         return ten.element_size() * ten.nelement()
 
     def get_support_attribute_score(self, x_nei, x_support):
+
+
         # print('===start==')
         # print(f'before x_nei:{x_nei.shape} numel: '
         #       f'{torch.numel(x_nei)/1000000}M mem:'
@@ -411,23 +411,26 @@ class KernelConv(Module):
         return sc
 
     def get_center_attribute_score(self, x_focal, x_center):
-        # inverse of L2 norm
-        #         print(f'center attri:{type(x_focal)}, {type(x_center)}')
-        #         print(f'x_focal:{x_focal.shape}, x_center:{x_center.shape}')
-        #         print(x_focal)
-        #         print(x_center)
-        #         diff = torch.square(x_focal - x_center)
-        #         sc = torch.sum(diff)
-        #         sc:'shape([])' = torch.atan(1/sc)
-        x_focal = x_focal.unsqueeze(0).expand(
-            x_center.shape[0], x_focal.shape[0], x_focal.shape[1])
-        x_center = x_center.expand(x_focal.shape)
-        #         print('x_focal')
-        #         print(x_focal)
-        #         print('x_center')
-        #         print(x_center)
-
-        sc = self.calculate_average_similarity_score(x_focal, x_center, sim_dim=(-1))
+        """
+        Get the similarity score between center and focal atoms in the
+        neighborhood and filter
+        :param x_focal: Shape[num_node_of_this_degree, node_attr_dim]
+        :param x_center: Shape[num_kernels, 1, node_attr_dim]
+        :return: a tensor of Shape[num_kernels, num_node_of_this_degree]
+        """
+        
+        x_focal_node_list = x_focal.unbind()
+        x_center_kernel_list = x_center.unbind()
+        res_kernel = []
+        for x_center_kernel in x_center_kernel_list:
+            res_node = []
+            for x_focal_node in x_focal_node_list:
+                sc = self.calculate_average_similarity_score(x_focal_node,
+                                                             x_center_kernel,
+                                                        sim_dim=(-1))
+                res_node.append(sc)
+            res_kernel.append(res_node)
+        sc = torch.tensor(res_kernel, device = x_focal.device)
         return sc
 
     def get_edge_attribute_score(self, edge_attr_nei, edge_attr_support):
@@ -569,6 +572,7 @@ class KernelConv(Module):
 
         # Get kernel params
         x_center = self.x_center
+        print(f'total_score, x_center:{x_center.shape}')
         x_support = self.x_support
         edge_attr_support = self.edge_attr_support
         p_support = self.p_support
@@ -663,17 +667,20 @@ class KernelConv(Module):
 
 
         # Debug
-        if (deg == 4):
+        # if (deg == 4):
         #     # print(f'kernels.py::length:{length_sc}')
         #     # print(f'kernels.py::angle:{angle_sc}')
-            print(f'==============')
-            print(f'kernels.py::support_attr_sc:{support_attr_sc}')
-            print(f'kernels.py::center_attr_sc:{center_attr_sc}')
-            print(f'kernels.py::edge_attr_support_sc:'
-                  f'{edge_attr_support_sc}')
-            print(f'kernels:----------')
-            print(f'x_center:\n{x_center}')
-            print(f'x_support:\n{x_support}')
+        #     print(f'==============')
+        #     print(f'kernels.py::support_attr_sc:{support_attr_sc}')
+        #     print(f'kernels.py::center_attr_sc:{center_attr_sc}')
+        #     print(f'kernels.py::edge_attr_support_sc:'
+        #           f'{edge_attr_support_sc}')
+        #     print(f'neighborhood:----')
+        #     torch.set_printoptions(profile="full")
+        #     print(f'x_focal:\n{x_focal}')
+        #     print(f'kernels:----------')
+        #     print(f'x_center:\n{x_center}')
+        #     print(f'x_support:\n{x_support}')
 
 
 

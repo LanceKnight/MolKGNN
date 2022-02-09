@@ -113,9 +113,11 @@ def smiles2graph(D, smiles):
     atom_pos = []
     atom_attr = []
 
-    # get atom attributes and positions
+    # Get atom attributes and positions
+    atomic_num_list = []
     for i, atom in enumerate(mol.GetAtoms()):
         atomic_num = atom.GetAtomicNum()
+        atomic_num_list.append(atomic_num)
         h = get_atom_rep(atomic_num)
 
         if D == 2:
@@ -154,10 +156,9 @@ def smiles2graph(D, smiles):
 
     x = torch.tensor(atom_attr, dtype=torch.double)
     p = torch.tensor(atom_pos, dtype=torch.double)
-
-
     edge_index = torch.tensor(edge_list).t().contiguous()
     edge_attr = torch.tensor(edge_attr_list, dtype=torch.double)
+    atomic_num = torch.tensor(atomic_num_list, dtype= torch.long)
 
     # graphormer-specific features
     # adj = torch.zeros([N, N], dtype=torch.bool)
@@ -170,7 +171,8 @@ def smiles2graph(D, smiles):
     #                ] = convert_to_single_emb(edge_attr) + 1
 
     data = Data(x=x, p=p, edge_index=edge_index,
-                edge_attr=edge_attr)  # , adj=adj, attn_bias=attn_bias,
+                edge_attr=edge_attr, atomic_num = atomic_num)  # , adj=adj,
+    # attn_bias=attn_bias,
     # attn_edge_type=attn_edge_type)
     # data = preprocess_item(data)
     return data

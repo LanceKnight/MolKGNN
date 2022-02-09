@@ -4,8 +4,9 @@ from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy
 
 # Public libraries
 import pytorch_lightning as pl
-from torch.nn import Linear, Sigmoid, BCEWithLogitsLoss
+from torch.nn import Linear, Sigmoid, BCEWithLogitsLoss, Embedding
 from torch_geometric.data import Data
+import torch
 
 
 class GNNModel(pl.LightningModule):
@@ -68,7 +69,7 @@ class GNNModel(pl.LightningModule):
         else:
             raise ValueError("model.py::GNNModel: GNN model type is not "
                              "defined.")
-
+        self.atom_encoder = Embedding(118, hidden_dim)
         self.linear = Linear(hidden_dim, hidden_dim)
         self.lin2 = Linear(hidden_dim, output_dim)
         self.activate_func = Sigmoid()  # Not used
@@ -79,6 +80,11 @@ class GNNModel(pl.LightningModule):
         self.loss_func = loss_func
 
     def forward(self, data):
+        # print(f'model.py::x before:{data.x.shape}')
+        # print(f'model.py::atomic_num:{data.atomic_num}')
+        data.x = self.atom_encoder(data.atomic_num)
+        # print(f'model.py::data.x.shape:{data.x.shape}')
+        # print(f'model.py::data.x:{data.x}')
         graph_embedding = self.gnn_model(data)
         prediction = self.lin2(self.activate_func(self.linear(
             graph_embedding)))
@@ -89,6 +95,22 @@ class GNNModel(pl.LightningModule):
         # print(f'graph_embedding:\n:{graph_embedding}')
 
         return prediction, graph_embedding
+
+    def save_atom_encoder(self, path):
+        torch.save(self.atom_encoder.state_dict(), path)
+
+    def save_kernels(self, path):
+        """
+        Save the kernels. Unique for Kernel GNN
+        :param path:
+        :return:
+        """
+        if isinstance(self.gnn_model, KGNNNet):
+            torch.save(self.gnn_model.gnn.layers[
+                           0].trainable_kernelconv_set.state_dict(), path)
+        else:
+            raise Exception("model.py::GNNModel.sve_kernels(): only "
+                            "implemented for Kernel GNN")
 
     @staticmethod
     def add_model_args(gnn_type, parent_parser):

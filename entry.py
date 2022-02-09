@@ -199,8 +199,11 @@ def main(gnn_type):
     # Prepare model for actural training
     model = prepare_actual_model(args)
 
+
     # Start actual training
     actual_training(model, actual_training_data_module, args)
+    model.save_atom_encoder('atom_encoder/atom_encoder.pt')
+    model.save_kernels('atom_encoder/kernels.pt')
 
 
 if __name__ == '__main__':
