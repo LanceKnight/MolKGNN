@@ -79,6 +79,7 @@ class GNNModel(pl.LightningModule):
         self.end_lr = end_lr
         self.loss_func = loss_func
         self.graph_embedding = None
+        self.smiles_list = None
 
     def forward(self, data):
         # print(f'model.py::x before:{data.x.shape}')
@@ -95,20 +96,27 @@ class GNNModel(pl.LightningModule):
         # print(f'prediction:\n{prediction}\n ')
         print(f'graph_embedding:\n:{graph_embedding}')
         self.graph_embedding = graph_embedding
+        self.smiles_list = data.smiles
         return prediction, graph_embedding
 
-    def save_atom_encoder(self, path):
-        torch.save(self.atom_encoder.state_dict(), path)
+    def save_atom_encoder(self, file_name):
+        torch.save(self.atom_encoder.state_dict(), file_name)
 
-    def save_kernels(self, path):
+    def save_graph_embedding(self, dir):
+        torch.save(self.graph_embedding, f'{dir}/graph_embedding.pt')
+        with open(f'{dir}/smiles_for_graph_embedding.txt', 'w+') as f:
+            for smiles in self.smiles_list:
+                f.write(smiles+ "\n")
+
+    def save_kernels(self, file_name):
         """
         Save the kernels. Unique for Kernel GNN
-        :param path:
+        :param file_name:
         :return:
         """
         if isinstance(self.gnn_model, KGNNNet):
             torch.save(self.gnn_model.gnn.layers[
-                           0].trainable_kernelconv_set.state_dict(), path)
+                           0].trainable_kernelconv_set.state_dict(), file_name)
         else:
             raise Exception("model.py::GNNModel.sve_kernels(): only "
                             "implemented for Kernel GNN")

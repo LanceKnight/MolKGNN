@@ -243,8 +243,8 @@ class D4DCHPDataset(InMemoryDataset):
         data_smiles_list = []
         data_list = []
         data_df = pd.read_csv(self.data_file)
-        smiles_list = list(data_df['smiles'])[0:32]
-        labels_list = list(data_df['labels'])[0:32]
+        smiles_list = list(data_df['smiles'])[0:1000]
+        labels_list = list(data_df['labels'])[0:1000]
 
         for i, smi in tqdm(enumerate(smiles_list)):
             label = labels_list[i]

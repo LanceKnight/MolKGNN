@@ -308,38 +308,38 @@ class KernelConv(Module):
         # print(f'get_angle():sc:{sc.shape}')
         # return sc.squeeze(1)
 
-    def get_length_score(self, p_neighbor, p_support):
-        """
-        Compare the length of the neighbors and supports
-
-        It calculates the norm for all vectors in neighbors/supports first
-        and then calculates similarities between those norms
-        :param p_neighbor: Shape[num_nodes_in_this_degree, degree, dim]
-        :param p_support: Shape[num_kernels, num_nodes_in_this_degree,
-        degree, dim]
-        :return: a tensor. Shape[num_kernel, num_nodes_in_this_degree]
-        """
-        len_p_neighbor = torch.norm(p_neighbor, dim=-1)
-        len_p_support = torch.norm(p_support, dim=-1)
-
-
-
-        # Round the length of neighbors to 0.1. E.g., 1.512 becomes 1.5
-        # This eliminates the impact of small difference in lengths
-        len_p_neighbor = (len_p_neighbor * 10).round()/10
-
-        # Debug
-        # deg = p_neighbor.shape[-2]
-        # if deg == 4:
-        #     print(f'get_length():p_neighbor:{p_neighbor}')
-        #     print(f'get_length_score():p_neighbor:{p_neighbor.shape} p_support:'
-        #           f'{p_support.shape}')
-        #     print(f'get_length_score():\nlen_p_neighbor:\n'
-        #           f'{len_p_neighbor}\nlen_p_support:\n{len_p_support}')
-
-        # Get the similarity score
-        sc = self.calculate_average_similarity_score(len_p_neighbor, len_p_support, sim_dim=(-1))
-        return sc
+    # def get_length_score(self, p_neighbor, p_support):
+    #     """
+    #     Compare the length of the neighbors and supports
+    #
+    #     It calculates the norm for all vectors in neighbors/supports first
+    #     and then calculates similarities between those norms
+    #     :param p_neighbor: Shape[num_nodes_in_this_degree, degree, dim]
+    #     :param p_support: Shape[num_kernels, num_nodes_in_this_degree,
+    #     degree, dim]
+    #     :return: a tensor. Shape[num_kernel, num_nodes_in_this_degree]
+    #     """
+    #     len_p_neighbor = torch.norm(p_neighbor, dim=-1)
+    #     len_p_support = torch.norm(p_support, dim=-1)
+    #
+    #
+    #
+    #     # Round the length of neighbors to 0.1. E.g., 1.512 becomes 1.5
+    #     # This eliminates the impact of small difference in lengths
+    #     len_p_neighbor = (len_p_neighbor * 10).round()/10
+    #
+    #     # Debug
+    #     # deg = p_neighbor.shape[-2]
+    #     # if deg == 4:
+    #     #     print(f'get_length():p_neighbor:{p_neighbor}')
+    #     #     print(f'get_length_score():p_neighbor:{p_neighbor.shape} p_support:'
+    #     #           f'{p_support.shape}')
+    #     #     print(f'get_length_score():\nlen_p_neighbor:\n'
+    #     #           f'{len_p_neighbor}\nlen_p_support:\n{len_p_support}')
+    #
+    #     # Get the similarity score
+    #     sc = self.calculate_average_similarity_score(len_p_neighbor, len_p_support, sim_dim=(-1))
+    #     return sc
 
     def get_the_permutation_with_best_alignment_id(self, input_tensor,
                                                    best_alignment_id):
@@ -468,79 +468,39 @@ class KernelConv(Module):
         """
         Get the similarity score between center and focal atoms in the
         neighborhood and filter
-        :param x_focal: Shape[num_node_of_this_degree, node_attr_dim]
-        :param x_center: Shape[num_kernels, 1, node_attr_dim]
-        :return: a tensor of Shape[num_kernels, num_node_of_this_degree]
+        :param x_focal: Shape[num_node, node_attr_dim]
+        :param x_center: Shape[num_kernels, node_attr_dim]
+        :return: a tensor of Shape[num_kernels, num_node]
         """
 
-        x_focal_node_list = x_focal.unbind()
-        x_center_kernel_list = x_center.unbind()
-        res_kernel = []
-        for x_center_kernel in x_center_kernel_list:
-            res_node = []
-            for x_focal_node in x_focal_node_list:
-                sc = self.calculate_average_similarity_score(x_focal_node,
-                                                             x_center_kernel,
-                                                        sim_dim=(-1))
-                res_node.append(sc)
-            res_kernel.append(res_node)
-        sc = torch.tensor(res_kernel, device = x_focal.device)
+        # x_focal_node_list = x_focal.unbind()
+        # x_center_kernel_list = x_center.unbind()
+        # res_kernel = []
+        # for x_center_kernel in x_center_kernel_list:
+        #     res_node = []
+        #     for x_focal_node in x_focal_node_list:
+        #         sc = self.calculate_average_similarity_score(x_focal_node,
+        #                                                      x_center_kernel,
+        #                                                 sim_dim=(-1))
+        #         res_node.append(sc)
+        #     res_kernel.append(res_node)
+        # sc = torch.tensor(res_kernel, device = x_focal.device)
+
+        x_focal = x_focal.unsqueeze(0).expand(
+            x_center.shape[0], x_focal.shape[0], x_focal.shape[1])
+        x_center = x_center.unsqueeze(1).expand(x_focal.shape)
+
+        sc = self.calculate_average_similarity_score(x_focal, x_center,
+                                                     sim_dim=-1)
+
         return sc
 
     def get_edge_attribute_score(self, edge_attr_nei, edge_attr_support):
-        #         print('edge_attr_nei')
-        #         print(edge_attr_nei)
-        #         print('edge_attr_support')
-        #         print(edge_attr_support)
-        #         diff = torch.square(edge_attr_nei - edge_attr_support)
-        #         sc = torch.sum(diff)
-        #         sc:'shape([])' = torch.atan(1/sc)
         sc = self.calculate_average_similarity_score(edge_attr_nei, edge_attr_support, sim_dim=-1,
                                                      avg_dim=-2)
         return sc
 
-    def get_position_score(self, p_nei, p_support):
-        """
-        Get the neighbor position score
 
-        The inputs are two ordered vectors representing neighbors and
-        supports (in tensor forms). For degree 1, the position score is The
-        dot
-        product similarities
-        between
-        any
-        two vectors in neighbors/supports are calculated first.
-
-        For degree 1,
-
-        :param p_nei: Shape[num_nodes_of_this_degree, degree, space_dim]
-        :param p_support: Shape[num_kernels, num_nodes_of_this_degree,
-        degree, space_dim]
-        :return: a tensor of scores. Shape[num_kernels]
-        """
-        # Debug
-        deg = p_nei.shape[-2]
-
-        p_support_for_all_kernels = p_support.unbind()
-        res_list = []
-        for i, p_support_each_kernel in enumerate(p_support_for_all_kernels):
-            # Debug
-            # if deg == 4:
-            #     print(f'i:{i} get_position_score:\np_nei:\n'
-            #           f'{p_nei}\ni{i} p_support_each_kernel'
-            #           f':{p_support_each_kernel}')
-
-
-            res_list.append(self.calculate_average_similarity_score(p_nei, p_support_each_kernel,
-                                                                    sim_dim=-1, avg_dim=-2))
-        result = torch.stack(res_list)
-        # Debug
-        # if deg == 4:
-        #     print(f'get_position_score:\np_nei:\n{p_nei}\np_support:{p_support}')
-        #     print(f'result:{result}')
-
-
-        return result
 
     def get_chirality_sign(self, p_nei, x_nei, p_support):
         """

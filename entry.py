@@ -202,9 +202,12 @@ def main(gnn_type):
 
     # Start actual training
     actual_training(model, actual_training_data_module, args)
+
+    # Save relevant data for analyses
     model.save_atom_encoder('utils/atom_encoder/atom_encoder.pt')
     model.save_kernels('utils/atom_encoder/kernels.pt')
     model.print_graph_embedding()
+    model.save_graph_embedding('utils/atom_encoder/graph_embedding')
 
 
 if __name__ == '__main__':
