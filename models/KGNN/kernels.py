@@ -195,8 +195,8 @@ class KernelConv(Module):
         The result is tensor([1.000, 0.8729]) because the average of the two
         similarity scores are 1.000 and 0.9729 respectively
 
-        :param tensor1:
-        :param tensor2:
+        :param tensor1: input1
+        :param tensor2: input1
         :param sim_dim: the dimension along which similarity is calculated
         This dimension becomes 1 after calculation. The sim_dim has to be
         expressed as a negative interger (for the ease of implementation).
@@ -375,8 +375,13 @@ class KernelConv(Module):
         return ten.element_size() * ten.nelement()
 
     def get_support_attribute_score(self, x_nei, x_support):
+        """
 
-
+        :param x_nei: [num_nodes_of_this_degree, deg, attr_dim]
+        :param x_support: Shape[num_kernel, num_permute, deg, attr_dim]
+        :return: a tensor of Shape[num_kernels,
+        num_permute, num_node_of_this_degree]
+        """
         # print('===start==')
         # print(f'before x_nei:{x_nei.shape} numel: '
         #       f'{torch.numel(x_nei)/1000000}M mem:'
@@ -386,29 +391,78 @@ class KernelConv(Module):
         #       f' {torch.numel(x_support)/1000000}M mem:'
         #       f'{self.mem_size(x_support)/1000000}MB')
 
-        # ====================
-        # Debugging
-        # deg = x_support.shape[-2]
-        # if deg == 4:
-        #     print(f'kernels.py::\nx_nei:\n{x_nei}\nx_support:\n{x_support}')
 
-        x_nei = x_nei.unsqueeze(0).unsqueeze(0).expand(
-            x_support.shape[0], x_support.shape[1], x_nei.shape[0],
-            x_nei.shape[1], x_nei.shape[2])
-        x_support = x_support.unsqueeze(2).expand(x_nei.shape)
-        sc = self.calculate_average_similarity_score(x_nei, x_support, sim_dim=-1, avg_dim=-2)
-        # print(f'kernels.py::sc:{sc}')
-        # =====================
 
-        # print(f'after x_nei shape:{x_nei.shape}, numel:'
-        #       f'{torch.numel(x_nei)/1000000}M mem:'
-        #       f'{self.mem_size(x_nei)/1000000}MB')
-        # print(f'x_support shape:{x_support.shape}, numel:'
-        #       f'{torch.numel(x_support)/1000000}M mem:'
-        #       f'{self.mem_size(x_support)/(1024*1024)}MB')
-        # print(f'sc shape:{sc.shape}')
-        # print('===end==')
+        res_permute = []
+        x_support_permute_list = x_support.unbind(dim=1)
+        x_nei = x_nei.unsqueeze(0).expand(x_support.shape[0],
+                                          x_nei.shape[0], x_nei.shape[1],
+                                          x_nei.shape[2])
+        for x_support_permute in x_support_permute_list:
+            x_support_permute = x_support_permute.unsqueeze(1).expand(
+                x_nei.shape)
+            sc = self.calculate_average_similarity_score(x_nei,
+                                                         x_support_permute,
+                                                         sim_dim=-1,
+                                                             avg_dim=-2)
+            res_permute.append(sc)
+        sc = torch.stack(res_permute, dim=1)
         return sc
+
+
+        # x_nei_node_list = x_nei.unbind()
+        # x_support_kernel_list = x_support.unbind()
+        # res_kernel = []
+        # for x_support_kernel in x_support_kernel_list:
+        #     x_support_permute_list = x_support_kernel.unbind()
+        #     res_permute = []
+        #     for x_support_permute in x_support_permute_list:
+        #         def sim(input):
+        #             sc = self.calculate_average_similarity_score(input,
+        #                                                          x_support_permute,
+        #                                                          sim_dim=-1,
+        #                                                          avg_dim=-2)
+        #             return sc
+        #
+        #         res_node = list(map(sim, x_nei_node_list))
+        #         # for x_nei_node in x_nei_node_list:
+        #
+        #             # res_node.append(sc)
+        #         res_permute.append(res_node)
+        #     res_kernel.append(res_permute)
+        # sc = torch.tensor(res_kernel, device=x_nei.device)
+        # return sc
+
+
+
+
+
+
+
+
+        # # ====================
+        # # Debugging
+        # # deg = x_support.shape[-2]
+        # # if deg == 4:
+        # #     print(f'kernels.py::\nx_nei:\n{x_nei}\nx_support:\n{x_support}')
+        #
+        # x_nei = x_nei.unsqueeze(0).unsqueeze(0).expand(
+        #     x_support.shape[0], x_support.shape[1], x_nei.shape[0],
+        #     x_nei.shape[1], x_nei.shape[2])
+        # x_support = x_support.unsqueeze(2).expand(x_nei.shape)
+        # sc = self.calculate_average_similarity_score(x_nei, x_support, sim_dim=-1, avg_dim=-2)
+        # # print(f'kernels.py::sc:{sc.shape}')
+        # # # =====================
+        # #
+        # # print(f'after x_nei shape:{x_nei.shape}, numel:'
+        # #       f'{torch.numel(x_nei)/1000000}M mem:'
+        # #       f'{self.mem_size(x_nei)/1000000}MB')
+        # # print(f'x_support shape:{x_support.shape}, numel:'
+        # #       f'{torch.numel(x_support)/1000000}M mem:'
+        # #       f'{self.mem_size(x_support)/(1024*1024)}MB')
+        # # print(f'sc shape:{sc.shape}')
+        # # print('===end==')
+        # return sc
 
     def get_center_attribute_score(self, x_focal, x_center):
         """
@@ -418,7 +472,7 @@ class KernelConv(Module):
         :param x_center: Shape[num_kernels, 1, node_attr_dim]
         :return: a tensor of Shape[num_kernels, num_node_of_this_degree]
         """
-        
+
         x_focal_node_list = x_focal.unbind()
         x_center_kernel_list = x_center.unbind()
         res_kernel = []
@@ -572,7 +626,6 @@ class KernelConv(Module):
 
         # Get kernel params
         x_center = self.x_center
-        print(f'total_score, x_center:{x_center.shape}')
         x_support = self.x_support
         edge_attr_support = self.edge_attr_support
         p_support = self.p_support

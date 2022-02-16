@@ -78,6 +78,7 @@ class GNNModel(pl.LightningModule):
         self.peak_lr = peak_lr
         self.end_lr = end_lr
         self.loss_func = loss_func
+        self.graph_embedding = None
 
     def forward(self, data):
         # print(f'model.py::x before:{data.x.shape}')
@@ -92,8 +93,8 @@ class GNNModel(pl.LightningModule):
         # # Debug
         print(f'model.py::smiles:{data.smiles}\n ')
         # print(f'prediction:\n{prediction}\n ')
-        # print(f'graph_embedding:\n:{graph_embedding}')
-
+        print(f'graph_embedding:\n:{graph_embedding}')
+        self.graph_embedding = graph_embedding
         return prediction, graph_embedding
 
     def save_atom_encoder(self, path):
@@ -111,6 +112,9 @@ class GNNModel(pl.LightningModule):
         else:
             raise Exception("model.py::GNNModel.sve_kernels(): only "
                             "implemented for Kernel GNN")
+    def print_graph_embedding(self):
+        print(self.graph_embedding)
+
 
     @staticmethod
     def add_model_args(gnn_type, parent_parser):

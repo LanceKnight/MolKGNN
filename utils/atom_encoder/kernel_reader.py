@@ -76,13 +76,26 @@ def train(criterion, optimizer):
     return loss.item(), acc.item()
 
 
-def intepret(input):
+def intepret_emb(input):
     output = decoder(input)
-    pred_num = torch.max(torch.log_softmax(output, dim=1), dim=1)
-    print(f'num:{pred_num}')
+    _, pred_num = torch.max(torch.log_softmax(output, dim=-1), dim=-1)
+    return pred_num
+
+
+def intepret_kernel(param_name, deg):
+    param = params[f'{deg-1}.{param_name}']
+    # print(f'shape of {param_name}:{param.shape}')
+    if 'x' in param_name:
+        predicted_atom_num = intepret_emb(param)
+        print(f'predicted_atom_num:\n{predicted_atom_num}')
+    elif 'p':
+        print(f'coordinates:\n{param}')
+    else:
+        raise NotImplementedException("param_name not found")
 
 
 if __name__ == '__main__':
+    torch.set_printoptions(profile="full")
     # gnn_type = 'kgnn'
     # task = Task.init(project_name=f"Tests/{gnn_type}",
     #                  task_name="atom_embedding_intepreter",
@@ -94,26 +107,39 @@ if __name__ == '__main__':
     decoder = Decoder(32)
     if os.path.exists('decoder.pt'):
         decoder.load_param('decoder.pt')
+    else:
+        model = decoder
 
-    model = decoder
+        # Train Decoder
+        criterion = CrossEntropyLoss()
+        optimizer = optim.Adam(model.parameters(), lr=1 * 10 ** -2)
+        for epoch in tqdm(range(100)):
+            loss, acc = train(criterion, optimizer)
+            print(f'loss:{loss} acc:{acc}')
+            # logger.report_scalar(title='loss', series='train', value=loss, iteration=epoch)
+            # logger.report_scalar(title='accuracy', series='train', value=acc, iteration=epoch)
+        decoder.save_param('decoder.pt')
 
-    # Train Decoder
-    # criterion = CrossEntropyLoss()
-    # optimizer = optim.Adam(model.parameters(), lr=1 * 10 ** -2)
-    # for epoch in tqdm(range(100)):
-    #     loss, acc = train(criterion, optimizer)
-    #     print(f'loss:{loss} acc:{acc}')
-    #     logger.report_scalar(title='loss', series='train', value=loss, iteration=epoch)
-    #     logger.report_scalar(title='accuracy', series='train', value=acc, iteration=epoch)
-    # decoder.save_param('decoder.pt')
+    # Validating Decoder is working
+    atom_id = 3
+    input = encoder(torch.tensor([atom_id]))
+    pred_num = intepret_emb(input)
+    if pred_num == atom_id:
+        print("Decoder is properly trained to predict the input of encoder")
+    else:
+        print("Decoder is not correctly trained")
 
-    # input = encoder(torch.tensor([3]))
-
+    # Kernel decoding
     path = 'kernels.pt'
     params = torch.load(path)
-    deg1_x_center = params['2.x_center'].squeeze(1)
-    print(deg1_x_center.shape)
-    deg1_atom_center = intepret(deg1_x_center)
-    print(deg1_atom_center)
-    for param in params:
-        print(param)
+
+    # print(f'Kernel Info: all keys in params:')
+    # for param in params:
+    #     print(param)
+
+    # Decode attributes
+    deg = 4
+    param_name = 'x_support'
+    intepret_kernel(param_name, deg)
+    param_name = 'p_support'
+    intepret_kernel(param_name, deg)

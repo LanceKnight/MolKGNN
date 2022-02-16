@@ -202,8 +202,9 @@ def main(gnn_type):
 
     # Start actual training
     actual_training(model, actual_training_data_module, args)
-    model.save_atom_encoder('atom_encoder/atom_encoder.pt')
-    model.save_kernels('atom_encoder/kernels.pt')
+    model.save_atom_encoder('utils/atom_encoder/atom_encoder.pt')
+    model.save_kernels('utils/atom_encoder/kernels.pt')
+    model.print_graph_embedding()
 
 
 if __name__ == '__main__':
@@ -213,5 +214,9 @@ if __name__ == '__main__':
     task = Task.init(project_name=f"Tests/{gnn_type}",
                      task_name="improving_dummy_performance",
                      tags=[gnn_type, "debug", "dummy"])
+    # True this on to prevent logger sending data to the backend,
+    # which takes time, takes backend storage and hence not good for debugging.
+    # task.set_offline(True)
+    print(f'task offline:{task.is_offline()}')
     logger = task.get_logger()
     main(gnn_type)
