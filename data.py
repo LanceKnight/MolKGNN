@@ -172,14 +172,14 @@ class DataLoaderModule(LightningDataModule):
         print(f'dataset_train:{self.dataset_train[0]}')
         val_loader = DataLoader(
             self.dataset_val,
-            batch_size=len(self.dataset_val),
+            batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
         )
         print(f'dataset_train:{self.dataset_train[0]}')
         train_loader = DataLoader(
             self.dataset_train,
-            batch_size=len(self.dataset_train),
+            batch_size=self.batch_size,
             shuffle=False,
             num_workers=self.num_workers,
         )
