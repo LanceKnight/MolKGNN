@@ -3,10 +3,12 @@ from models.KGNN.KGNNNet import KGNNNet
 from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy
 
 # Public libraries
+import os
 import pytorch_lightning as pl
 from torch.nn import Linear, Sigmoid, BCEWithLogitsLoss, Embedding
 from torch_geometric.data import Data
 import torch
+
 
 
 class GNNModel(pl.LightningModule):
@@ -99,24 +101,33 @@ class GNNModel(pl.LightningModule):
         self.smiles_list = data.smiles
         return prediction, graph_embedding
 
-    def save_atom_encoder(self, file_name):
-        torch.save(self.atom_encoder.state_dict(), file_name)
+    def save_atom_encoder(self, dir, file_name):
+        if not os.path.exists(dir):
+            os.mkdir(dir)
+        torch.save(self.atom_encoder.state_dict(), dir+file_name)
+
+
 
     def save_graph_embedding(self, dir):
+        if not os.path.exists(dir):
+            os.mkdir(dir)
         torch.save(self.graph_embedding, f'{dir}/graph_embedding.pt')
         with open(f'{dir}/smiles_for_graph_embedding.txt', 'w+') as f:
             for smiles in self.smiles_list:
                 f.write(smiles+ "\n")
 
-    def save_kernels(self, file_name):
+    def save_kernels(self, dir, file_name):
         """
         Save the kernels. Unique for Kernel GNN
         :param file_name:
         :return:
         """
         if isinstance(self.gnn_model, KGNNNet):
+            if not os.path.exists(dir):
+                os.mkdir(dir)
             torch.save(self.gnn_model.gnn.layers[
-                           0].trainable_kernelconv_set.state_dict(), file_name)
+                           0].trainable_kernelconv_set.state_dict(),
+                       dir+file_name)
         else:
             raise Exception("model.py::GNNModel.sve_kernels(): only "
                             "implemented for Kernel GNN")
