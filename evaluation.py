@@ -115,10 +115,10 @@ def calculate_accuracy(true_y, predicted_score):
 
     if (tp + fp + tn + fn) != 0:
         accuracy = ((tp + tn) / (tp + fp + tn + fn))
-        print(f'\ntn:{tn}, fp:{fp}, fn:{fn}, tp:{tp}, all:'
-              f'{tp + fp + tn + fn}, accuracy:{accuracy}')
+        # print(f'\ntn:{tn}, fp:{fp}, fn:{fn}, tp:{tp}, all:'
+        #       f'{tp + fp + tn + fn}, accuracy:{accuracy}')
     else:
         accuracy = np.NAN
-        print(f'\ntn:{tn}, fp:{fp}, fn:{fn}, tp:{tp}, all:'
-              f'{tp + fp + tn + fn}, accuracy:NAN')
+        # print(f'\ntn:{tn}, fp:{fp}, fn:{fn}, tp:{tp}, all:'
+        #       f'{tp + fp + tn + fn}, accuracy:NAN')
     return accuracy

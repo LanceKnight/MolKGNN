@@ -4,4 +4,5 @@ __pycache__/
 *$py.class
 
 # Checkpoints
-actual_training_checkpoints
+actual_training_checkpoints/
+temp_training_checkpoints/

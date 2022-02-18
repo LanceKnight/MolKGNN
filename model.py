@@ -92,9 +92,9 @@ class GNNModel(pl.LightningModule):
             graph_embedding)))
 
         # # Debug
-        print(f'model.py::smiles:{data.smiles}\n ')
+        # print(f'model.py::smiles:{data.smiles}\n ')
         # print(f'prediction:\n{prediction}\n ')
-        print(f'graph_embedding:\n:{graph_embedding}')
+        # print(f'graph_embedding:\n:{graph_embedding}')
         self.graph_embedding = graph_embedding
         self.smiles_list = data.smiles
         return prediction, graph_embedding
@@ -171,7 +171,7 @@ class GNNModel(pl.LightningModule):
         pred_y, _ = self(batch_data)
         pred_y = pred_y.view(-1)
         true_y = batch_data.y.view(-1)
-        print(f"models.py::true_y:{true_y}")
+        # print(f"models.py::true_y:{true_y}")
         # Get metrics
         results = {}
         loss = self.loss_func(pred_y, true_y.float())
