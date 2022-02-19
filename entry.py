@@ -216,8 +216,8 @@ if __name__ == '__main__':
     # argument is that model specific arguments depends on it
 
     task = Task.init(project_name=f"Tests/{gnn_type}",
-                     task_name="improving_dummy_performance",
-                     tags=[gnn_type, "debug", "dummy"])
+                     task_name="CHIRAL-1k-barium",
+                     tags=[gnn_type, "barium", "CHIRAL1", "1k"])
     # True this on to prevent logger sending data to the backend,
     # which takes time, takes backend storage and hence not good for debugging.
     # task.set_offline(True)
