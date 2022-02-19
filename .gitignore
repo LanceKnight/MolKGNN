@@ -6,5 +6,6 @@ __pycache__/
 # Checkpoints
 actual_training_checkpoints/
 temp_training_checkpoints/
+utils/atom_encoder/graph_embedding/*.pt
+utils/atom_encoder/graph_embedding/*.txt
 utils/atom_encoder/*.pt
-utils/atom_encoder/*.txt
