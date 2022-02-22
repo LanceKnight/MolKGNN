@@ -256,7 +256,7 @@ class D4DCHPDataset(InMemoryDataset):
             if data is None:
                 continue
             data.idx = i
-            data.y = torch.tensor([label], dtype=torch.int)
+            data.y = torch.tensor([label], dtype=torch.float)
             data.smiles = smi
 
             data_list.append(data)
