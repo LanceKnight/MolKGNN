@@ -190,3 +190,26 @@ class AccuracyNoDropoutMonitor(MetricMonitor):
                                                   title=f'accuracy_by_'
                                                         f'{logging_interval}',
                                               series='no_dropout')
+
+# RMSE
+class RMSEMonitor(MetricMonitor):
+    def __init__(self, stage='valid', logger =None, logging_interval=None,
+                 title = None ):
+        super(RMSEMonitor, self).__init__(stage=stage,
+                                                  metric="RMSE",
+                                                  logger=logger,
+                                                  logging_interval=logging_interval,
+                                                  title=f'RMSE_by_'
+                                                        f'{logging_interval}')
+
+
+class RMSENoDropoutMonitor(MetricMonitor):
+    def __init__(self, stage='valid', logger =None, logging_interval=None,
+                 title = None ):
+        super(RMSENoDropoutMonitor, self).__init__(stage=stage,
+                                                  metric="RMSE_no_dropout",
+                                                  logger=logger,
+                                                  logging_interval=logging_interval,
+                                                  title=f'RMSE_by_'
+                                                        f'{logging_interval}',
+                                              series='no_dropout')

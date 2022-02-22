@@ -5,7 +5,7 @@ from data import DataLoaderModule, get_dataset
 from model import GNNModel
 from monitors import LossMonitor, LossNoDropoutMonitor, LogAUCMonitor, \
     LogAUCNoDropoutMonitor, PPVMonitor, PPVNoDropoutMonitor, \
-    AccuracyMonitor, AccuracyNoDropoutMonitor
+    AccuracyMonitor, AccuracyNoDropoutMonitor, RMSEMonitor, RMSENoDropoutMonitor
 
 from argparse import ArgumentParser
 from pprint import pprint
@@ -78,7 +78,8 @@ def prepare_actual_model(args):
     else:  # if not using pretrained model
         print(f'Creating a model from scratch...')
 
-        model = GNNModel(gnn_type, args.num_layers, args.input_dim,
+        model = GNNModel(gnn_type, args.dataset_name, args.num_layers,
+                         args.input_dim,
                          args.hidden_dim, args.output_dim,
                          args.warmup_iterations, args.tot_iterations,
                          args.peak_lr, args.end_lr, args=args)
@@ -121,6 +122,38 @@ def actual_training(model, data_module, args):
     trainer.callbacks.append(
         LossNoDropoutMonitor(stage='valid', logger=logger,
                              logging_interval='epoch'))
+
+    # Learning rate monitors
+    # trainer.callbacks.append(LearningRateMonitor(logging_interval='step'))
+    trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
+
+    # Other metrics monitors
+    metrics = get_dataset(data_module.dataset_name)['metrics']
+    for metric in metrics:
+        if metric == 'accucuracy':
+            # Accuracy monitors
+            trainer.callbacks.append(
+                AccuracyMonitor(stage='train', logger=logger,
+                                logging_interval='epoch'))
+            trainer.callbacks.append(
+                AccuracyMonitor(stage='valid', logger=logger,
+                                logging_interval='epoch'))
+            trainer.callbacks.append(
+                AccuracyNoDropoutMonitor(stage='valid', logger=logger,
+                                         logging_interval='epoch'))
+            continue
+        if metric == 'RMSE':
+            # Accuracy monitors
+            trainer.callbacks.append(
+                RMSEMonitor(stage='train', logger=logger,
+                                logging_interval='epoch'))
+            trainer.callbacks.append(
+                RMSEMonitor(stage='valid', logger=logger,
+                                logging_interval='epoch'))
+            trainer.callbacks.append(
+                RMSENoDropoutMonitor(stage='valid', logger=logger,
+                                         logging_interval='epoch'))
+            continue
     #
     # # LogAUC monitors
     # trainer.callbacks.append(
@@ -140,21 +173,10 @@ def actual_training(model, data_module, args):
     #     PPVNoDropoutMonitor(stage='valid', logger=logger,
     #                         logging_interval='epoch'))
 
-    # Accuracy monitors
-    trainer.callbacks.append(
-        AccuracyMonitor(stage='train', logger=logger,
-                        logging_interval='epoch'))
-    trainer.callbacks.append(
-        AccuracyMonitor(stage='valid', logger=logger,
-                        logging_interval='epoch'))
-    trainer.callbacks.append(
-        AccuracyNoDropoutMonitor(stage='valid', logger=logger,
-                        logging_interval='epoch'))
 
 
-    # Learning rate monitors
-    # trainer.callbacks.append(LearningRateMonitor(logging_interval='step'))
-    trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
+
+
 
     if args.test:
         print(f'In Testing Mode:')
@@ -216,8 +238,8 @@ if __name__ == '__main__':
     # argument is that model specific arguments depends on it
 
     task = Task.init(project_name=f"Tests/{gnn_type}",
-                     task_name="CHIRAL-1k-barium",
-                     tags=["barium", "CHIRAL1", "1k",
+                     task_name="D4DCHP-1k-barium",
+                     tags=["barium", "D4DCHP", "1k",
                            ])
     # True this on to prevent logger sending data to the backend,
     # which takes time, takes backend storage and hence not good for debugging.

@@ -4,8 +4,9 @@ from wrapper import QSARDataset, D4DCHPDataset, ToXAndPAndEdgeAttrForDeg
 from pytorch_lightning import LightningDataModule
 import torch
 from torch.nn import functional as F
+from torch.nn import BCEWithLogitsLoss, MSELoss
 from torch.utils.data import WeightedRandomSampler
-from torch_geometric.data import DataLoader
+from torch_geometric.loader import DataLoader
 from torchvision.transforms import Lambda
 from functools import partial
 
@@ -44,19 +45,32 @@ def get_dataset(dataset_name='435034'):
             'dataset': qsar_dataset,
             'num_samples': len(qsar_dataset),
         }
-    elif dataset_name in ['CHIRAL1', 'DIFF5', "dummy"]:
+    elif dataset_name in ['CHIRAL1', 'DIFF5', 'D4DCHP', "dummy"]:
         if dataset_name == 'CHIRAL1':
             data_file =  '../dataset/d4_docking/d4_docking_rs.csv'
+            label_column_name = 'labels'
             index_file = '../dataset/d4_docking/rs/split0.npy'
+            metrics = ['accuracy']
+            loss_func = BCEWithLogitsLoss()
+        elif dataset_name == 'D4DCHP':
+            data_file = '../dataset/d4_docking/d4_docking.csv'
+            label_column_name = 'docking_score'
+            index_file = '../dataset/d4_docking/full/split0.npy'
+            metrics = ['RMSE']
+            loss_func = MSELoss()
         elif dataset_name == 'dummy':
             data_file = '../dataset/d4_docking/dummy/dummy.csv'
+            label_column_name = 'labels'
             index_file = '../dataset/d4_docking/dummy/split.npy'
+            metrics = ['accuracy']
+            loss_func = BCEWithLogitsLoss
 
 
         d4_dchp_dataset = D4DCHPDataset(
             root='../dataset/d4_docking/',
             subset_name=dataset_name,
             data_file= data_file,
+            label_column_name=label_column_name,
             idx_file=index_file,
             D=3,
             pre_transform=ToXAndPAndEdgeAttrForDeg(),
@@ -65,7 +79,9 @@ def get_dataset(dataset_name='435034'):
         dataset = {
             'num_class': 1,
             'dataset': d4_dchp_dataset,
-            'num_samples': len(d4_dchp_dataset)
+            'num_samples': len(d4_dchp_dataset),
+            'metrics':metrics,
+            'loss_func': loss_func
         }
 
     else:

@@ -205,6 +205,7 @@ class D4DCHPDataset(InMemoryDataset):
                  root,
                  subset_name,
                  data_file,
+                 label_column_name,
                  idx_file,
                  D,
                  transform=None,
@@ -216,7 +217,9 @@ class D4DCHPDataset(InMemoryDataset):
         "DIFF5"
         :param data_file: a file containing SMILES. File format: .csv file
         with headers; two columns with the first header being 'smiles' and the
-        second one being 'labels'
+        second one having a column name specifed by param label_column_name
+        :param label_column_name: a string of the column name for the label.
+        e.g., "docking_score"
         :param split_idx: a file specifying the split indices of samples in
         data_file. File format: a .npy file that should be loaded with
         numpy.load('split_idx.npy', allow_pickle=True). After loading,
@@ -228,6 +231,7 @@ class D4DCHPDataset(InMemoryDataset):
         print(f'root:{root}')
         self.subset_name = subset_name
         self.data_file = data_file
+        self.label_column_name = label_column_name
         self.idx_file = idx_file
         self.D = D
         super(D4DCHPDataset, self).__init__(root, transform, pre_transform,
@@ -244,7 +248,7 @@ class D4DCHPDataset(InMemoryDataset):
         data_list = []
         data_df = pd.read_csv(self.data_file)
         smiles_list = list(data_df['smiles'])[0:1000]
-        labels_list = list(data_df['labels'])[0:1000]
+        labels_list = list(data_df[self.label_column_name])[0:1000]
 
         for i, smi in tqdm(enumerate(smiles_list)):
             label = labels_list[i]

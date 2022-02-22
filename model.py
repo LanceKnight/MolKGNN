@@ -1,3 +1,4 @@
+from data import get_dataset
 from models.GCNNet.GCNNet import GCNNet
 from models.KGNN.KGNNNet import KGNNNet
 from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy
@@ -5,7 +6,8 @@ from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy
 # Public libraries
 import os
 import pytorch_lightning as pl
-from torch.nn import Linear, Sigmoid, BCEWithLogitsLoss, Embedding
+from sklearn.metrics import mean_squared_error
+from torch.nn import Linear, Sigmoid, Embedding
 from torch_geometric.data import Data
 import torch
 
@@ -23,6 +25,7 @@ class GNNModel(pl.LightningModule):
 
     def __init__(self,
                  gnn_type,
+                 dataset_name,
                  num_layers,
                  input_dim,
                  hidden_dim,
@@ -31,7 +34,6 @@ class GNNModel(pl.LightningModule):
                  tot_iterations,
                  peak_lr,
                  end_lr,
-                 loss_func=BCEWithLogitsLoss(),
                  args=None
                  ):
         super(GNNModel, self).__init__()
@@ -79,9 +81,10 @@ class GNNModel(pl.LightningModule):
         self.tot_iterations = tot_iterations
         self.peak_lr = peak_lr
         self.end_lr = end_lr
-        self.loss_func = loss_func
+        self.loss_func = get_dataset(dataset_name=dataset_name)['loss_func']
         self.graph_embedding = None
         self.smiles_list = None
+        self.metrics = get_dataset(dataset_name=dataset_name)['metrics']
 
     def forward(self, data):
         # print(f'model.py::x before:{data.x.shape}')
@@ -165,6 +168,17 @@ class GNNModel(pl.LightningModule):
             KGNNNet.add_model_specific_args(parent_parser)
         return parent_parser
 
+    def get_evaluations(self, results, numpy_y, numpy_prediction):
+        for metric in self.metrics:
+            if metric == 'accuracy':
+                accuracy = calculate_accuracy(numpy_y, numpy_prediction)
+                results['accuracy'] = accuracy
+                continue
+            if metric == 'RMSE':
+                rmse = mean_squared_error(numpy_y, numpy_prediction)
+                results['RMSE'] = rmse
+        return results
+
     def training_step(self, batch_data, batch_idx):
         """
         Training operations for each iteration includes getting the loss and
@@ -193,9 +207,7 @@ class GNNModel(pl.LightningModule):
         # results['logAUC'] = logAUC
         # ppv = calculate_ppv(numpy_y, numpy_prediction)
         # results['ppv'] = ppv
-        accuracy = calculate_accuracy(numpy_y, numpy_prediction)
-        results['accuracy'] = accuracy
-
+        results = self.get_evaluations(results, numpy_y, numpy_prediction)
         return results
 
     def training_epoch_end(self, train_step_outputs):
@@ -244,8 +256,7 @@ class GNNModel(pl.LightningModule):
         # results['logAUC'] = logAUC
         # ppv = calculate_ppv(numpy_y, numpy_prediction)
         # results['ppv'] = ppv
-        accuracy = calculate_accuracy(numpy_y, numpy_prediction)
-        results['accuracy'] = accuracy
+        results = self.get_evaluations(results, numpy_y, numpy_prediction)
         return results
         # return {
         #     'loss': loss,
