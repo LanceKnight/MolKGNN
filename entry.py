@@ -13,7 +13,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 import os
 from clearml import Task
-
+from torchviz import make_dot
 
 def add_args(gnn_type):
     """
@@ -28,7 +28,6 @@ def add_args(gnn_type):
     parser = ArgumentParser()
     parser = pl.Trainer.add_argparse_args(parser)  # default pl args
     parser = GNNModel.add_model_args(gnn_type, parser)
-    print(f'entry.py::parser:{parser} GNNModel:{GNNModel}')
     parser = DataLoaderModule.add_argparse_args(parser)
 
     # Custom arguments
@@ -96,7 +95,6 @@ def actual_training(model, data_module, args):
     )
 
     # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
-    print(f'dir:{actual_training_checkpoint_dir}')
     if not args.test and not args.validate and os.path.exists(
             f'{actual_training_checkpoint_dir}/last.ckpt'):
         print('Resuming from actual training checkpoint')
@@ -105,55 +103,60 @@ def actual_training(model, data_module, args):
 
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks.append(actual_training_checkpoint_callback)
-    print(f'max_epoch:{trainer.max_epochs}')
+
+    #
+    # # Loss monitors
+    # trainer.callbacks.append(
+    #     LossMonitor(stage='train', logger=logger, logging_interval='step'))
+    # trainer.callbacks.append(
+    #     LossMonitor(stage='train', logger=logger,
+    #                 logging_interval='epoch'))
+    # trainer.callbacks.append(
+    #     LossMonitor(stage='valid', logger=logger, logging_interval='step'))
+    # trainer.callbacks.append(
+    #     LossMonitor(stage='valid', logger=logger,
+    #                 logging_interval='epoch'))
+    # trainer.callbacks.append(
+    #     LossNoDropoutMonitor(stage='valid', logger=logger,
+    #                          logging_interval='epoch'))
+    #
+    # # Learning rate monitors
+    # # trainer.callbacks.append(LearningRateMonitor(logging_interval='step'))
+    # trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
+    #
+    # # Other metrics monitors
+    # metrics = get_dataset(data_module.dataset_name)['metrics']
+    # for metric in metrics:
+    #     if metric == 'accucuracy':
+    #         # Accuracy monitors
+    #         trainer.callbacks.append(
+    #             AccuracyMonitor(stage='train', logger=logger,
+    #                             logging_interval='epoch'))
+    #         trainer.callbacks.append(
+    #             AccuracyMonitor(stage='valid', logger=logger,
+    #                             logging_interval='epoch'))
+    #         trainer.callbacks.append(
+    #             AccuracyNoDropoutMonitor(stage='valid', logger=logger,
+    #                                      logging_interval='epoch'))
+    #         continue
+    #     if metric == 'RMSE':
+    #         # Accuracy monitors
+    #         trainer.callbacks.append(
+    #             RMSEMonitor(stage='train', logger=logger,
+    #                             logging_interval='epoch'))
+    #         trainer.callbacks.append(
+    #             RMSEMonitor(stage='valid', logger=logger,
+    #                             logging_interval='epoch'))
+    #         trainer.callbacks.append(
+    #             RMSENoDropoutMonitor(stage='valid', logger=logger,
+    #                                      logging_interval='epoch'))
+    #         continue
+    #
 
 
-    # Loss monitors
-    trainer.callbacks.append(
-        LossMonitor(stage='train', logger=logger, logging_interval='step'))
-    trainer.callbacks.append(
-        LossMonitor(stage='train', logger=logger,
-                    logging_interval='epoch'))
-    trainer.callbacks.append(
-        LossMonitor(stage='valid', logger=logger, logging_interval='step'))
-    trainer.callbacks.append(
-        LossMonitor(stage='valid', logger=logger,
-                    logging_interval='epoch'))
-    trainer.callbacks.append(
-        LossNoDropoutMonitor(stage='valid', logger=logger,
-                             logging_interval='epoch'))
 
-    # Learning rate monitors
-    # trainer.callbacks.append(LearningRateMonitor(logging_interval='step'))
-    trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 
-    # Other metrics monitors
-    metrics = get_dataset(data_module.dataset_name)['metrics']
-    for metric in metrics:
-        if metric == 'accucuracy':
-            # Accuracy monitors
-            trainer.callbacks.append(
-                AccuracyMonitor(stage='train', logger=logger,
-                                logging_interval='epoch'))
-            trainer.callbacks.append(
-                AccuracyMonitor(stage='valid', logger=logger,
-                                logging_interval='epoch'))
-            trainer.callbacks.append(
-                AccuracyNoDropoutMonitor(stage='valid', logger=logger,
-                                         logging_interval='epoch'))
-            continue
-        if metric == 'RMSE':
-            # Accuracy monitors
-            trainer.callbacks.append(
-                RMSEMonitor(stage='train', logger=logger,
-                                logging_interval='epoch'))
-            trainer.callbacks.append(
-                RMSEMonitor(stage='valid', logger=logger,
-                                logging_interval='epoch'))
-            trainer.callbacks.append(
-                RMSENoDropoutMonitor(stage='valid', logger=logger,
-                                         logging_interval='epoch'))
-            continue
+
     #
     # # LogAUC monitors
     # trainer.callbacks.append(
@@ -172,8 +175,6 @@ def actual_training(model, data_module, args):
     # trainer.callbacks.append(
     #     PPVNoDropoutMonitor(stage='valid', logger=logger,
     #                         logging_interval='epoch'))
-
-
 
 
 
@@ -221,6 +222,25 @@ def main(gnn_type):
     # Prepare model for actural training
     model = prepare_actual_model(args)
 
+    # # Debug
+    # from data import D4DCHPDataset
+    # from torch_geometric.loader import DataLoader
+    #
+    # data = D4DCHPDataset(
+    #         root='../dataset/d4_docking/',
+    #         subset_name='D4DCHP',
+    #         data_file='../dataset/d4_docking/d4_docking.csv',
+    #         label_column_name = 'docking_score',
+    #         idx_file = '../dataset/d4_docking/full/split0.npy',
+    #         # loss_func = MSELoss(reduction='sum')
+    #         D=3
+    #         # pre_transform=ToXAndPAndEdgeAttrForDeg(),
+    #     )
+    # loader = DataLoader(data, batch_size = 17)
+    # batch = next(iter(loader))
+    # yhat = model(batch)
+    # make_dot(yhat, params=dict(list(model.named_parameters()))).render(
+    #     "rnn_torchviz", format="png")
 
     # Start actual training
     actual_training(model, actual_training_data_module, args)
@@ -237,13 +257,15 @@ if __name__ == '__main__':
     gnn_type = 'kgnn'  # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
 
-    task = Task.init(project_name=f"Tests/{gnn_type}",
-                     task_name="D4DCHP-1k-barium",
-                     tags=["barium", "D4DCHP", "1k",
-                           ])
+    # task = Task.init(project_name=f"Tests/{gnn_type}",
+    #                  task_name="D4DCHP-1k-barium",
+    #                  tags=["barium", "D4DCHP", "1k","debug"
+    #                        ])
     # True this on to prevent logger sending data to the backend,
     # which takes time, takes backend storage and hence not good for debugging.
     # task.set_offline(True)
-    print(f'task offline:{task.is_offline()}')
-    logger = task.get_logger()
+    # print(f'task offline:{task.is_offline()}')
+    # logger = task.get_logger()
     main(gnn_type)
+
+
