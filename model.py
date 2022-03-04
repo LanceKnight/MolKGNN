@@ -7,7 +7,7 @@ from lr import PolynomialDecayLR
 import os
 import pytorch_lightning as pl
 from sklearn.metrics import mean_squared_error
-from torch.nn import Linear, Sigmoid, Embedding
+from torch.nn import Linear, Sigmoid, ReLU, Embedding
 from torch_geometric.data import Data
 import torch
 from torch.optim import Adam
@@ -75,9 +75,10 @@ class GNNModel(pl.LightningModule):
             raise ValueError("model.py::GNNModel: GNN model type is not "
                              "defined.")
         self.atom_encoder = Embedding(118, hidden_dim)
-        self.lin = Linear(hidden_dim, hidden_dim)
+        self.lin1 = Linear(hidden_dim, hidden_dim)
         self.lin2 = Linear(hidden_dim, output_dim)
-        self.activate_func = Sigmoid()
+        self.ffn = Linear(hidden_dim, output_dim)
+        self.activate_func = ReLU()
         self.warmup_iterations = warmup_iterations
         self.tot_iterations = tot_iterations
         self.peak_lr = peak_lr
@@ -94,7 +95,7 @@ class GNNModel(pl.LightningModule):
 
         graph_embedding = self.gnn_model(data)
         # print(f'emb:{graph_embedding}')
-        prediction = self.lin2(self.activate_func(self.lin(graph_embedding)))
+        prediction = self.ffn(graph_embedding)
 
         # # Debug
         # print(f'model.py::smiles:{data.smiles}\n ')
