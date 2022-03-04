@@ -57,7 +57,7 @@ def get_dataset(dataset_name='435034'):
             label_column_name = 'docking_score'
             index_file = '../dataset/d4_docking/full/split0.npy'
             metrics = ['RMSE']
-            loss_func = MSELoss()
+            loss_func = MSELoss(reduction='sum')
         elif dataset_name == 'dummy':
             data_file = '../dataset/d4_docking/dummy/dummy.csv'
             label_column_name = 'labels'

@@ -11,7 +11,7 @@ import numpy as np
 pattern_dict = {'[NH-]': '[N-]'}
 add_atom_num = 5
 num_reference = 10000  # number of reference molecules for augmentation
-
+num_data = 1000 # number of data used for debugging. Not used in full dataset
 
 def smiles_cleaner(smiles):
     '''
@@ -247,8 +247,10 @@ class D4DCHPDataset(InMemoryDataset):
         data_smiles_list = []
         data_list = []
         data_df = pd.read_csv(self.data_file)
-        smiles_list = list(data_df['smiles'])#[0:1000]
-        labels_list = list(data_df[self.label_column_name])#[0:1000]
+
+        smiles_list = list(data_df['smiles'])#[0:num_data]
+        labels_list = list(data_df[self.label_column_name])#[0:num_data]
+
 
         for i, smi in tqdm(enumerate(smiles_list)):
             label = labels_list[i]
@@ -257,6 +259,7 @@ class D4DCHPDataset(InMemoryDataset):
                 continue
             data.idx = i
             data.y = torch.tensor([label], dtype=torch.float)
+            # data.dummy_graph_embedding = torch.ones(1, 32)
             data.smiles = smi
 
             data_list.append(data)
@@ -293,12 +296,21 @@ class D4DCHPDataset(InMemoryDataset):
         split_dict['test'] = test_indices
 
         # Delete if statement if using the full CHIRAL1 dataset
+<<<<<<< HEAD
         #split_dict['train'] = [torch.tensor(x) for x in train_indices if x <
         #                       1000]
         #split_dict['valid'] = [torch.tensor(x) for x in val_indices if
         #                       x < 1000]
         #split_dict['test'] = [torch.tensor(x) for x in test_indices if
         #                      x < 1000]
+=======
+        split_dict['train'] = [torch.tensor(x) for x in train_indices if x <
+                               num_data]
+        split_dict['valid'] = [torch.tensor(x) for x in val_indices if
+                               x < num_data]
+        split_dict['test'] = [torch.tensor(x) for x in test_indices if
+                              x < num_data]
+>>>>>>> 39748c93e03f1c62150de2dadfdbb5d65f6cd3ee
 
         return split_dict
 

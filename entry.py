@@ -13,7 +13,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 import os
 from clearml import Task
-
+from torchviz import make_dot
 
 def add_args(gnn_type):
     """
@@ -28,7 +28,6 @@ def add_args(gnn_type):
     parser = ArgumentParser()
     parser = pl.Trainer.add_argparse_args(parser)  # default pl args
     parser = GNNModel.add_model_args(gnn_type, parser)
-    print(f'entry.py::parser:{parser} GNNModel:{GNNModel}')
     parser = DataLoaderModule.add_argparse_args(parser)
 
     # Custom arguments
@@ -96,7 +95,6 @@ def actual_training(model, data_module, args):
     )
 
     # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
-    print(f'dir:{actual_training_checkpoint_dir}')
     if not args.test and not args.validate and os.path.exists(
             f'{actual_training_checkpoint_dir}/last.ckpt'):
         print('Resuming from actual training checkpoint')
@@ -105,7 +103,6 @@ def actual_training(model, data_module, args):
 
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks.append(actual_training_checkpoint_callback)
-    print(f'max_epoch:{trainer.max_epochs}')
 
 
     # Loss monitors
@@ -154,6 +151,12 @@ def actual_training(model, data_module, args):
                 RMSENoDropoutMonitor(stage='valid', logger=logger,
                                          logging_interval='epoch'))
             continue
+
+
+
+
+
+
     #
     # # LogAUC monitors
     # trainer.callbacks.append(
@@ -172,8 +175,6 @@ def actual_training(model, data_module, args):
     # trainer.callbacks.append(
     #     PPVNoDropoutMonitor(stage='valid', logger=logger,
     #                         logging_interval='epoch'))
-
-
 
 
 
@@ -221,7 +222,6 @@ def main(gnn_type):
     # Prepare model for actural training
     model = prepare_actual_model(args)
 
-
     # Start actual training
     actual_training(model, actual_training_data_module, args)
 
@@ -241,9 +241,8 @@ if __name__ == '__main__':
                      task_name="D4DCHP-1k-barium",
                      tags=["3090", "D4DCHP", "20k",
                            ])
-    # True this on to prevent logger sending data to the backend,
-    # which takes time, takes backend storage and hence not good for debugging.
-    # task.set_offline(True)
-    print(f'task offline:{task.is_offline()}')
+
     logger = task.get_logger()
     main(gnn_type)
+
+

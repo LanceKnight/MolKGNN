@@ -2,14 +2,15 @@ from data import get_dataset
 from models.GCNNet.GCNNet import GCNNet
 from models.KGNN.KGNNNet import KGNNNet
 from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy
-
+from lr import PolynomialDecayLR
 # Public libraries
 import os
 import pytorch_lightning as pl
 from sklearn.metrics import mean_squared_error
-from torch.nn import Linear, Sigmoid, Embedding
+from torch.nn import Linear, Sigmoid, ReLU, Embedding
 from torch_geometric.data import Data
 import torch
+from torch.optim import Adam
 
 
 
@@ -74,9 +75,10 @@ class GNNModel(pl.LightningModule):
             raise ValueError("model.py::GNNModel: GNN model type is not "
                              "defined.")
         self.atom_encoder = Embedding(118, hidden_dim)
-        self.linear = Linear(hidden_dim, hidden_dim)
+        self.lin1 = Linear(hidden_dim, hidden_dim)
         self.lin2 = Linear(hidden_dim, output_dim)
-        self.activate_func = Sigmoid()  # Not used
+        self.ffn = Linear(hidden_dim, output_dim)
+        self.activate_func = ReLU()
         self.warmup_iterations = warmup_iterations
         self.tot_iterations = tot_iterations
         self.peak_lr = peak_lr
@@ -86,98 +88,24 @@ class GNNModel(pl.LightningModule):
         self.smiles_list = None
         self.metrics = get_dataset(dataset_name=dataset_name)['metrics']
 
+
     def forward(self, data):
-        # print(f'model.py::x before:{data.x.shape}')
-        # print(f'model.py::atomic_num:{data.atomic_num}')
+
         data.x = self.atom_encoder(data.atomic_num)
-        # print(f'model.py::data.x.shape:{data.x.shape}')
-        # print(f'model.py::data.x:{data.x}')
+
         graph_embedding = self.gnn_model(data)
-        prediction = self.lin2(self.activate_func(self.linear(
-            graph_embedding)))
+        # print(f'emb:{graph_embedding}')
+        prediction = self.ffn(graph_embedding)
 
         # # Debug
         # print(f'model.py::smiles:{data.smiles}\n ')
         # print(f'prediction:\n{prediction}\n ')
         # print(f'graph_embedding:\n:{graph_embedding}')
+
         self.graph_embedding = graph_embedding
         self.smiles_list = data.smiles
         return prediction, graph_embedding
 
-    def save_atom_encoder(self, dir, file_name):
-        if not os.path.exists(dir):
-            os.mkdir(dir)
-        torch.save(self.atom_encoder.state_dict(), dir+file_name)
-
-
-
-    def save_graph_embedding(self, dir):
-        if not os.path.exists(dir):
-            os.mkdir(dir)
-        torch.save(self.graph_embedding, f'{dir}/graph_embedding.pt')
-        with open(f'{dir}/smiles_for_graph_embedding.txt', 'w+') as f:
-            for smiles in self.smiles_list:
-                f.write(smiles+ "\n")
-
-    def save_kernels(self, dir, file_name):
-        """
-        Save the kernels. Unique for Kernel GNN
-        :param file_name:
-        :return:
-        """
-        if isinstance(self.gnn_model, KGNNNet):
-            if not os.path.exists(dir):
-                os.mkdir(dir)
-            torch.save(self.gnn_model.gnn.layers[
-                           0].trainable_kernelconv_set.state_dict(),
-                       dir+file_name)
-        else:
-            raise Exception("model.py::GNNModel.sve_kernels(): only "
-                            "implemented for Kernel GNN")
-    def print_graph_embedding(self):
-        print(self.graph_embedding)
-
-
-    @staticmethod
-    def add_model_args(gnn_type, parent_parser):
-        """
-        Add model arguments to the parent parser
-        :param gnn_type: a lowercase string specifying GNN type
-        :param parent_parser: parent parser for adding arguments
-        :return: parent parser with added arguments
-        """
-        parser = parent_parser.add_argument_group("GNN_Model")
-
-        # Add general model arguments below
-        # E.g., parser.add_argument('--general_model_args', type=int,
-        # default=12)
-        parser.add_argument('--seed', type=int, default=42)
-        parser.add_argument('--input_dim', type=int, default=32)
-        parser.add_argument('--hidden_dim', type=int, default=32)
-        parser.add_argument('--output_dim', type=int, default=32)
-        parser.add_argument('--validate', action='store_true', default=False)
-        parser.add_argument('--test', action='store_true', default=False)
-        parser.add_argument('--warmup_iterations', type=int, default=60000)
-        parser.add_argument('--tot_iterations', type=int, default=1000000)
-        parser.add_argument('--peak_lr', type=float, default=2e-4)
-        parser.add_argument('--end_lr', type=float, default=1e-9)
-
-        if gnn_type == 'gcn':
-            GCNNet.add_model_specific_args(parent_parser)
-        elif gnn_type == 'kgnn':
-            KGNNNet.add_model_specific_args(parent_parser)
-        return parent_parser
-
-    def get_evaluations(self, results, numpy_y, numpy_prediction):
-        for metric in self.metrics:
-            if metric == 'accuracy':
-                accuracy = calculate_accuracy(numpy_y, numpy_prediction)
-                results['accuracy'] = accuracy
-                continue
-            if metric == 'RMSE':
-                rmse = mean_squared_error(numpy_y, numpy_prediction)
-                results['RMSE'] = rmse
-        return results
 
     def training_step(self, batch_data, batch_idx):
         """
@@ -203,11 +131,14 @@ class GNNModel(pl.LightningModule):
         results['loss'] = loss
         numpy_prediction = pred_y.detach().cpu().numpy()
         numpy_y = true_y.cpu().numpy()
+        print(f'prediction:\n{numpy_prediction}')
+        print(f'true:\n{numpy_y}')
         # logAUC = calculate_logAUC(numpy_y, numpy_prediction)
         # results['logAUC'] = logAUC
         # ppv = calculate_ppv(numpy_y, numpy_prediction)
         # results['ppv'] = ppv
         results = self.get_evaluations(results, numpy_y, numpy_prediction)
+        print(results)
         return results
 
     def training_epoch_end(self, train_step_outputs):
@@ -308,7 +239,100 @@ class GNNModel(pl.LightningModule):
         :return: A union of lists, the first one is optimizers and the
         second one is schedulers
         """
-        optimizer, scheduler = self.gnn_model.configure_optimizers(
-            self.warmup_iterations, self.tot_iterations, self.peak_lr,
-            self.end_lr)
+        optimizer = Adam(self.parameters())
+        # scheduler = warmup.
+        scheduler = {
+            'scheduler': PolynomialDecayLR(
+                optimizer,
+                warmup_iterations=self.warmup_iterations,
+                tot_iterations=self.tot_iterations,
+                lr=self.peak_lr,
+                end_lr=self.end_lr,
+                power=1.0,
+            ),
+            'name': 'learning_rate',
+            'interval': 'step',
+            'frequency': 1,
+        }
+        # return optimizer, scheduler
+
+
+        # optimizer, scheduler = self.gnn_model.configure_optimizers(
+        #     self.warmup_iterations, self.tot_iterations, self.peak_lr,
+        #     self.end_lr)
         return [optimizer], [scheduler]
+
+    def save_atom_encoder(self, dir, file_name):
+        if not os.path.exists(dir):
+            os.mkdir(dir)
+        torch.save(self.atom_encoder.state_dict(), dir+file_name)
+
+    def save_graph_embedding(self, dir):
+        if not os.path.exists(dir):
+            os.mkdir(dir)
+        torch.save(self.graph_embedding, f'{dir}/graph_embedding.pt')
+        with open(f'{dir}/smiles_for_graph_embedding.txt', 'w+') as f:
+            for smiles in self.smiles_list:
+                f.write(smiles+ "\n")
+
+    def save_kernels(self, dir, file_name):
+        """
+        Save the kernels. Unique for Kernel GNN
+        :param file_name:
+        :return:
+        """
+        if isinstance(self.gnn_model, KGNNNet):
+            if not os.path.exists(dir):
+                os.mkdir(dir)
+            torch.save(self.gnn_model.gnn.layers[
+                           0].trainable_kernelconv_set.state_dict(),
+                       dir+file_name)
+        else:
+            raise Exception("model.py::GNNModel.sve_kernels(): only "
+                            "implemented for Kernel GNN")
+    def print_graph_embedding(self):
+        print(self.graph_embedding)
+
+
+    @staticmethod
+    def add_model_args(gnn_type, parent_parser):
+        """
+        Add model arguments to the parent parser
+        :param gnn_type: a lowercase string specifying GNN type
+        :param parent_parser: parent parser for adding arguments
+        :return: parent parser with added arguments
+        """
+        parser = parent_parser.add_argument_group("GNN_Model")
+
+        # Add general model arguments below
+        # E.g., parser.add_argument('--general_model_args', type=int,
+        # default=12)
+        parser.add_argument('--seed', type=int, default=42)
+        parser.add_argument('--input_dim', type=int, default=32)
+        parser.add_argument('--hidden_dim', type=int, default=32)
+        parser.add_argument('--output_dim', type=int, default=32)
+        parser.add_argument('--validate', action='store_true', default=False)
+        parser.add_argument('--test', action='store_true', default=False)
+        parser.add_argument('--warmup_iterations', type=int, default=60000)
+        parser.add_argument('--tot_iterations', type=int, default=1000000)
+        parser.add_argument('--peak_lr', type=float, default=2e-4)
+        parser.add_argument('--end_lr', type=float, default=1e-9)
+
+        if gnn_type == 'gcn':
+            GCNNet.add_model_specific_args(parent_parser)
+        elif gnn_type == 'kgnn':
+            KGNNNet.add_model_specific_args(parent_parser)
+        return parent_parser
+
+    def get_evaluations(self, results, numpy_y, numpy_prediction):
+        for metric in self.metrics:
+            if metric == 'accuracy':
+                accuracy = calculate_accuracy(numpy_y, numpy_prediction)
+                results['accuracy'] = accuracy
+                continue
+            if metric == 'RMSE':
+                rmse = mean_squared_error(numpy_y, numpy_prediction,
+                                          squared=False) # Setting
+                # squared=False returns RMSE
+                results['RMSE'] = rmse
+        return results
