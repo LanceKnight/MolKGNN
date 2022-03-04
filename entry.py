@@ -239,7 +239,7 @@ if __name__ == '__main__':
 
     task = Task.init(project_name=f"Tests/{gnn_type}",
                      task_name="D4DCHP-1k-barium",
-                     tags=["barium", "D4DCHP", "1k",
+                     tags=["3090", "D4DCHP", "20k",
                            ])
     # True this on to prevent logger sending data to the backend,
     # which takes time, takes backend storage and hence not good for debugging.
