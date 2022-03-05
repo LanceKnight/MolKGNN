@@ -296,21 +296,12 @@ class D4DCHPDataset(InMemoryDataset):
         split_dict['test'] = test_indices
 
         # Delete if statement if using the full CHIRAL1 dataset
-<<<<<<< HEAD
         #split_dict['train'] = [torch.tensor(x) for x in train_indices if x <
         #                       1000]
         #split_dict['valid'] = [torch.tensor(x) for x in val_indices if
         #                       x < 1000]
         #split_dict['test'] = [torch.tensor(x) for x in test_indices if
         #                      x < 1000]
-=======
-        split_dict['train'] = [torch.tensor(x) for x in train_indices if x <
-                               num_data]
-        split_dict['valid'] = [torch.tensor(x) for x in val_indices if
-                               x < num_data]
-        split_dict['test'] = [torch.tensor(x) for x in test_indices if
-                              x < num_data]
->>>>>>> 39748c93e03f1c62150de2dadfdbb5d65f6cd3ee
 
         return split_dict
 

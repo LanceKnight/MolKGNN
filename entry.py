@@ -13,7 +13,6 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 import os
 from clearml import Task
-from torchviz import make_dot
 
 def add_args(gnn_type):
     """
@@ -239,7 +238,7 @@ if __name__ == '__main__':
 
     task = Task.init(project_name=f"Tests/{gnn_type}",
                      task_name="D4DCHP-1k-barium",
-                     tags=["3090", "D4DCHP", "20k",
+                     tags=["3090", "D4DCHP", "200k"
                            ])
 
     logger = task.get_logger()
