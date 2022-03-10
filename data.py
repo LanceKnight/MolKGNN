@@ -35,7 +35,7 @@ def get_dataset(dataset_name='435034'):
     :param dataset_name:
     :return:
     """
-    if dataset_name in ['435008', '1798', '435034', '1834']:
+    if dataset_name in ['435008', '1798', '435034', '1843']:
         qsar_dataset = QSARDataset(root='../dataset/qsar',
                                    dataset=dataset_name,
                                    pre_transform=ToXAndPAndEdgeAttrForDeg(),
@@ -130,7 +130,7 @@ class DataLoaderModule(LightningDataModule):
         self.dataset_val = ...
 
     def setup(self, stage: str = None):
-        split_idx = self.dataset['dataset'].get_idx_split()
+        split_idx = self.dataset['dataset'].get_idx_split(seed=self.seed)
         # print(f'split_idx:{split_idx}')
 
         self.dataset_train = self.dataset['dataset'][split_idx["train"]]

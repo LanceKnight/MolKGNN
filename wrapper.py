@@ -7,6 +7,7 @@ from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.utils import degree
 from tqdm import tqdm
 import numpy as np
+import random
 
 pattern_dict = {'[NH-]': '[N-]'}
 add_atom_num = 5
@@ -327,7 +328,8 @@ class QSARDataset(InMemoryDataset):
                  pre_transform=None,
                  pre_filter=None,
                  dataset='435008',
-                 empty=False):
+                 empty=False,
+                 seed = 42):
 
         self.dataset = dataset
         self.root = root
@@ -373,7 +375,8 @@ class QSARDataset(InMemoryDataset):
         data_smiles_list = []
         data_list = []
 
-        if self.dataset not in ['435008', '1798', '435034', '1834']:
+        if self.dataset not in ['435008', '1798', '345034', '1843', '2258',
+                                '463087', '488997','2689', '485290']:
             # print(f'dataset:{self.dataset}')
             raise ValueError('Invalid dataset name')
 
@@ -436,9 +439,67 @@ class QSARDataset(InMemoryDataset):
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
-    def get_idx_split(self):
+    def get_idx_split(self, seed):
+        num_active = len(torch.nonzero(self.data.y))
+        # num_active = len(torch.nonzero(torch.tensor([data.y for data in
+        #                                              self.data])))
+        num_inactive = 4000#len(self.data.y) - num_active
+
+        active_idx = list(range(num_active))
+        inactive_idx = list(range(num_active, num_active+num_inactive))
+        # print(f'wrapper.py::first 10 of inactive_idx:{inactive_idx[0:10]}')
+        print(f'wrapper.py::split:num_active{len(active_idx)}, num_inactive:'
+              f'{len(inactive_idx)}')
+        random.seed(seed)
+        random.shuffle(active_idx)
+        random.shuffle(inactive_idx)
+
+        num_active_train = round(num_active * 0.8)
+        num_inactive_train = round(num_inactive * 0.8)
+        num_active_valid = round(num_active * 0.1)
+        num_inactive_valid = round(num_inactive * 0.1)
+        num_active_test = round(num_active * 0.1)
+        num_inactive_test = round(num_inactive * 0.1)
+        print(f'wrapper.py::num_active_train:{num_active_train} '
+              f'num_inactive_train:{num_inactive_train}')
+        print(f'wrapper.py::num_active_valid:{num_active_valid} '
+              f'num_inactive_valid:{num_inactive_valid}')
+        print(f'wrapper.py::num_active_test:{num_active_test} '
+              f'num_inactive_test:{num_inactive_test}')
+
         split_dict = {}
-        # # Total 362 actives. Split: train-290, 36, 36
+        split_dict['train'] = active_idx[:num_active_train]\
+                              + inactive_idx[:num_inactive_train]
+        split_dict['valid'] = active_idx[
+                              num_active_train:num_active_train
+                                               +num_active_valid] \
+                              + inactive_idx[
+                                num_inactive_train:num_inactive_train
+                                                   +num_inactive_valid]
+        split_dict['test'] = active_idx[
+                              num_active_train + num_active_valid
+                              : num_active_train
+                                + num_active_valid
+                                + num_active_test] \
+                              + inactive_idx[
+                              num_inactive_train + num_inactive_valid
+                              : num_inactive_train
+                                + num_inactive_valid
+                                + num_inactive_test]
+        for i in range(136,146):
+            print(f'wrapper.py::first 10 of train:{split_dict["train"][i]}')
+        # print(f'wrapper.py::train{len(split_dict["train"])}  valid:'
+        #       f'{len(split_dict["valid"])}  test:{len(split_dict["test"])}')
+
+        # split_dict['train'] = [torch.tensor(x) for x in
+        #                        active_idx[:num_active_train]] + [
+        #     torch.tensor(x) for x in inactive_idx[num_inactive_train]]  # 10K Training
+        # split_dict['valid'] = [torch.tensor(x) for x in active_idx[num_]] + [
+        #     torch.tensor(x) for x in range(20000, 29964)]  # 10K val
+        # split_dict['test'] = [torch.tensor(x) for x in range(326, 362)] + [
+        #     torch.tensor(x) for x in range(3000, 9066)]
+
+        # Total 362 actives. Split: train-290, 36, 36
         # split_dict['train'] = [torch.tensor(x) for x in range(0, 326)] + [
         #     torch.tensor(x) for x in range(1000, 10674)]  # 10K Training
         # split_dict['valid'] = [torch.tensor(x) for x in range(326, 362)] + [
@@ -448,12 +509,12 @@ class QSARDataset(InMemoryDataset):
 
         # Super small dataset for processing debugging.
         # Total 362 actives. Split: 290, 36, 36
-        split_dict['train'] = [torch.tensor(x) for x in range(0, 326)] + [
-            torch.tensor(x) for x in range(400, 1074)]  # 1K Training
-        split_dict['valid'] = [torch.tensor(x) for x in range(326, 362)] + [
-            torch.tensor(x) for x in range(1100, 2064)]  # 1K val
-        split_dict['test'] = [torch.tensor(x) for x in range(326, 362)] + [
-            torch.tensor(x) for x in range(3000, 4000)]
+        # split_dict['train'] = [torch.tensor(x) for x in range(0, 326)] + [
+        #     torch.tensor(x) for x in range(400, 1074)]  # 1K Training
+        # split_dict['valid'] = [torch.tensor(x) for x in range(326, 362)] + [
+        #     torch.tensor(x) for x in range(1100, 2064)]  # 1K val
+        # split_dict['test'] = [torch.tensor(x) for x in range(326, 362)] + [
+        #     torch.tensor(x) for x in range(3000, 4000)]
 
         return split_dict
 
