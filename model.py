@@ -183,10 +183,7 @@ class GNNModel(pl.LightningModule):
         results['loss'] = loss
         numpy_prediction = pred_y.detach().cpu().numpy()
         numpy_y = true_y.cpu().numpy()
-        # logAUC = calculate_logAUC(numpy_y, numpy_prediction)
-        # results['logAUC'] = logAUC
-        # ppv = calculate_ppv(numpy_y, numpy_prediction)
-        # results['ppv'] = ppv
+
         results = self.get_evaluations(results, numpy_y, numpy_prediction)
         return results
         # return {
@@ -335,4 +332,10 @@ class GNNModel(pl.LightningModule):
                                           squared=False) # Setting
                 # squared=False returns RMSE
                 results['RMSE'] = rmse
+            if metric == 'logAUC':
+                logAUC = calculate_logAUC(numpy_y, numpy_prediction)
+                results['logAUC'] = logAUC
+            if metric == 'ppv':
+                ppv = calculate_ppv(numpy_y, numpy_prediction)
+                results['ppv'] = ppv
         return results

@@ -13,7 +13,6 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 import os
 from clearml import Task
-from torchviz import make_dot
 
 def add_args(gnn_type):
     """
@@ -85,7 +84,7 @@ def prepare_actual_model(args):
     return model
 
 
-def actual_training(model, data_module, args):
+def actual_training(model, data_module, use_clearml, args):
     # Add checkpoint
     actual_training_checkpoint_dir = args.default_root_dir
     actual_training_checkpoint_callback = ModelCheckpoint(
@@ -104,77 +103,79 @@ def actual_training(model, data_module, args):
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks.append(actual_training_checkpoint_callback)
 
+    if use_clearml:
+        # Loss monitors
+        trainer.callbacks.append(
+            LossMonitor(stage='train', logger=logger, logging_interval='step'))
+        trainer.callbacks.append(
+            LossMonitor(stage='train', logger=logger,
+                        logging_interval='epoch'))
+        trainer.callbacks.append(
+            LossMonitor(stage='valid', logger=logger, logging_interval='step'))
+        trainer.callbacks.append(
+            LossMonitor(stage='valid', logger=logger,
+                        logging_interval='epoch'))
+        trainer.callbacks.append(
+            LossNoDropoutMonitor(stage='valid', logger=logger,
+                                 logging_interval='epoch'))
 
-    # Loss monitors
-    trainer.callbacks.append(
-        LossMonitor(stage='train', logger=logger, logging_interval='step'))
-    trainer.callbacks.append(
-        LossMonitor(stage='train', logger=logger,
+        # Learning rate monitors
+        # trainer.callbacks.append(LearningRateMonitor(logging_interval='step'))
+        trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
+
+        # Other metrics monitors
+        metrics = get_dataset(data_module.dataset_name)['metrics']
+        for metric in metrics:
+            if metric == 'accucuracy':
+                # Accuracy monitors
+                trainer.callbacks.append(
+                    AccuracyMonitor(stage='train', logger=logger,
+                                    logging_interval='epoch'))
+                trainer.callbacks.append(
+                    AccuracyMonitor(stage='valid', logger=logger,
+                                    logging_interval='epoch'))
+                trainer.callbacks.append(
+                    AccuracyNoDropoutMonitor(stage='valid', logger=logger,
+                                             logging_interval='epoch'))
+                continue
+
+            if metric == 'RMSE':
+                # Accuracy monitors
+                trainer.callbacks.append(
+                    RMSEMonitor(stage='train', logger=logger,
+                                    logging_interval='epoch'))
+                trainer.callbacks.append(
+                    RMSEMonitor(stage='valid', logger=logger,
+                                    logging_interval='epoch'))
+                trainer.callbacks.append(
+                    RMSENoDropoutMonitor(stage='valid', logger=logger,
+                                             logging_interval='epoch'))
+                continue
+
+            if metric == 'logAUC':
+                # LogAUC monitors
+                trainer.callbacks.append(
+                    LogAUCMonitor(stage='train', logger=logger,
                     logging_interval='epoch'))
-    trainer.callbacks.append(
-        LossMonitor(stage='valid', logger=logger, logging_interval='step'))
-    trainer.callbacks.append(
-        LossMonitor(stage='valid', logger=logger,
+                trainer.callbacks.append(
+                    LogAUCMonitor(stage='valid', logger=logger,
                     logging_interval='epoch'))
-    trainer.callbacks.append(
-        LossNoDropoutMonitor(stage='valid', logger=logger,
-                             logging_interval='epoch'))
-
-    # Learning rate monitors
-    # trainer.callbacks.append(LearningRateMonitor(logging_interval='step'))
-    trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
-
-    # Other metrics monitors
-    metrics = get_dataset(data_module.dataset_name)['metrics']
-    for metric in metrics:
-        if metric == 'accucuracy':
-            # Accuracy monitors
-            trainer.callbacks.append(
-                AccuracyMonitor(stage='train', logger=logger,
-                                logging_interval='epoch'))
-            trainer.callbacks.append(
-                AccuracyMonitor(stage='valid', logger=logger,
-                                logging_interval='epoch'))
-            trainer.callbacks.append(
-                AccuracyNoDropoutMonitor(stage='valid', logger=logger,
-                                         logging_interval='epoch'))
-            continue
-        if metric == 'RMSE':
-            # Accuracy monitors
-            trainer.callbacks.append(
-                RMSEMonitor(stage='train', logger=logger,
-                                logging_interval='epoch'))
-            trainer.callbacks.append(
-                RMSEMonitor(stage='valid', logger=logger,
-                                logging_interval='epoch'))
-            trainer.callbacks.append(
-                RMSENoDropoutMonitor(stage='valid', logger=logger,
-                                         logging_interval='epoch'))
-            continue
+                trainer.callbacks.append(
+                    LogAUCNoDropoutMonitor(stage='valid', logger=logger,
+                                           logging_interval='epoch'))
+                continue
 
 
-
-
-
-
-    #
-    # # LogAUC monitors
-    # trainer.callbacks.append(
-    #     LogAUCMonitor(stage='train', logger=logger, logging_interval='epoch'))
-    # trainer.callbacks.append(
-    #     LogAUCMonitor(stage='valid', logger=logger, logging_interval='epoch'))
-    # trainer.callbacks.append(
-    #     LogAUCNoDropoutMonitor(stage='valid', logger=logger,
-    #                            logging_interval='epoch'))
-    #
-    # # PPV monitors
-    # trainer.callbacks.append(
-    #     PPVMonitor(stage='train', logger=logger, logging_interval='epoch'))
-    # trainer.callbacks.append(
-    #     PPVMonitor(stage='valid', logger=logger, logging_interval='epoch'))
-    # trainer.callbacks.append(
-    #     PPVNoDropoutMonitor(stage='valid', logger=logger,
-    #                         logging_interval='epoch'))
+            if metric == 'ppv':
+                # PPV monitors
+                trainer.callbacks.append(
+                    PPVMonitor(stage='train', logger=logger, logging_interval='epoch'))
+                trainer.callbacks.append(
+                    PPVMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+                trainer.callbacks.append(
+                    PPVNoDropoutMonitor(stage='valid', logger=logger,
+                                        logging_interval='epoch'))
+                continue
 
 
 
@@ -192,7 +193,7 @@ def actual_training(model, data_module, args):
         trainer.fit(model=model, datamodule=data_module)
 
 
-def main(gnn_type):
+def main(gnn_type, use_clearml):
     """
     the main process that defines model and data
     also trains and evaluate the model
@@ -223,7 +224,7 @@ def main(gnn_type):
     model = prepare_actual_model(args)
 
     # Start actual training
-    actual_training(model, actual_training_data_module, args)
+    actual_training(model, actual_training_data_module, use_clearml, args)
 
     # Save relevant data for analyses
     model.save_atom_encoder(dir = 'utils/atom_encoder/',
@@ -237,12 +238,14 @@ if __name__ == '__main__':
     gnn_type = 'kgnn'  # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
 
-    task = Task.init(project_name=f"Tests/{gnn_type}",
-                     task_name="D4DCHP-1k-barium",
-                     tags=["barium", "D4DCHP", "1k","debug"
-                           ])
+    use_clearml = True
+    if use_clearml:
+        task = Task.init(project_name=f"Tests/{gnn_type}",
+                         task_name="1834-1k-barium",
+                         tags=["barium", "1834", "1k","debug"
+                               ])
 
-    logger = task.get_logger()
-    main(gnn_type)
+        logger = task.get_logger()
+    main(gnn_type, use_clearml)
 
 

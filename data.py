@@ -35,7 +35,7 @@ def get_dataset(dataset_name='435034'):
     :param dataset_name:
     :return:
     """
-    if dataset_name in ['435008', '1798', '435034']:
+    if dataset_name in ['435008', '1798', '435034', '1834']:
         qsar_dataset = QSARDataset(root='../dataset/qsar',
                                    dataset=dataset_name,
                                    pre_transform=ToXAndPAndEdgeAttrForDeg(),
@@ -44,7 +44,11 @@ def get_dataset(dataset_name='435034'):
             'num_class': 1,
             'dataset': qsar_dataset,
             'num_samples': len(qsar_dataset),
+            'metrics': ['ppv', 'logAUC'],
+            'loss_func': BCEWithLogitsLoss()
         }
+
+
     elif dataset_name in ['CHIRAL1', 'DIFF5', 'D4DCHP', "dummy"]:
         if dataset_name == 'CHIRAL1':
             data_file =  '../dataset/d4_docking/d4_docking_rs.csv'
@@ -85,8 +89,8 @@ def get_dataset(dataset_name='435034'):
         }
 
     else:
-        print(f'dataset_name:{dataset_name}')
-        raise NotImplementedError(f'data.py::get_dataset: dataset_name is '
+        raise NotImplementedError(f'data.py::get_dataset: dataset_name '
+                                  f'{dataset_name} is '
                                   f'not found')
 
     print(f'dataset {dataset_name} loaded!')
@@ -185,18 +189,53 @@ class DataLoaderModule(LightningDataModule):
         return train_loader
 
     def val_dataloader(self):
-        print(f'dataset_train:{self.dataset_train[0]}')
+        # Validation laader
+        print(f'dataset_valid:{self.dataset_val[0]}')
+        num_valid_active = len(torch.nonzero(
+            torch.tensor([data.y for data in self.dataset_val])))
+        num_valid_inactive = len(self.dataset_val) - num_valid_active
+
+        valid_sampler_weight = torch.tensor([(1. / num_valid_inactive)
+                                             if data.y == 0
+                                             else (1. / num_valid_active)
+                                             for data in
+                                             self.dataset_val])
+        generator = torch.Generator()
+        generator.manual_seed(self.seed)
+        valid_sampler = WeightedRandomSampler(weights=valid_sampler_weight,
+                                              num_samples=len(
+                                                  valid_sampler_weight),
+                                              generator=generator)
+
         val_loader = DataLoader(
             self.dataset_val,
             batch_size=self.batch_size,
-            shuffle=False,
+            sampler=valid_sampler,
             num_workers=self.num_workers,
         )
+
+        # Train loader in evaluation mode
         print(f'dataset_train:{self.dataset_train[0]}')
+        num_train_active = len(torch.nonzero(
+            torch.tensor([data.y for data in self.dataset_train])))
+        num_train_inactive = len(self.dataset_train) - num_train_active
+
+        train_sampler_weight = torch.tensor([(1. / num_train_inactive)
+                                             if data.y == 0
+                                             else (1. / num_train_active)
+                                             for data in
+                                             self.dataset_train])
+        generator = torch.Generator()
+        generator.manual_seed(self.seed)
+        train_sampler = WeightedRandomSampler(weights=train_sampler_weight,
+                                              num_samples=len(
+                                                  train_sampler_weight),
+                                              generator=generator)
+
         train_loader = DataLoader(
             self.dataset_train,
             batch_size=self.batch_size,
-            shuffle=False,
+            sampler=train_sampler,
             num_workers=self.num_workers,
         )
         return val_loader, train_loader

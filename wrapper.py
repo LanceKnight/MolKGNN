@@ -105,8 +105,11 @@ def smiles2graph(D, smiles):
     if D == 2:
         Chem.rdDepictor.Compute2DCoords(mol)
     if D == 3:
-        AllChem.EmbedMolecule(mol)
-        AllChem.UFFOptimizeMolecule(mol)
+        AllChem.EmbedMolecule(mol, useRandomCoords=True)
+        try:
+            AllChem.UFFOptimizeMolecule(mol)
+        except Exception as e:
+            print(f'smiles:{smiles} error message:{e}')
 
     conf = mol.GetConformer()
 
@@ -370,7 +373,7 @@ class QSARDataset(InMemoryDataset):
         data_smiles_list = []
         data_list = []
 
-        if self.dataset not in ['435008', '1798', '435034']:
+        if self.dataset not in ['435008', '1798', '435034', '1834']:
             # print(f'dataset:{self.dataset}')
             raise ValueError('Invalid dataset name')
 
