@@ -238,11 +238,11 @@ if __name__ == '__main__':
     gnn_type = 'kgnn'  # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
 
-    use_clearml = False
+    use_clearml = True
     if use_clearml:
         task = Task.init(project_name=f"Tests/{gnn_type}",
-                         task_name="1834-1k-barium",
-                         tags=["barium", "1834", "1k","debug"
+                         task_name="1798-full-barium",
+                         tags=["barium", "1798", "full","debug"
                                ])
 
         logger = task.get_logger()

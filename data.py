@@ -36,7 +36,7 @@ def get_dataset(dataset_name='435034'):
     :return:
     """
     if dataset_name in ['435008', '1798', '435034', '1843']:
-        qsar_dataset = QSARDataset(root='../dataset/qsar',
+        qsar_dataset = QSARDataset(root='../dataset/qsar/clean_sdf',
                                    dataset=dataset_name,
                                    pre_transform=ToXAndPAndEdgeAttrForDeg(),
                                    )
@@ -114,18 +114,15 @@ class DataLoaderModule(LightningDataModule):
             num_workers,
             batch_size,
             seed,
-            enable_oversampling_with_replacement=False,
-            *args,
-            **kwargs,
+            enable_oversampling_with_replacement,
     ):
-        super().__init__(*args, **kwargs)
+        super().__init__()
         self.dataset_name = dataset_name
         self.dataset = get_dataset(self.dataset_name)
         self.num_workers = num_workers
         self.batch_size = batch_size
         self.seed = seed
-        self.enable_oversampling_with_replacement = \
-            enable_oversampling_with_replacement
+        self.enable_oversampling_with_replacement = enable_oversampling_with_replacement
         self.dataset_train = ...
         self.dataset_val = ...
 
@@ -159,6 +156,7 @@ class DataLoaderModule(LightningDataModule):
                                                  else (1. / num_train_active)
                                                  for data in
                                                  self.dataset_train])
+            print(f'data.py::train_sampler weight:{train_sampler_weight}')
 
             generator = torch.Generator()
             generator.manual_seed(self.seed)
@@ -264,6 +262,7 @@ class DataLoaderModule(LightningDataModule):
         parser.add_argument('--dataset_name', type=str, default="435034")
         parser.add_argument('--num_workers', type=int, default=1)
         parser.add_argument('--batch_size', type=int, default=32)
+        parser.add_argument('--enable_oversampling_with_replacement', action='store_true', default=False)
         return parent_parser
 #
 # class AugmentedDataModule(LightningDataModule):

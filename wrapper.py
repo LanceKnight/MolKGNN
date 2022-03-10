@@ -2,6 +2,7 @@ import os
 import pandas as pd
 from rdkit import Chem
 from rdkit.Chem import AllChem
+from rdkit import RDLogger
 import torch
 from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.utils import degree
@@ -9,7 +10,7 @@ from tqdm import tqdm
 import numpy as np
 import random
 
-pattern_dict = {'[NH-]': '[N-]'}
+pattern_dict = {'[NH-]': '[N-]', '[OH2+]':'[O]'}
 add_atom_num = 5
 num_reference = 10000  # number of reference molecules for augmentation
 num_data = 1000 # number of data used for debugging. Not used in full dataset
@@ -73,46 +74,12 @@ def get_atom_rep(atomic_num):
 
     return result
 
-
-def smiles2graph(D, smiles):
-    if D == None:
-        raise Exception(
-            'smiles2grpah() needs to input D to specifiy 2D or 3D graph '
-            'generation.')
-    # print(f'smiles:{smiles}')
-    # Default RDKit behavior is to reject hypervalent P, so you need to set
-    # sanitize=False. Search keyword = 'Explicit Valence Error - Partial
-    # Sanitization' on https://www.rdkit.org/docs/Cookbook.html for more info
-    smiles = smiles.replace(r'/=', '=')
-    smiles = smiles.replace(r'\=', '=')
+def mol2graph(mol, D=3):
     try:
-        mol = Chem.MolFromSmiles(smiles, sanitize=True)
+        conf = mol.GetConformer()
     except Exception as e:
-        print(f'Cannot generate mol, error:{e}, smiles:{smiles}')
-
-    if mol is None:
-        smiles = smiles_cleaner(smiles)
-        try:
-            mol = Chem.MolFromSmiles(smiles, sanitize=True)
-        except Exception as e:
-            print(f'Generated mol is None, error:{e}, smiles:{smiles}')
-            return None
-    try:
-        # mol.UpdatePropertyCache(strict=False)
-        mol = Chem.AddHs(mol)
-    except Exception as e:
-        print(f'{e}, smiles:{smiles}')
-
-    if D == 2:
-        Chem.rdDepictor.Compute2DCoords(mol)
-    if D == 3:
-        AllChem.EmbedMolecule(mol, useRandomCoords=True)
-        try:
-            AllChem.UFFOptimizeMolecule(mol)
-        except Exception as e:
-            print(f'smiles:{smiles} error message:{e}')
-
-    conf = mol.GetConformer()
+        smiles = AllChem.MolToSmiles(mol)
+        print(f'smiles:{smiles} error message:{e}')
 
     atom_pos = []
     atom_attr = []
@@ -129,7 +96,8 @@ def smiles2graph(D, smiles):
                 [conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y])
         elif D == 3:
             atom_pos.append([conf.GetAtomPosition(
-                i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z])
+                i).x, conf.GetAtomPosition(i).y,
+                             conf.GetAtomPosition(i).z])
         atom_attr.append(h)
 
     # get bond attributes
@@ -162,7 +130,7 @@ def smiles2graph(D, smiles):
     p = torch.tensor(atom_pos, dtype=torch.double)
     edge_index = torch.tensor(edge_list).t().contiguous()
     edge_attr = torch.tensor(edge_attr_list, dtype=torch.double)
-    atomic_num = torch.tensor(atomic_num_list, dtype= torch.long)
+    atomic_num = torch.tensor(atomic_num_list, dtype=torch.long)
 
     # graphormer-specific features
     # adj = torch.zeros([N, N], dtype=torch.bool)
@@ -175,11 +143,104 @@ def smiles2graph(D, smiles):
     #                ] = convert_to_single_emb(edge_attr) + 1
 
     data = Data(x=x, p=p, edge_index=edge_index,
-                edge_attr=edge_attr, atomic_num = atomic_num)  # , adj=adj,
+                edge_attr=edge_attr, atomic_num=atomic_num)  # , adj=adj,
     # attn_bias=attn_bias,
     # attn_edge_type=attn_edge_type)
     # data = preprocess_item(data)
     return data
+
+def process_sdf(dataset, root):
+    RDLogger.DisableLog('rdApp.*')
+    data_smiles_list = []
+    data_list = []
+    for file_name, label in [(f'{dataset}_actives_clean.sdf', 1),
+                        (f'{dataset}_inactives_clean.sdf', 0)]:
+        sdf_path = os.path.join(root, 'raw', file_name)
+        sdf_supplier = Chem.SDMolSupplier(sdf_path)
+        for i, mol in tqdm(enumerate(sdf_supplier)):
+            data = mol2graph(mol)
+            data.idx = i
+            data.y = torch.tensor([label], dtype=torch.int)
+            smiles = AllChem.MolToSmiles(mol)
+            data.smiles = smiles
+
+            data_list.append(data)
+            data_smiles_list.append(smiles)
+    return data_list, data_smiles_list
+
+def smiles2graph(D, smiles):
+    if D == None:
+        raise Exception(
+            'smiles2grpah() needs to input D to specifiy 2D or 3D graph '
+            'generation.')
+    # print(f'smiles:{smiles}')
+    # Default RDKit behavior is to reject hypervalent P, so you need to set
+    # sanitize=False. Search keyword = 'Explicit Valence Error - Partial
+    # Sanitization' on https://www.rdkit.org/docs/Cookbook.html for more
+    # info
+    smiles = smiles.replace(r'/=', '=')
+    smiles = smiles.replace(r'\=', '=')
+    try:
+        mol = Chem.MolFromSmiles(smiles, sanitize=True)
+    except Exception as e:
+        print(f'Cannot generate mol, error:{e}, smiles:{smiles}')
+
+    if mol is None:
+        smiles = smiles_cleaner(smiles)
+        try:
+            mol = Chem.MolFromSmiles(smiles, sanitize=True)
+        except Exception as e:
+            print(f'Generated mol is None, error:{e}, smiles:{smiles}')
+            return None
+        if mol is None:
+            print(f'Generated mol is still None after cleaning, smiles'
+                  f':{smiles}')
+    try:
+        # mol.UpdatePropertyCache(strict=False)
+        mol = Chem.AddHs(mol)
+    except Exception as e:
+        print(f'error in adding Hs{e}, smiles:{smiles}')
+
+    if D == 2:
+        Chem.rdDepictor.Compute2DCoords(mol)
+    if D == 3:
+        AllChem.EmbedMolecule(mol, useRandomCoords=True)
+        try:
+            AllChem.UFFOptimizeMolecule(mol)
+        except Exception as e:
+            print(f'smiles:{smiles} error message:{e}')
+
+    data = mol2graph(mol)
+    return data
+
+
+def process_smiles(dataset, root, D):
+    data_smiles_list = []
+    data_list = []
+    for file, label in [(f'{dataset}_actives.smi', 1),
+                        (f'{dataset}_inactives.smi', 0)]:
+        smiles_path = os.path.join(root, 'raw', file)
+        smiles_list = pd.read_csv(
+            smiles_path, sep='\t', header=None)[0]
+
+        # Only get first N data, just for debugging
+        smiles_list = smiles_list
+
+        for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
+            # for i in tqdm(range(1)):
+            smi = smiles_list[i]
+
+            data = smiles2graph(D, smi)
+            if data is None:
+                continue
+
+            data.idx = i
+            data.y = torch.tensor([label], dtype=torch.int)
+            data.smiles = smi
+
+            data_list.append(data)
+            data_smiles_list.append(smiles_list[i])
+    return data_list, data_smiles_list
 
 
 def convert_to_single_emb(x, offset=512):
@@ -271,8 +332,11 @@ class D4DCHPDataset(InMemoryDataset):
             data_list = [data for data in data_list if self.pre_filter(data)]
 
         if self.pre_transform is not None:
+            new_data_list = []
             print('doing pre_transforming...')
-            data_list = [self.pre_transform(data) for data in data_list]
+            for data in tqdm(data_list):
+                new_data_list.append(self.pre_transform(data))
+            data_list = new_data_list
 
         # write data_smiles_list in processed paths
         data_smiles_series = pd.Series(data_smiles_list)
@@ -315,7 +379,7 @@ class QSARDataset(InMemoryDataset):
 
     There are nine subsets in this dataset, identified by their summary assay
     IDs (SAIDs):
-    435008, 1798, 345034, 1843, 2258, 463087, 488997,2689, 485290
+    435008, 1798, 435034, 1843, 2258, 463087, 488997,2689, 485290
     The statistics of each subset can be found in the original publication
     """
 
@@ -372,60 +436,22 @@ class QSARDataset(InMemoryDataset):
     #     return self.get(index)
 
     def process(self):
-        data_smiles_list = []
-        data_list = []
-
-        if self.dataset not in ['435008', '1798', '345034', '1843', '2258',
+        if self.dataset not in ['435008', '1798', '435034', '1843', '2258',
                                 '463087', '488997','2689', '485290']:
             # print(f'dataset:{self.dataset}')
             raise ValueError('Invalid dataset name')
 
-        for file, label in [(f'{self.dataset}_actives.smi', 1),
-                            (f'{self.dataset}_inactives.smi', 0)]:
-            smiles_path = os.path.join(self.root, 'raw', file)
-            smiles_list = pd.read_csv(
-                smiles_path, sep='\t', header=None)[0]
-
-            # Only get first N data, just for debugging
-            smiles_list = smiles_list[0:4000]
-
-            for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
-                # for i in tqdm(range(1)):
-                smi = smiles_list[i]
-
-                data = smiles2graph(self.D, smi)
-                if data is None:
-                    continue
-
-                # # If use ogb_smiles2graph()
-                # try:
-                #     graph = ogb_smiles2graph(smi)
-                # except:
-                #     print('cannot convert smiles to graph')
-                #     pass
-
-                # data = Data()
-                # data.__num_nodes__ = int(graph['num_nodes'])
-                # data.edge_index = torch.from_numpy(graph['edge_index']).to(
-                #     torch.int64)
-                # data.edge_attr = torch.from_numpy(graph['edge_feat']).to(
-                #     torch.int64)
-                # data.x = torch.from_numpy(graph['node_feat']).to(
-                # torch.float32)
-
-                data.idx = i
-                data.y = torch.tensor([label], dtype=torch.int)
-                data.smiles = smi
-
-                data_list.append(data)
-                data_smiles_list.append(smiles_list[i])
+        data_list, data_smiles_list = process_sdf(self.dataset, self.root)
 
         if self.pre_filter is not None:
             data_list = [data for data in data_list if self.pre_filter(data)]
 
         if self.pre_transform is not None:
             print('doing pre_transforming...')
-            data_list = [self.pre_transform(data) for data in data_list]
+            new_data_list = []
+            for data in tqdm(data_list):
+                new_data_list.append(self.pre_transform(data))
+            data_list = new_data_list
 
         # write data_smiles_list in processed paths
         data_smiles_series = pd.Series(data_smiles_list)
@@ -443,7 +469,7 @@ class QSARDataset(InMemoryDataset):
         num_active = len(torch.nonzero(self.data.y))
         # num_active = len(torch.nonzero(torch.tensor([data.y for data in
         #                                              self.data])))
-        num_inactive = 4000#len(self.data.y) - num_active
+        num_inactive = len(self.data.y) - num_active
 
         active_idx = list(range(num_active))
         inactive_idx = list(range(num_active, num_active+num_inactive))
@@ -683,5 +709,7 @@ class ToXAndPAndEdgeAttrForDeg(object):
 
 if __name__ == "__main__":
     pass
-    # dataset = MyQSARDataset(root='../../dataset/connect_aug/',
-    #                            generate_num=5)
+    qsar_dataset = QSARDataset(root='../dataset/qsar',
+                               dataset='485290',
+                               pre_transform=ToXAndPAndEdgeAttrForDeg(),
+                               )
