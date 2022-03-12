@@ -34,6 +34,9 @@ def add_args(gnn_type):
     # Pretraining
 
     args = parser.parse_args()
+    args.tot_iterations = round(len(get_dataset(
+        args.dataset_name)['dataset']) * 0.8 / args.batch_size) * \
+                          args.max_epochs + 1
     args.max_steps = args.tot_iterations + 1
     print(args)
     return args
@@ -211,7 +214,8 @@ def main(gnn_type, use_clearml):
     # Prepare data
     enable_pretraining = args.enable_pretraining
     print(f'enable_pretraining:{enable_pretraining}')
-    data_modules = prepare_data(args, enable_pretraining)
+    data_modules = prepare_data(args, enable_pretraining) # A list of
+    # data_module to accommodate different pretraining data
     actual_training_data_module = data_modules[0]
 
     # Pretrain the model if pretraining is enabled
@@ -238,7 +242,7 @@ if __name__ == '__main__':
     gnn_type = 'kgnn'  # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
 
-    use_clearml = True
+    use_clearml = False
     if use_clearml:
         task = Task.init(project_name=f"Tests/{gnn_type}",
                          task_name="1798-full-barium",
