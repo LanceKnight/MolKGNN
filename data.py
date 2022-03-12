@@ -35,7 +35,8 @@ def get_dataset(dataset_name='435034'):
     :param dataset_name:
     :return:
     """
-    if dataset_name in ['435008', '1798', '435034', '1843']:
+    if dataset_name in ['435008', '1798', '435034', '1843', '2258',
+                                '463087', '488997','2689', '485290']:
         qsar_dataset = QSARDataset(root='../dataset/qsar/clean_sdf',
                                    dataset=dataset_name,
                                    pre_transform=ToXAndPAndEdgeAttrForDeg(),
