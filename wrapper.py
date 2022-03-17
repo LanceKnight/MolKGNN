@@ -150,11 +150,11 @@ def mol2graph(mol, D=3):
     return data
 
 def process_sdf(dataset, root):
-    RDLogger.DisableLog('rdApp.*')
+    # RDLogger.DisableLog('rdApp.*')
     data_smiles_list = []
     data_list = []
-    for file_name, label in [(f'{dataset}_actives_clean.sdf', 1),
-                        (f'{dataset}_inactives_clean.sdf', 0)]:
+    for file_name, label in [(f'{dataset}_actives_new.sdf', 1),
+                        (f'{dataset}_inactives_new.sdf', 0)]:
         sdf_path = os.path.join(root, 'raw', file_name)
         sdf_supplier = Chem.SDMolSupplier(sdf_path)
         for i, mol in tqdm(enumerate(sdf_supplier)):
