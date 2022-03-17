@@ -141,7 +141,7 @@ class GNNModel(pl.LightningModule):
         # ppv = calculate_ppv(numpy_y, numpy_prediction)
         # results['ppv'] = ppv
         results = self.get_evaluations(results, numpy_y, numpy_prediction)
-        self.log("performance by step", results, on_step=True,
+        self.log("train metrics by step", results, on_step=True,
                  prog_bar=True, logger=True)
         return results
 
@@ -163,7 +163,7 @@ class GNNModel(pl.LightningModule):
             train_epoch_outputs[key] = mean_output
 
         self.train_epoch_outputs = train_epoch_outputs
-        self.log("performance by epoch", train_epoch_outputs, on_epoch=True,
+        self.log("train metrics by epoch", train_epoch_outputs, on_epoch=True,
                 prog_bar=True, logger=True)
 
     def validation_step(self, batch_data, batch_idx, dataloader_idx):
@@ -236,7 +236,7 @@ class GNNModel(pl.LightningModule):
                 for key in results.keys():
                     new_key = key+"_no_dropout"
                     self.valid_epoch_outputs[new_key] = results[key]
-        self.log("valid performance by epoch", self.valid_epoch_outputs,
+        self.log("valid metrics by epoch", self.valid_epoch_outputs,
                  on_epoch=True, prog_bar=True, logger=True)
             # for key in outputs_each_dataloader[0].keys():
             #     mean_output = sum(output[key] for output in
@@ -362,7 +362,7 @@ class GNNModel(pl.LightningModule):
             if metric == 'ppv':
                 ppv = calculate_ppv(numpy_y, numpy_prediction)
                 results['ppv'] = ppv
-            if metric == 'f1 score':
+            if metric == 'f1_score':
                 f1_sc = calculate_f1_score(numpy_y, numpy_prediction)
-                results['f1 score'] = f1_sc
+                results['f1_score'] = f1_sc
         return results
