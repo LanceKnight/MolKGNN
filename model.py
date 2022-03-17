@@ -3,7 +3,8 @@ import numpy as np
 from data import get_dataset
 from models.GCNNet.GCNNet import GCNNet
 from models.KGNN.KGNNNet import KGNNNet
-from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy
+from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy, \
+    calculate_f1_score
 from lr import PolynomialDecayLR
 # Public libraries
 import os
@@ -361,4 +362,7 @@ class GNNModel(pl.LightningModule):
             if metric == 'ppv':
                 ppv = calculate_ppv(numpy_y, numpy_prediction)
                 results['ppv'] = ppv
+            if metric == 'f1 score':
+                f1_sc = calculate_f1_score(numpy_y, numpy_prediction)
+                results['f1 score'] = f1_sc
         return results

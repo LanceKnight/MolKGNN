@@ -1,7 +1,7 @@
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix, auc, roc_curve
+from sklearn.metrics import confusion_matrix, auc, roc_curve, f1_score
 
 
 def sigmoid(x):
@@ -44,6 +44,7 @@ def calculate_logAUC(true_y, predicted_score, FPR_range=(0.001, 0.1)):
     :return: a numpy array of logAUC of size [1,1]
     """
 
+    np.seterr(divide='ignore')
     # FPR range validity check
     if FPR_range == None:
         raise Exception('FPR range cannot be None')
@@ -99,7 +100,7 @@ def calculate_ppv(true_y, predicted_score):
 
     tn, fp, fn, tp = confusion_matrix(
         true_y, predicted_y, labels=[0, 1]).ravel()
-    print(f'\ntn:{tn}, fp:{fp}, fn:{fn}, tp:{tp}, tp+fp:{tp + fp}')
+    # print(f'\ntn:{tn}, fp:{fp}, fn:{fn}, tp:{tp}, tp+fp:{tp + fp}')
     if (tp + fp) != 0:
         ppv = (tp / (tp + fp))
     else:
@@ -122,3 +123,9 @@ def calculate_accuracy(true_y, predicted_score):
         # print(f'\ntn:{tn}, fp:{fp}, fn:{fn}, tp:{tp}, all:'
         #       f'{tp + fp + tn + fn}, accuracy:NAN')
     return accuracy
+
+def calculate_f1_score(true_y, predicted_score):
+    predicted_prob = sigmoid(predicted_score) # Convert to range [0,1]
+    predicted_y = np.where(predicted_prob > 0.5, 1, 0) # Convert to binary
+    f1_sc = f1_score(true_y, predicted_y)
+    return f1_sc
