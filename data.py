@@ -45,7 +45,7 @@ def get_dataset(dataset_name='435034'):
             'num_class': 1,
             'dataset': qsar_dataset,
             'num_samples': len(qsar_dataset),
-            'metrics': ['ppv', 'logAUC'],
+            'metrics': ['ppv', 'logAUC', 'f1_score'],
             'loss_func': BCEWithLogitsLoss()
         }
 
@@ -68,7 +68,7 @@ def get_dataset(dataset_name='435034'):
             label_column_name = 'labels'
             index_file = '../dataset/d4_docking/dummy/split.npy'
             metrics = ['accuracy']
-            loss_func = BCEWithLogitsLoss
+            loss_func = BCEWithLogitsLoss()
 
 
         d4_dchp_dataset = D4DCHPDataset(
@@ -209,7 +209,8 @@ class DataLoaderModule(LightningDataModule):
         val_loader = DataLoader(
             self.dataset_val,
             batch_size=self.batch_size,
-            sampler=valid_sampler,
+            # sampler=valid_sampler,
+            shuffle=False,
             num_workers=self.num_workers,
         )
 
@@ -234,7 +235,8 @@ class DataLoaderModule(LightningDataModule):
         train_loader = DataLoader(
             self.dataset_train,
             batch_size=self.batch_size,
-            sampler=train_sampler,
+            # sampler=train_sampler,
+            shuffle=False,
             num_workers=self.num_workers,
         )
         return val_loader, train_loader

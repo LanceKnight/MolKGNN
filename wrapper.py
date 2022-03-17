@@ -350,7 +350,7 @@ class D4DCHPDataset(InMemoryDataset):
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
-    def get_idx_split(self):
+    def get_idx_split(self, seed):
         indices = np.load(self.idx_file, allow_pickle=True)
         train_indices = indices[0]
         val_indices = indices[1]

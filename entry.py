@@ -245,8 +245,8 @@ if __name__ == '__main__':
     use_clearml = False
     if use_clearml:
         task = Task.init(project_name=f"Tests/{gnn_type}",
-                         task_name="1798-full-barium",
-                         tags=["barium", "1798", "full","debug"
+                         task_name="435034-full-barium",
+                         tags=["barium", "435034", "full","debug"
                                ])
 
         logger = task.get_logger()

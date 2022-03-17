@@ -1,3 +1,5 @@
+import numpy as np
+
 from data import get_dataset
 from models.GCNNet.GCNNet import GCNNet
 from models.KGNN.KGNNNet import KGNNNet
@@ -131,14 +133,15 @@ class GNNModel(pl.LightningModule):
         results['loss'] = loss
         numpy_prediction = pred_y.detach().cpu().numpy()
         numpy_y = true_y.cpu().numpy()
-        print(f'prediction:\n{numpy_prediction}')
-        print(f'true:\n{numpy_y}')
+        # print(f'prediction:\n{numpy_prediction}')
+        # print(f'true:\n{numpy_y}')
         # logAUC = calculate_logAUC(numpy_y, numpy_prediction)
         # results['logAUC'] = logAUC
         # ppv = calculate_ppv(numpy_y, numpy_prediction)
         # results['ppv'] = ppv
         results = self.get_evaluations(results, numpy_y, numpy_prediction)
-        print(results)
+        self.log("performance by step", results, on_step=True,
+                 prog_bar=True, logger=True)
         return results
 
     def training_epoch_end(self, train_step_outputs):
@@ -159,6 +162,8 @@ class GNNModel(pl.LightningModule):
             train_epoch_outputs[key] = mean_output
 
         self.train_epoch_outputs = train_epoch_outputs
+        self.log("performance by epoch", train_epoch_outputs, on_epoch=True,
+                prog_bar=True, logger=True)
 
     def validation_step(self, batch_data, batch_idx, dataloader_idx):
         """
@@ -177,14 +182,16 @@ class GNNModel(pl.LightningModule):
         true_y = batch_data.y.view(-1)
         # print(f'y_pred.shape:{y_pred.shape} y_true:{y_true.shape}')
 
-        # Get metrics
+        # Get numpy_prediction and numpy_y and concate those from all batches
         results = {}
         loss = self.loss_func(pred_y, true_y.float())
         results['loss'] = loss
         numpy_prediction = pred_y.detach().cpu().numpy()
         numpy_y = true_y.cpu().numpy()
 
-        results = self.get_evaluations(results, numpy_y, numpy_prediction)
+        results['numpy_prediction'] = numpy_prediction
+        results['numpy_y'] = numpy_y
+        # results = self.get_evaluations(results, numpy_y, numpy_prediction)
         return results
         # return {
         #     'loss': loss,
@@ -204,7 +211,7 @@ class GNNModel(pl.LightningModule):
         See the return description from function validation_step() above.
         set dataloader
         :return: None. However, set self.valid_epoch_outputs to be a
-        dictionary of mean metrics from each validation step, with metrics
+        dictionary of metrics from each validation step, with metrics
         from training dataset with "_no_dropout" suffix, such as
         "loss_no_dropout". The self.valid_epoch_outputs is used for monitoring.
         """
@@ -214,20 +221,36 @@ class GNNModel(pl.LightningModule):
         # resulting from each validation iteration. Here we get the mean and
         # then store them in self.valid_epoch_outputs
         for i, outputs_each_dataloader in enumerate(valid_step_outputs):
-            for key in outputs_each_dataloader[0].keys():
-                mean_output = sum(output[key] for output in
-                                  outputs_each_dataloader) \
-                              / len(outputs_each_dataloader)
+            results = {}
+            all_pred = [output['numpy_prediction'] for output in
+                        outputs_each_dataloader]
+            all_true = [output['numpy_y'] for output in outputs_each_dataloader]
 
-                if i ==0:
-                    # For validation dataloader, output keys are "loss",
-                    # "logAUC", "ppv"
-                    pass
-                else:
-                    # For training dataloader, output keys are "loss_no_dropout",
-                    # "logAUC_no_dropout", "ppv_no_dropout"
-                    key = key + "_no_dropout"
-                self.valid_epoch_outputs[key] = mean_output
+            # print(f'np true:{np.concatenate(all_true)}, all_pred:{np.concatenate(all_pred)}')
+            self.get_evaluations(results, np.concatenate(all_true),
+                                 np.concatenate(all_pred))
+            if i == 0:
+                self.valid_epoch_outputs = results
+            else:
+                for key in results.keys():
+                    new_key = key+"_no_dropout"
+                    self.valid_epoch_outputs[new_key] = results[key]
+        self.log("valid performance by epoch", self.valid_epoch_outputs,
+                 on_epoch=True, prog_bar=True, logger=True)
+            # for key in outputs_each_dataloader[0].keys():
+            #     mean_output = sum(output[key] for output in
+            #                       outputs_each_dataloader) \
+            #                   / len(outputs_each_dataloader)
+            #
+            #     if i ==0:
+            #         # For validation dataloader, output keys are "loss",
+            #         # "logAUC", "ppv"
+            #         pass
+            #     else:
+            #         # For training dataloader, output keys are "loss_no_dropout",
+            #         # "logAUC_no_dropout", "ppv_no_dropout"
+            #         key = key + "_no_dropout"
+            #     self.valid_epoch_outputs[key] = mean_output
 
 
     def configure_optimizers(self):
