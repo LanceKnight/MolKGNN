@@ -221,7 +221,9 @@ class GNNModel(pl.LightningModule):
             all_pred = [output['numpy_prediction'] for output in
                         outputs_each_dataloader]
             all_true = [output['numpy_y'] for output in outputs_each_dataloader]
-
+            self.valid_epoch_outputs = self.get_evaluations(
+                self.valid_epoch_outputs, np.concatenate(all_true),
+                                 np.concatenate(all_pred))
             if i == 0:
                 self.valid_epoch_outputs = results
             else:
