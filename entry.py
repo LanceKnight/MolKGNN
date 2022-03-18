@@ -129,7 +129,7 @@ def actual_training(model, data_module, use_clearml, args):
         # Other metrics monitors
         metrics = get_dataset(data_module.dataset_name)['metrics']
         for metric in metrics:
-            if metric == 'accucuracy':
+            if metric == 'accuracy':
                 # Accuracy monitors
                 trainer.callbacks.append(
                     AccuracyMonitor(stage='train', logger=logger,
@@ -167,7 +167,6 @@ def actual_training(model, data_module, use_clearml, args):
                     LogAUCNoDropoutMonitor(stage='valid', logger=logger,
                                            logging_interval='epoch'))
                 continue
-
 
             if metric == 'ppv':
                 # PPV monitors
@@ -239,7 +238,7 @@ if __name__ == '__main__':
     gnn_type = 'kgnn'  # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
 
-    use_clearml = False
+    use_clearml = True
     if use_clearml:
         task = Task.init(project_name=f"Tests/{gnn_type}",
                          task_name="435034-full-barium",
@@ -247,6 +246,7 @@ if __name__ == '__main__':
                                ])
 
         logger = task.get_logger()
+        # logger = pl.loggers.tensorboard
     main(gnn_type, use_clearml)
 
 

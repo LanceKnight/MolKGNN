@@ -131,12 +131,8 @@ class GNNModel(pl.LightningModule):
         true_y = batch_data.y.view(-1)
         # print(f"models.py::true_y:{true_y}")
         # Get metrics
-        results = {}
-        loss = self.loss_func(pred_y, true_y.float())
-        results['loss'] = loss
-        numpy_prediction = pred_y.detach().cpu().numpy()
-        numpy_y = true_y.cpu().numpy()
-        results = self.get_evaluations(results, numpy_y, numpy_prediction)
+        results={}
+        results = self.get_evaluations(results, true_y, pred_y)
 
         self.log(f"train performance by step", results, on_step=True, prog_bar=True, logger=True)
         return results
@@ -179,22 +175,11 @@ class GNNModel(pl.LightningModule):
         # print(f'y_pred.shape:{y_pred.shape} y_true:{y_true.shape}')
 
         # Get numpy_prediction and numpy_y and concate those from all batches
-        results = {}
-        loss = self.loss_func(pred_y, true_y.float())
-        results['loss'] = loss
-        numpy_prediction = pred_y.detach().cpu().numpy()
-        numpy_y = true_y.cpu().numpy()
+        valid_step_output = {}
+        valid_step_output['pred_y'] = pred_y
+        valid_step_output['true_y'] = true_y
+        return valid_step_output
 
-        results['numpy_prediction'] = numpy_prediction
-        results['numpy_y'] = numpy_y
-        # results = self.get_evaluations(results, numpy_y, numpy_prediction)
-        return results
-        # return {
-        #     'loss': loss,
-        #     'logAUC': logAUC,
-        #     'ppv': ppv,
-        #     'accuracy':accuracy
-        # }
 
     def validation_epoch_end(self, valid_step_outputs):
         """
@@ -213,24 +198,23 @@ class GNNModel(pl.LightningModule):
         """
         self.valid_epoch_outputs = {}
 
-        # There are outputs from both validation and training datasets
-        # resulting from each validation iteration. Here we get the mean and
-        # then store them in self.valid_epoch_outputs
+        # There are true_y and pred_y from both validation and training
+        # datasets from each validation iteration. Here we get the
+        # concatenate them and calculate the metrics for all of them
         for i, outputs_each_dataloader in enumerate(valid_step_outputs):
             results = {}
-            all_pred = [output['numpy_prediction'] for output in
+            all_pred = [output['pred_y'] for output in
                         outputs_each_dataloader]
-            all_true = [output['numpy_y'] for output in outputs_each_dataloader]
-            self.valid_epoch_outputs = self.get_evaluations(
-                self.valid_epoch_outputs, np.concatenate(all_true),
-                                 np.concatenate(all_pred))
+            all_true = [output['true_y'] for output in outputs_each_dataloader]
+            results = self.get_evaluations(
+                results, torch.cat(all_true),
+                                 torch.cat(all_pred))
             if i == 0:
                 self.valid_epoch_outputs = results
             else:
                 for key in results.keys():
                     new_key = key+"_no_dropout"
                     self.valid_epoch_outputs[new_key] = results[key]
-
         # Logging
         self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
@@ -327,7 +311,22 @@ class GNNModel(pl.LightningModule):
             KGNNNet.add_model_specific_args(parent_parser)
         return parent_parser
 
-    def get_evaluations(self, results, numpy_y, numpy_prediction):
+    def get_evaluations(self, results, true_y, pred_y):
+        '''
+        :param results: a dictionary to store the result. Results will be
+        appended to the existing dictionary.
+        :param true_y: Tensor
+        :param pred_y: Tensor
+        :return:
+        '''
+        # Calculate loss using tensor
+        loss = self.loss_func(pred_y, true_y.float())
+        results['loss'] = loss
+
+        # Convert tensor to numpy
+        numpy_prediction = pred_y.detach().cpu().numpy()
+        numpy_y = true_y.cpu().numpy()
+
         for metric in self.metrics:
             if metric == 'accuracy':
                 accuracy = calculate_accuracy(numpy_y, numpy_prediction)
