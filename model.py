@@ -3,6 +3,7 @@ import numpy as np
 from data import get_dataset
 from models.GCNNet.GCNNet import GCNNet
 from models.KGNN.KGNNNet import KGNNNet
+from models.ChebNet.ChebNet import ChebNet
 from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy, \
     calculate_f1_score
 from lr import PolynomialDecayLR
@@ -42,9 +43,10 @@ class GNNModel(pl.LightningModule):
                  ):
         super(GNNModel, self).__init__()
         print(f'kwargs:{args}')
-
         if gnn_type == 'gcn':
-            self.gnn_model = GCNNet(input_dim, hidden_dim)
+            self.gnn_model = GCNNet(input_dim, hidden_dim, num_layers)
+        if gnn_type == 'chebnet':
+            self.gnn_model = ChebNet(input_dim, hidden_dim, num_layers, args.K)
         if gnn_type == 'kgnn':
             self.gnn_model = KGNNNet(num_layers=num_layers,
                                      # num_kernel1_1hop=kwargs['num_kernel1_1hop'],
@@ -134,15 +136,9 @@ class GNNModel(pl.LightningModule):
         results['loss'] = loss
         numpy_prediction = pred_y.detach().cpu().numpy()
         numpy_y = true_y.cpu().numpy()
-        # print(f'prediction:\n{numpy_prediction}')
-        # print(f'true:\n{numpy_y}')
-        # logAUC = calculate_logAUC(numpy_y, numpy_prediction)
-        # results['logAUC'] = logAUC
-        # ppv = calculate_ppv(numpy_y, numpy_prediction)
-        # results['ppv'] = ppv
         results = self.get_evaluations(results, numpy_y, numpy_prediction)
-        self.log("train metrics by step", results, on_step=True,
-                 prog_bar=True, logger=True)
+
+        self.log(f"train performance by step", results, on_step=True, prog_bar=True, logger=True)
         return results
 
     def training_epoch_end(self, train_step_outputs):
@@ -163,8 +159,7 @@ class GNNModel(pl.LightningModule):
             train_epoch_outputs[key] = mean_output
 
         self.train_epoch_outputs = train_epoch_outputs
-        self.log("train metrics by epoch", train_epoch_outputs, on_epoch=True,
-                prog_bar=True, logger=True)
+        self.log(f"train performance by epoch", train_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
     def validation_step(self, batch_data, batch_idx, dataloader_idx):
         """
@@ -227,32 +222,15 @@ class GNNModel(pl.LightningModule):
                         outputs_each_dataloader]
             all_true = [output['numpy_y'] for output in outputs_each_dataloader]
 
-            # print(f'np true:{np.concatenate(all_true)}, all_pred:{np.concatenate(all_pred)}')
-            self.get_evaluations(results, np.concatenate(all_true),
-                                 np.concatenate(all_pred))
             if i == 0:
                 self.valid_epoch_outputs = results
             else:
                 for key in results.keys():
                     new_key = key+"_no_dropout"
                     self.valid_epoch_outputs[new_key] = results[key]
-        self.log("valid metrics by epoch", self.valid_epoch_outputs,
-                 on_epoch=True, prog_bar=True, logger=True)
-            # for key in outputs_each_dataloader[0].keys():
-            #     mean_output = sum(output[key] for output in
-            #                       outputs_each_dataloader) \
-            #                   / len(outputs_each_dataloader)
-            #
-            #     if i ==0:
-            #         # For validation dataloader, output keys are "loss",
-            #         # "logAUC", "ppv"
-            #         pass
-            #     else:
-            #         # For training dataloader, output keys are "loss_no_dropout",
-            #         # "logAUC_no_dropout", "ppv_no_dropout"
-            #         key = key + "_no_dropout"
-            #     self.valid_epoch_outputs[key] = mean_output
 
+        # Logging
+        self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
     def configure_optimizers(self):
         """
@@ -341,6 +319,8 @@ class GNNModel(pl.LightningModule):
 
         if gnn_type == 'gcn':
             GCNNet.add_model_specific_args(parent_parser)
+        if gnn_type == 'chebnet':
+            ChebNet.add_model_specific_args(parent_parser)
         elif gnn_type == 'kgnn':
             KGNNNet.add_model_specific_args(parent_parser)
         return parent_parser

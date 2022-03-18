@@ -113,8 +113,8 @@ def actual_training(model, data_module, use_clearml, args):
         trainer.callbacks.append(
             LossMonitor(stage='train', logger=logger,
                         logging_interval='epoch'))
-        trainer.callbacks.append(
-            LossMonitor(stage='valid', logger=logger, logging_interval='step'))
+        # trainer.callbacks.append(
+        #     LossMonitor(stage='valid', logger=logger, logging_interval='step'))
         trainer.callbacks.append(
             LossMonitor(stage='valid', logger=logger,
                         logging_interval='epoch'))
@@ -179,9 +179,6 @@ def actual_training(model, data_module, use_clearml, args):
                     PPVNoDropoutMonitor(stage='valid', logger=logger,
                                         logging_interval='epoch'))
                 continue
-
-
-
 
     if args.test:
         print(f'In Testing Mode:')
