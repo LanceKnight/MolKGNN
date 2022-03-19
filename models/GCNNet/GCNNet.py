@@ -68,14 +68,10 @@ class GCNNet(torch.nn.Module):
         edge_index = data.edge_index
         batch = data.batch
 
-        print(1, h)
         for i in range(len(self.lins)):
             h = torch.mm(h, self.lins[i])
-            print(2, h)
             h = propagate(h, edge_index, edge_weight=None) + self.biases[i]
-            print(3, h)
             h = F.relu(h)
-            print(4, h)
 
         graph_embedding = global_mean_pool(h, batch)
 
