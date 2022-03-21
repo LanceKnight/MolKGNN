@@ -15,6 +15,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 import os
 from clearml import Task
 
+
 def add_args(gnn_type):
     """
     Add arguments from three sources:
@@ -27,17 +28,20 @@ def add_args(gnn_type):
 
     parser = ArgumentParser()
     parser = pl.Trainer.add_argparse_args(parser)  # default pl args
+    print(333)
     parser = GNNModel.add_model_args(gnn_type, parser)
+    print(222)
     parser = DataLoaderModule.add_argparse_args(parser)
 
     # Custom arguments
     parser.add_argument("--enable_pretraining", default=False)  # TODO: \
     # Pretraining
-
+    print(555)
     args = parser.parse_args()
+    print(444)
     args.tot_iterations = round(len(get_dataset(
         args.dataset_name)['dataset']) * 0.8 / args.batch_size) * \
-                          args.max_epochs + 1
+        args.max_epochs + 1
     args.max_steps = args.tot_iterations + 1
     print(args)
     return args
@@ -102,7 +106,7 @@ def actual_training(model, data_module, use_clearml, args):
             f'{actual_training_checkpoint_dir}/last.ckpt'):
         print('Resuming from actual training checkpoint')
         args.resume_from_checkpoint = actual_training_checkpoint_dir + \
-                                      '/last.ckpt'
+            '/last.ckpt'
 
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks.append(actual_training_checkpoint_callback)
@@ -147,23 +151,23 @@ def actual_training(model, data_module, use_clearml, args):
                 # Accuracy monitors
                 trainer.callbacks.append(
                     RMSEMonitor(stage='train', logger=logger,
-                                    logging_interval='epoch'))
+                                logging_interval='epoch'))
                 trainer.callbacks.append(
                     RMSEMonitor(stage='valid', logger=logger,
-                                    logging_interval='epoch'))
+                                logging_interval='epoch'))
                 trainer.callbacks.append(
                     RMSENoDropoutMonitor(stage='valid', logger=logger,
-                                             logging_interval='epoch'))
+                                         logging_interval='epoch'))
                 continue
 
             if metric == 'logAUC':
                 # LogAUC monitors
                 trainer.callbacks.append(
                     LogAUCMonitor(stage='train', logger=logger,
-                    logging_interval='epoch'))
+                                  logging_interval='epoch'))
                 trainer.callbacks.append(
                     LogAUCMonitor(stage='valid', logger=logger,
-                    logging_interval='epoch'))
+                                  logging_interval='epoch'))
                 trainer.callbacks.append(
                     LogAUCNoDropoutMonitor(stage='valid', logger=logger,
                                            logging_interval='epoch'))
@@ -223,7 +227,7 @@ def main(gnn_type, use_clearml):
     # Prepare data
     enable_pretraining = args.enable_pretraining
     print(f'enable_pretraining:{enable_pretraining}')
-    data_modules = prepare_data(args, enable_pretraining) # A list of
+    data_modules = prepare_data(args, enable_pretraining)  # A list of
     # data_module to accommodate different pretraining data
     actual_training_data_module = data_modules[0]
 
@@ -240,26 +244,24 @@ def main(gnn_type, use_clearml):
     actual_training(model, actual_training_data_module, use_clearml, args)
 
     # Save relevant data for analyses
-    model.save_atom_encoder(dir = 'utils/atom_encoder/',
-    file_name='atom_encoder.pt')
+    model.save_atom_encoder(dir='utils/atom_encoder/',
+                            file_name='atom_encoder.pt')
     model.save_kernels(dir='utils/atom_encoder/', file_name='kernels.pt')
     model.print_graph_embedding()
     model.save_graph_embedding('utils/atom_encoder/graph_embedding')
 
 
 if __name__ == '__main__':
-    gnn_type = 'kgnn'  # The reason that gnn_type cannot be a cmd line
+    gnn_type = 'gcn'  # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
 
-    use_clearml = True
+    use_clearml = False
     if use_clearml:
         task = Task.init(project_name=f"Tests/{gnn_type}",
                          task_name="435034-full-barium",
-                         tags=["barium", "435034", "full","debug"
+                         tags=["barium", "435034", "full", "debug"
                                ])
 
         logger = task.get_logger()
         # logger = pl.loggers.tensorboard
     main(gnn_type, use_clearml)
-
-
