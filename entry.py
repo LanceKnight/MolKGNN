@@ -235,10 +235,10 @@ def main(gnn_type, use_clearml):
 
 
 if __name__ == '__main__':
-    gnn_type = 'kgnn'  # The reason that gnn_type cannot be a cmd line
+    gnn_type = 'chebnet'  # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
 
-    use_clearml = True
+    use_clearml = False
     if use_clearml:
         task = Task.init(project_name=f"Tests/{gnn_type}",
                          task_name="435034-full-barium",

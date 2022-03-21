@@ -30,6 +30,12 @@ def smiles_cleaner(smiles):
 
 
 def generate_element_rep_list(elements):
+    '''
+    Generate an element representation.
+    contains weight, van der waal radius, valence, out_eletron
+    :param elements:
+    :return:
+    '''
     print('calculating rdkit element representation lookup table')
     elem_rep_lookup = []
     for elem in elements:
@@ -61,18 +67,24 @@ element_nums = [x + 1 for x in range(max_elem_num)]
 elem_lst = generate_element_rep_list(element_nums)
 
 
-def get_atom_rep(atomic_num):
-    '''use rdkit to generate atom representation
-    '''
-    global elem_lst
+# def get_element_rep(atomic_num):
+#     '''use rdkit to generate atom representation
+#     '''
+#     global elem_lst
+#
+#     result = 0
+#     try:
+#         result = elem_lst[atomic_num - 1]
+#     except:
+#         print(f'error: atomic_num {atomic_num} does not exist')
+#
+#     return result
 
-    result = 0
-    try:
-        result = elem_lst[atomic_num - 1]
-    except:
-        print(f'error: atomic_num {atomic_num} does not exist')
-
-    return result
+def get_atom_rep(atom):
+    features = []
+    features.append(atom.GetAtomicNum())
+    features.append(atom.GetNeighors())
+    features.append
 
 def mol2graph(mol, D=3):
     try:
@@ -89,7 +101,8 @@ def mol2graph(mol, D=3):
     for i, atom in enumerate(mol.GetAtoms()):
         atomic_num = atom.GetAtomicNum()
         atomic_num_list.append(atomic_num)
-        h = get_atom_rep(atomic_num)
+        h = get_atom_rep(atom)
+        # h = get_atom_rep(atomic_num)
 
         if D == 2:
             atom_pos.append(
