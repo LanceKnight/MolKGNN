@@ -75,7 +75,7 @@ class GCNNet(torch.nn.Module):
 
         graph_embedding = global_mean_pool(h, batch)
 
-        print(graph_embedding)
+        # print(graph_embedding)
 
         return graph_embedding
 

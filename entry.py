@@ -28,17 +28,13 @@ def add_args(gnn_type):
 
     parser = ArgumentParser()
     parser = pl.Trainer.add_argparse_args(parser)  # default pl args
-    print(333)
     parser = GNNModel.add_model_args(gnn_type, parser)
-    print(222)
     parser = DataLoaderModule.add_argparse_args(parser)
 
     # Custom arguments
     parser.add_argument("--enable_pretraining", default=False)  # TODO: \
     # Pretraining
-    print(555)
     args = parser.parse_args()
-    print(444)
     args.tot_iterations = round(len(get_dataset(
         args.dataset_name)['dataset']) * 0.8 / args.batch_size) * \
         args.max_epochs + 1

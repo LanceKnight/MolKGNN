@@ -97,7 +97,7 @@ class GNNModel(pl.LightningModule):
         data.x = self.atom_encoder(data.atomic_num)
 
         graph_embedding = self.gnn_model(data)
-        # print(f'emb:{graph_embedding}')
+        # print(f'model.py::emb:{graph_embedding}')
         prediction = self.ffn(graph_embedding)
 
         # # Debug
@@ -127,7 +127,8 @@ class GNNModel(pl.LightningModule):
         pred_y, _ = self(batch_data)
         pred_y = pred_y.view(-1)
         true_y = batch_data.y.view(-1)
-        # print(f"models.py::true_y:{true_y}")
+        print(f"models.py::true_y:{true_y}")
+        print(f"models.py::pred_y:{pred_y}")
         # Get metrics
         results = {}
         results = self.get_evaluations(results, true_y, pred_y)
