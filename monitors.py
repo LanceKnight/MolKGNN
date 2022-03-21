@@ -213,3 +213,27 @@ class RMSENoDropoutMonitor(MetricMonitor):
                                                   title=f'RMSE_by_'
                                                         f'{logging_interval}',
                                               series='no_dropout')
+
+
+# F1 score
+class F1ScoreMonitor(MetricMonitor):
+    def __init__(self, stage='valid', logger =None, logging_interval=None,
+                 title = None ):
+        super(F1ScoreMonitor, self).__init__(stage=stage,
+                                                  metric="f1_score",
+                                                  logger=logger,
+                                                  logging_interval=logging_interval,
+                                                  title=f'f1_score_by_'
+                                                        f'{logging_interval}')
+
+
+class F1ScoreNoDropoutMonitor(MetricMonitor):
+    def __init__(self, stage='valid', logger =None, logging_interval=None,
+                 title = None ):
+        super(F1ScoreNoDropoutMonitor, self).__init__(stage=stage,
+                                                  metric="f1_score_no_dropout",
+                                                  logger=logger,
+                                                  logging_interval=logging_interval,
+                                                  title=f'f1_score_by_'
+                                                        f'{logging_interval}',
+                                              series='no_dropout')
