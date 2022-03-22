@@ -1,3 +1,4 @@
+import math
 import os
 import pandas as pd
 from rdkit import Chem
@@ -9,6 +10,9 @@ from torch_geometric.utils import degree
 from tqdm import tqdm
 import numpy as np
 import random
+import rdkit.Chem.EState as EState
+import rdkit.Chem.rdMolDescriptors as rdMolDescriptors
+import rdkit.Chem.rdPartialCharges as rdPartialCharges
 
 pattern_dict = {'[NH-]': '[N-]', '[OH2+]':'[O]'}
 add_atom_num = 5
@@ -83,8 +87,60 @@ elem_lst = generate_element_rep_list(element_nums)
 def get_atom_rep(atom):
     features = []
     features.append(atom.GetAtomicNum())
-    features.append(atom.GetNeighors())
-    features.append
+    features.append(len(atom.GetNeighbors()))
+    # features.append(atom.GetTotalNumHs())
+    features.append(atom.GetFormalCharge())
+    features.append(atom.IsInRing())
+    features.append(atom.GetIsAromatic())
+    features.append(atom.GetExplicitValence())
+    features.append(atom.GetMass())
+
+    # Add Gasteiger charge and set to 0 if it is NaN or Infinite
+    gasteiger_charge = float(atom.GetProp('_GasteigerCharge'))
+    if math.isnan(gasteiger_charge) or math.isinf(gasteiger_charge):
+        gasteiger_charge = 0
+    features.append(gasteiger_charge)
+
+    # Add Gasteiger H charge and set to 0 if it is NaN or Infinite
+    gasteiger_h_charge = float(atom.GetProp('_GasteigerHCharge'))
+    if math.isnan(gasteiger_h_charge) or math.isinf(gasteiger_h_charge):
+        gasteiger_h_charge = 0
+
+    features.append(gasteiger_h_charge)
+    return features
+
+def get_extra_atom_feature(all_atom_features, mol):
+    '''
+    Get more atom features that cannot be calculated only with atom,
+    but also with mol
+    :param all_atom_features:
+    :param mol:
+    :return:
+    '''
+    # Crippen has two parts: first is logP, second is Molar Refactivity(MR)
+    all_atom_crippen = rdMolDescriptors._CalcCrippenContribs(mol)
+    all_atom_TPSA_contrib = rdMolDescriptors._CalcTPSAContribs(mol)
+    # ASA = Accessible Surface Area
+    all_atom_ASA_contrib = rdMolDescriptors._CalcLabuteASAContribs(mol)[0]
+    all_atom_EState = EState.EStateIndices(mol)
+
+    new_all_atom_features = []
+    for atom_id, feature in enumerate(all_atom_features):
+        crippen_logP = all_atom_crippen[atom_id][0]
+        crippen_MR = all_atom_crippen[atom_id][1]
+        atom_TPSA_contrib = all_atom_TPSA_contrib[atom_id]
+        atom_ASA_contrib = all_atom_ASA_contrib[atom_id]
+        atom_EState = all_atom_EState[atom_id]
+
+        feature.append(crippen_logP)
+        feature.append(crippen_MR)
+        feature.append(atom_TPSA_contrib)
+        feature.append(atom_ASA_contrib)
+        feature.append(atom_EState)
+
+        new_all_atom_features.append(feature)
+    return new_all_atom_features
+
 
 def mol2graph(mol, D=3):
     try:
@@ -94,14 +150,16 @@ def mol2graph(mol, D=3):
         print(f'smiles:{smiles} error message:{e}')
 
     atom_pos = []
-    atom_attr = []
+    atomic_num_list = []
+    all_atom_features = []
 
     # Get atom attributes and positions
-    atomic_num_list = []
+    rdPartialCharges.ComputeGasteigerCharges(mol)
+
     for i, atom in enumerate(mol.GetAtoms()):
         atomic_num = atom.GetAtomicNum()
         atomic_num_list.append(atomic_num)
-        h = get_atom_rep(atom)
+        atom_feature = get_atom_rep(atom)
         # h = get_atom_rep(atomic_num)
 
         if D == 2:
@@ -111,7 +169,9 @@ def mol2graph(mol, D=3):
             atom_pos.append([conf.GetAtomPosition(
                 i).x, conf.GetAtomPosition(i).y,
                              conf.GetAtomPosition(i).z])
-        atom_attr.append(h)
+        all_atom_features.append(atom_feature)
+    # Add extra features that are needs to calculate using mol
+    all_atom_features = get_extra_atom_feature(all_atom_features, mol)
 
     # get bond attributes
     edge_list = []
@@ -131,6 +191,13 @@ def mol2graph(mol, D=3):
         elif bond_type == Chem.rdchem.BondType.AROMATIC:
             bond_attr = [4]
 
+        is_aromatic = edge.GetIsAromatic()
+        is_conjugate = edge.GetIsConjugated()
+        is_in_ring = edge.IsInRing()
+        bond_attr.append(is_aromatic)
+        bond_attr.append(is_conjugate)
+        bond_attr.append(is_in_ring)
+
         edge_list.append((i, j))
         edge_attr_list.append(bond_attr)
         #         print(f'i:{i} j:{j} bond_attr:{bond_attr}')
@@ -139,7 +206,7 @@ def mol2graph(mol, D=3):
         edge_attr_list.append(bond_attr)
     #         print(f'j:{j} j:{i} bond_attr:{bond_attr}')
 
-    x = torch.tensor(atom_attr, dtype=torch.double)
+    x = torch.tensor(all_atom_features, dtype=torch.double)
     p = torch.tensor(atom_pos, dtype=torch.double)
     edge_index = torch.tensor(edge_list).t().contiguous()
     edge_attr = torch.tensor(edge_attr_list, dtype=torch.double)
