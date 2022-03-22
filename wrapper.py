@@ -2,16 +2,18 @@ import os
 import pandas as pd
 from rdkit import Chem
 from rdkit.Chem import AllChem
+from rdkit import RDLogger
 import torch
 from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.utils import degree
 from tqdm import tqdm
 import numpy as np
+import random
 
-pattern_dict = {'[NH-]': '[N-]'}
+pattern_dict = {'[NH-]': '[N-]', '[OH2+]':'[O]'}
 add_atom_num = 5
 num_reference = 10000  # number of reference molecules for augmentation
-
+num_data = 1000 # number of data used for debugging. Not used in full dataset
 
 def smiles_cleaner(smiles):
     '''
@@ -72,50 +74,21 @@ def get_atom_rep(atomic_num):
 
     return result
 
-
-def smiles2graph(D, smiles):
-    if D == None:
-        raise Exception(
-            'smiles2grpah() needs to input D to specifiy 2D or 3D graph '
-            'generation.')
-    # print(f'smiles:{smiles}')
-    # Default RDKit behavior is to reject hypervalent P, so you need to set
-    # sanitize=False. Search keyword = 'Explicit Valence Error - Partial
-    # Sanitization' on https://www.rdkit.org/docs/Cookbook.html for more info
-    smiles = smiles.replace(r'/=', '=')
-    smiles = smiles.replace(r'\=', '=')
+def mol2graph(mol, D=3):
     try:
-        mol = Chem.MolFromSmiles(smiles, sanitize=True)
+        conf = mol.GetConformer()
     except Exception as e:
-        print(f'Cannot generate mol, error:{e}, smiles:{smiles}')
-
-    if mol is None:
-        smiles = smiles_cleaner(smiles)
-        try:
-            mol = Chem.MolFromSmiles(smiles, sanitize=True)
-        except Exception as e:
-            print(f'Generated mol is None, error:{e}, smiles:{smiles}')
-            return None
-    try:
-        # mol.UpdatePropertyCache(strict=False)
-        mol = Chem.AddHs(mol)
-    except Exception as e:
-        print(f'{e}, smiles:{smiles}')
-
-    if D == 2:
-        Chem.rdDepictor.Compute2DCoords(mol)
-    if D == 3:
-        AllChem.EmbedMolecule(mol)
-        AllChem.UFFOptimizeMolecule(mol)
-
-    conf = mol.GetConformer()
+        smiles = AllChem.MolToSmiles(mol)
+        print(f'smiles:{smiles} error message:{e}')
 
     atom_pos = []
     atom_attr = []
 
-    # get atom attributes and positions
+    # Get atom attributes and positions
+    atomic_num_list = []
     for i, atom in enumerate(mol.GetAtoms()):
         atomic_num = atom.GetAtomicNum()
+        atomic_num_list.append(atomic_num)
         h = get_atom_rep(atomic_num)
 
         if D == 2:
@@ -123,7 +96,8 @@ def smiles2graph(D, smiles):
                 [conf.GetAtomPosition(i).x, conf.GetAtomPosition(i).y])
         elif D == 3:
             atom_pos.append([conf.GetAtomPosition(
-                i).x, conf.GetAtomPosition(i).y, conf.GetAtomPosition(i).z])
+                i).x, conf.GetAtomPosition(i).y,
+                             conf.GetAtomPosition(i).z])
         atom_attr.append(h)
 
     # get bond attributes
@@ -152,10 +126,11 @@ def smiles2graph(D, smiles):
         edge_attr_list.append(bond_attr)
     #         print(f'j:{j} j:{i} bond_attr:{bond_attr}')
 
-    x = torch.tensor(atom_attr)
-    p = torch.tensor(atom_pos)
+    x = torch.tensor(atom_attr, dtype=torch.double)
+    p = torch.tensor(atom_pos, dtype=torch.double)
     edge_index = torch.tensor(edge_list).t().contiguous()
-    edge_attr = torch.tensor(edge_attr_list)
+    edge_attr = torch.tensor(edge_attr_list, dtype=torch.double)
+    atomic_num = torch.tensor(atomic_num_list, dtype=torch.long)
 
     # graphormer-specific features
     # adj = torch.zeros([N, N], dtype=torch.bool)
@@ -168,10 +143,104 @@ def smiles2graph(D, smiles):
     #                ] = convert_to_single_emb(edge_attr) + 1
 
     data = Data(x=x, p=p, edge_index=edge_index,
-                edge_attr=edge_attr)  # , adj=adj, attn_bias=attn_bias,
+                edge_attr=edge_attr, atomic_num=atomic_num)  # , adj=adj,
+    # attn_bias=attn_bias,
     # attn_edge_type=attn_edge_type)
     # data = preprocess_item(data)
     return data
+
+def process_sdf(dataset, root):
+    # RDLogger.DisableLog('rdApp.*')
+    data_smiles_list = []
+    data_list = []
+    for file_name, label in [(f'{dataset}_actives_new.sdf', 1),
+                        (f'{dataset}_inactives_new.sdf', 0)]:
+        sdf_path = os.path.join(root, 'raw', file_name)
+        sdf_supplier = Chem.SDMolSupplier(sdf_path)
+        for i, mol in tqdm(enumerate(sdf_supplier)):
+            data = mol2graph(mol)
+            data.idx = i
+            data.y = torch.tensor([label], dtype=torch.int)
+            smiles = AllChem.MolToSmiles(mol)
+            data.smiles = smiles
+
+            data_list.append(data)
+            data_smiles_list.append(smiles)
+    return data_list, data_smiles_list
+
+def smiles2graph(D, smiles):
+    if D == None:
+        raise Exception(
+            'smiles2grpah() needs to input D to specifiy 2D or 3D graph '
+            'generation.')
+    # print(f'smiles:{smiles}')
+    # Default RDKit behavior is to reject hypervalent P, so you need to set
+    # sanitize=False. Search keyword = 'Explicit Valence Error - Partial
+    # Sanitization' on https://www.rdkit.org/docs/Cookbook.html for more
+    # info
+    smiles = smiles.replace(r'/=', '=')
+    smiles = smiles.replace(r'\=', '=')
+    try:
+        mol = Chem.MolFromSmiles(smiles, sanitize=True)
+    except Exception as e:
+        print(f'Cannot generate mol, error:{e}, smiles:{smiles}')
+
+    if mol is None:
+        smiles = smiles_cleaner(smiles)
+        try:
+            mol = Chem.MolFromSmiles(smiles, sanitize=True)
+        except Exception as e:
+            print(f'Generated mol is None, error:{e}, smiles:{smiles}')
+            return None
+        if mol is None:
+            print(f'Generated mol is still None after cleaning, smiles'
+                  f':{smiles}')
+    try:
+        # mol.UpdatePropertyCache(strict=False)
+        mol = Chem.AddHs(mol)
+    except Exception as e:
+        print(f'error in adding Hs{e}, smiles:{smiles}')
+
+    if D == 2:
+        Chem.rdDepictor.Compute2DCoords(mol)
+    if D == 3:
+        AllChem.EmbedMolecule(mol, useRandomCoords=True)
+        try:
+            AllChem.UFFOptimizeMolecule(mol)
+        except Exception as e:
+            print(f'smiles:{smiles} error message:{e}')
+
+    data = mol2graph(mol)
+    return data
+
+
+def process_smiles(dataset, root, D):
+    data_smiles_list = []
+    data_list = []
+    for file, label in [(f'{dataset}_actives.smi', 1),
+                        (f'{dataset}_inactives.smi', 0)]:
+        smiles_path = os.path.join(root, 'raw', file)
+        smiles_list = pd.read_csv(
+            smiles_path, sep='\t', header=None)[0]
+
+        # Only get first N data, just for debugging
+        smiles_list = smiles_list
+
+        for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
+            # for i in tqdm(range(1)):
+            smi = smiles_list[i]
+
+            data = smiles2graph(D, smi)
+            if data is None:
+                continue
+
+            data.idx = i
+            data.y = torch.tensor([label], dtype=torch.int)
+            data.smiles = smi
+
+            data_list.append(data)
+            data_smiles_list.append(smiles_list[i])
+    return data_list, data_smiles_list
 
 
 def convert_to_single_emb(x, offset=512):
@@ -201,6 +270,7 @@ class D4DCHPDataset(InMemoryDataset):
                  root,
                  subset_name,
                  data_file,
+                 label_column_name,
                  idx_file,
                  D,
                  transform=None,
@@ -212,7 +282,9 @@ class D4DCHPDataset(InMemoryDataset):
         "DIFF5"
         :param data_file: a file containing SMILES. File format: .csv file
         with headers; two columns with the first header being 'smiles' and the
-        second one being 'labels'
+        second one having a column name specifed by param label_column_name
+        :param label_column_name: a string of the column name for the label.
+        e.g., "docking_score"
         :param split_idx: a file specifying the split indices of samples in
         data_file. File format: a .npy file that should be loaded with
         numpy.load('split_idx.npy', allow_pickle=True). After loading,
@@ -221,12 +293,14 @@ class D4DCHPDataset(InMemoryDataset):
         :param D: a integer being either 2 or 3, meaning the dimension
         """
         self.root = root
+        print(f'root:{root}')
         self.subset_name = subset_name
         self.data_file = data_file
+        self.label_column_name = label_column_name
         self.idx_file = idx_file
         self.D = D
         super(D4DCHPDataset, self).__init__(root, transform, pre_transform,
-                                          pre_filter)
+                                            pre_filter)
 
         self.data, self.slices = torch.load(self.processed_paths[0])
 
@@ -238,8 +312,8 @@ class D4DCHPDataset(InMemoryDataset):
         data_smiles_list = []
         data_list = []
         data_df = pd.read_csv(self.data_file)
-        smiles_list = list(data_df['smiles'])[0:1000]
-        labels_list = list(data_df['labels'])[0:1000]
+        smiles_list = list(data_df['smiles'])[0:num_data]
+        labels_list = list(data_df[self.label_column_name])[0:num_data]
 
         for i, smi in tqdm(enumerate(smiles_list)):
             label = labels_list[i]
@@ -247,7 +321,8 @@ class D4DCHPDataset(InMemoryDataset):
             if data is None:
                 continue
             data.idx = i
-            data.y = torch.tensor([label], dtype=torch.int)
+            data.y = torch.tensor([label], dtype=torch.float)
+            # data.dummy_graph_embedding = torch.ones(1, 32)
             data.smiles = smi
 
             data_list.append(data)
@@ -257,8 +332,11 @@ class D4DCHPDataset(InMemoryDataset):
             data_list = [data for data in data_list if self.pre_filter(data)]
 
         if self.pre_transform is not None:
+            new_data_list = []
             print('doing pre_transforming...')
-            data_list = [self.pre_transform(data) for data in data_list]
+            for data in tqdm(data_list):
+                new_data_list.append(self.pre_transform(data))
+            data_list = new_data_list
 
         # write data_smiles_list in processed paths
         data_smiles_series = pd.Series(data_smiles_list)
@@ -272,21 +350,26 @@ class D4DCHPDataset(InMemoryDataset):
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
-    def get_idx_split(self):
+    def get_idx_split(self, seed):
         indices = np.load(self.idx_file, allow_pickle=True)
         train_indices = indices[0]
         val_indices = indices[1]
         test_indices = indices[2]
 
         split_dict = {}
+        split_dict['train'] = train_indices
+        split_dict['valid'] = val_indices
+        split_dict['test'] = test_indices
+
         # Delete if statement if using the full CHIRAL1 dataset
-        split_dict['train'] = [torch.tensor(x) for x in train_indices if x<
-                               1000]
-        split_dict['valid'] = [torch.tensor(x) for x in val_indices if x <1000]
-        split_dict['test'] = [torch.tensor(x) for x in test_indices if x<1000]
+        split_dict['train'] = [torch.tensor(x) for x in train_indices if x <
+                               num_data]
+        split_dict['valid'] = [torch.tensor(x) for x in val_indices if
+                               x < num_data]
+        split_dict['test'] = [torch.tensor(x) for x in test_indices if
+                              x < num_data]
 
         return split_dict
-
 
 
 class QSARDataset(InMemoryDataset):
@@ -296,7 +379,7 @@ class QSARDataset(InMemoryDataset):
 
     There are nine subsets in this dataset, identified by their summary assay
     IDs (SAIDs):
-    435008, 1798, 345034, 1843, 2258, 463087, 488997,2689, 485290
+    435008, 1798, 435034, 1843, 2258, 463087, 488997,2689, 485290
     The statistics of each subset can be found in the original publication
     """
 
@@ -309,7 +392,8 @@ class QSARDataset(InMemoryDataset):
                  pre_transform=None,
                  pre_filter=None,
                  dataset='435008',
-                 empty=False):
+                 empty=False,
+                 seed = 42):
 
         self.dataset = dataset
         self.root = root
@@ -352,59 +436,22 @@ class QSARDataset(InMemoryDataset):
     #     return self.get(index)
 
     def process(self):
-        data_smiles_list = []
-        data_list = []
-
-        if self.dataset not in ['435008', '1798', '435034']:
+        if self.dataset not in ['435008', '1798', '435034', '1843', '2258',
+                                '463087', '488997','2689', '485290']:
             # print(f'dataset:{self.dataset}')
             raise ValueError('Invalid dataset name')
 
-        for file, label in [(f'{self.dataset}_actives.smi', 1),
-                            (f'{self.dataset}_inactives.smi', 0)]:
-            smiles_path = os.path.join(self.root, 'raw', file)
-            smiles_list = pd.read_csv(
-                smiles_path, sep='\t', header=None)[0]
-
-            # Only get first N data, just for debugging
-            smiles_list = smiles_list[0:4000]
-
-            for i in tqdm(range(len(smiles_list)), desc=f'{file}'):
-                # for i in tqdm(range(1)):
-                smi = smiles_list[i]
-
-                data = smiles2graph(self.D, smi)
-                if data is None:
-                    continue
-
-                # # If use ogb_smiles2graph()
-                # try:
-                #     graph = ogb_smiles2graph(smi)
-                # except:
-                #     print('cannot convert smiles to graph')
-                #     pass
-
-                # data = Data()
-                # data.__num_nodes__ = int(graph['num_nodes'])
-                # data.edge_index = torch.from_numpy(graph['edge_index']).to(
-                #     torch.int64)
-                # data.edge_attr = torch.from_numpy(graph['edge_feat']).to(
-                #     torch.int64)
-                # data.x = torch.from_numpy(graph['node_feat']).to(
-                # torch.float32)
-
-                data.idx = i
-                data.y = torch.tensor([label], dtype=torch.int)
-                data.smiles = smi
-
-                data_list.append(data)
-                data_smiles_list.append(smiles_list[i])
+        data_list, data_smiles_list = process_sdf(self.dataset, self.root)
 
         if self.pre_filter is not None:
             data_list = [data for data in data_list if self.pre_filter(data)]
 
         if self.pre_transform is not None:
             print('doing pre_transforming...')
-            data_list = [self.pre_transform(data) for data in data_list]
+            new_data_list = []
+            for data in tqdm(data_list):
+                new_data_list.append(self.pre_transform(data))
+            data_list = new_data_list
 
         # write data_smiles_list in processed paths
         data_smiles_series = pd.Series(data_smiles_list)
@@ -418,9 +465,67 @@ class QSARDataset(InMemoryDataset):
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
-    def get_idx_split(self):
+    def get_idx_split(self, seed):
+        num_active = len(torch.nonzero(self.data.y))
+        # num_active = len(torch.nonzero(torch.tensor([data.y for data in
+        #                                              self.data])))
+        num_inactive = len(self.data.y) - num_active
+
+        active_idx = list(range(num_active))
+        inactive_idx = list(range(num_active, num_active+num_inactive))
+        # print(f'wrapper.py::first 10 of inactive_idx:{inactive_idx[0:10]}')
+        # print(f'wrapper.py::split:num_active{len(active_idx)}, num_inactive:'
+        #       f'{len(inactive_idx)}')
+        random.seed(seed)
+        random.shuffle(active_idx)
+        random.shuffle(inactive_idx)
+
+        num_active_train = round(num_active * 0.8)
+        num_inactive_train = round(num_inactive * 0.8)
+        num_active_valid = round(num_active * 0.1)
+        num_inactive_valid = round(num_inactive * 0.1)
+        num_active_test = round(num_active * 0.1)
+        num_inactive_test = round(num_inactive * 0.1)
+        # print(f'wrapper.py::num_active_train:{num_active_train} '
+        #       f'num_inactive_train:{num_inactive_train}')
+        # print(f'wrapper.py::num_active_valid:{num_active_valid} '
+        #       f'num_inactive_valid:{num_inactive_valid}')
+        # print(f'wrapper.py::num_active_test:{num_active_test} '
+        #       f'num_inactive_test:{num_inactive_test}')
+
         split_dict = {}
-        # # Total 362 actives. Split: train-290, 36, 36
+        split_dict['train'] = active_idx[:num_active_train]\
+                              + inactive_idx[:num_inactive_train]
+        split_dict['valid'] = active_idx[
+                              num_active_train:num_active_train
+                                               +num_active_valid] \
+                              + inactive_idx[
+                                num_inactive_train:num_inactive_train
+                                                   +num_inactive_valid]
+        split_dict['test'] = active_idx[
+                              num_active_train + num_active_valid
+                              : num_active_train
+                                + num_active_valid
+                                + num_active_test] \
+                              + inactive_idx[
+                              num_inactive_train + num_inactive_valid
+                              : num_inactive_train
+                                + num_inactive_valid
+                                + num_inactive_test]
+        for i in range(136,146):
+            print(f'wrapper.py::first 10 of train:{split_dict["train"][i]}')
+        # print(f'wrapper.py::train{len(split_dict["train"])}  valid:'
+        #       f'{len(split_dict["valid"])}  test:{len(split_dict["test"])}')
+
+        # split_dict['train'] = [torch.tensor(x) for x in
+        #                        active_idx[:num_active_train]] + [
+        #     torch.tensor(x) for x in inactive_idx[num_inactive_train]]  # 10K Training
+        # split_dict['valid'] = [torch.tensor(x) for x in active_idx[num_]] + [
+        #     torch.tensor(x) for x in range(20000, 29964)]  # 10K val
+        # split_dict['test'] = [torch.tensor(x) for x in range(326, 362)] + [
+        #     torch.tensor(x) for x in range(3000, 9066)]
+
+        # Total 362 actives. Split: train-290, 36, 36
         # split_dict['train'] = [torch.tensor(x) for x in range(0, 326)] + [
         #     torch.tensor(x) for x in range(1000, 10674)]  # 10K Training
         # split_dict['valid'] = [torch.tensor(x) for x in range(326, 362)] + [
@@ -430,12 +535,12 @@ class QSARDataset(InMemoryDataset):
 
         # Super small dataset for processing debugging.
         # Total 362 actives. Split: 290, 36, 36
-        split_dict['train'] = [torch.tensor(x) for x in range(0, 326)] + [
-            torch.tensor(x) for x in range(400, 1074)]  # 1K Training
-        split_dict['valid'] = [torch.tensor(x) for x in range(326, 362)] + [
-            torch.tensor(x) for x in range(1100, 2064)]  # 1K val
-        split_dict['test'] = [torch.tensor(x) for x in range(326, 362)] + [
-            torch.tensor(x) for x in range(3000, 4000)]
+        # split_dict['train'] = [torch.tensor(x) for x in range(0, 326)] + [
+        #     torch.tensor(x) for x in range(400, 1074)]  # 1K Training
+        # split_dict['valid'] = [torch.tensor(x) for x in range(326, 362)] + [
+        #     torch.tensor(x) for x in range(1100, 2064)]  # 1K val
+        # split_dict['test'] = [torch.tensor(x) for x in range(326, 362)] + [
+        #     torch.tensor(x) for x in range(3000, 4000)]
 
         return split_dict
 
@@ -500,12 +605,18 @@ class ToXAndPAndEdgeAttrForDeg(object):
         edge_attr = data.edge_attr
         selected_index = focal_index = \
             (deg_index == deg).nonzero(as_tuple=True)[0]
-        x_focal = torch.index_select(input=x, dim=0, index=focal_index)
+
         p_focal = torch.index_select(input=p, dim=0, index=focal_index)
+
+        # Debug
+        # if deg == 2:
+        #     print(f'convert():p:{p}')
+        #     print(f'convert():focal_index:{focal_index}')
+        #     print(f"convert():p_focal:{p_focal}")
 
         num_focal = len(focal_index)
         nei_index_list_each_node = []
-        nei_x_list_each_node = []
+
         nei_p_list_each_node = []
         nei_edge_attr_list_each_node = []
 
@@ -513,8 +624,8 @@ class ToXAndPAndEdgeAttrForDeg(object):
             nei_index = self.get_neighbor_index(edge_index, focal_index[i])
             nei_index_list_each_node.append(nei_index)
 
-            nei_x = torch.index_select(x, 0, nei_index)
-            #             print(f'nei_x:{nei_x.shape}')
+            # nei_x = torch.index_select(x, 0, nei_index)
+            # #             print(f'nei_x:{nei_x.shape}')
             nei_p = torch.index_select(p, 0, nei_index)
             #             print(f'nei_p:{nei_p.shape}')
             nei_edge_attr = self.get_edge_attr_support_from_center_node(
@@ -522,37 +633,31 @@ class ToXAndPAndEdgeAttrForDeg(object):
             #             print('\n nei_edge_attr')
             #             print(nei_edge_attr)
 
-            nei_x_list_each_node.append(nei_x)
+            # nei_x_list_each_node.append(nei_x)
             nei_p_list_each_node.append(nei_p)
             nei_edge_attr_list_each_node.append(nei_edge_attr)
 
         if num_focal != 0:
             nei_index = torch.stack(nei_index_list_each_node, dim=0).reshape(
                 -1)
-            nei_x = torch.stack(nei_x_list_each_node, dim=0)
             nei_p = torch.stack(nei_p_list_each_node, dim=0)
             nei_edge_attr = torch.stack(nei_edge_attr_list_each_node, dim=0)
         else:
             nei_index = torch.Tensor()
-            nei_x = torch.Tensor()
             nei_p = torch.Tensor()
             nei_edge_attr = torch.Tensor()
 
         nei_index = nei_index.to(torch.long)
 
-        return x_focal, p_focal, nei_x, nei_p, nei_edge_attr, \
+        return p_focal, nei_p, nei_edge_attr, \
                selected_index, nei_index
 
     def __call__(self, data):
 
         deg_index = self.get_degree_index(data.x, data.edge_index)
 
-        data.x_focal_deg1 = data.x_focal_deg2 = data.x_focal_deg3 = \
-            data.x_focal_deg4 = None
         data.p_focal_deg1 = data.p_focal_deg2 = data.p_focal_deg3 = \
             data.p_focal_deg4 = None
-        data.nei_x_deg1 = data.nei_x_deg2 = data.nei_x_deg3 = \
-            data.nei_x_deg4 = None
         data.nei_p_deg1 = data.nei_p_deg2 = data.nei_p_deg3 = \
             data.nei_p_deg4 = None
         data.nei_edge_attr_deg1 = data.nei_edge_attr_deg2 = \
@@ -571,27 +676,32 @@ class ToXAndPAndEdgeAttrForDeg(object):
         # data.nei_edge_attr_deg4]
 
         deg = 1
-        data.x_focal_deg1, data.p_focal_deg1, data.nei_x_deg1, \
-        data.nei_p_deg1, data.nei_edge_attr_deg1, data.selected_index_deg1, \
-        data.nei_index_deg1 = self.convert_grpah_to_receptive_field_for_degN(
+        data.p_focal_deg1, data.nei_p_deg1, data.nei_edge_attr_deg1, \
+        data.selected_index_deg1, data.nei_index_deg1 = \
+            self.convert_grpah_to_receptive_field_for_degN(
             deg, deg_index, data)
 
         deg = 2
-        data.x_focal_deg2, data.p_focal_deg2, data.nei_x_deg2, \
-        data.nei_p_deg2, data.nei_edge_attr_deg2, data.selected_index_deg2, \
-        data.nei_index_deg2 = self.convert_grpah_to_receptive_field_for_degN(
+        data.p_focal_deg2, data.nei_p_deg2, data.nei_edge_attr_deg2,\
+        data.selected_index_deg2, data.nei_index_deg2 = \
+            self.convert_grpah_to_receptive_field_for_degN(
             deg, deg_index, data)
 
+        # # Debug
+        # print(f'wrapper.py==================')
+        # print(f'wrapper.py::smiles:{data.smiles}')
+        # print(f'wrapper.py::p_focal:{data.p_focal_deg2}')
+
         deg = 3
-        data.x_focal_deg3, data.p_focal_deg3, data.nei_x_deg3, \
-        data.nei_p_deg3, data.nei_edge_attr_deg3, data.selected_index_deg3, \
-        data.nei_index_deg3 = self.convert_grpah_to_receptive_field_for_degN(
+        data.p_focal_deg3, data.nei_p_deg3, data.nei_edge_attr_deg3, \
+        data.selected_index_deg3, data.nei_index_deg3 = \
+            self.convert_grpah_to_receptive_field_for_degN(
             deg, deg_index, data)
 
         deg = 4
-        data.x_focal_deg4, data.p_focal_deg4, data.nei_x_deg4, \
-        data.nei_p_deg4, data.nei_edge_attr_deg4, data.selected_index_deg4, \
-        data.nei_index_deg4 = self.convert_grpah_to_receptive_field_for_degN(
+        data.p_focal_deg4, data.nei_p_deg4, data.nei_edge_attr_deg4, \
+        data.selected_index_deg4, data.nei_index_deg4 = \
+            self.convert_grpah_to_receptive_field_for_degN(
             deg, deg_index, data)
 
         return data
@@ -599,5 +709,7 @@ class ToXAndPAndEdgeAttrForDeg(object):
 
 if __name__ == "__main__":
     pass
-    # dataset = MyQSARDataset(root='../../dataset/connect_aug/',
-    #                            generate_num=5)
+    qsar_dataset = QSARDataset(root='../dataset/qsar',
+                               dataset='485290',
+                               pre_transform=ToXAndPAndEdgeAttrForDeg(),
+                               )

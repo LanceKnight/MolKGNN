@@ -2,7 +2,7 @@ from .KernelLayer import MolGCN
 from lr import PolynomialDecayLR
 
 import torch
-from torch.nn import  Linear
+from torch.nn import Linear, Sigmoid
 from torch_geometric.nn import global_mean_pool
 from torch.optim import Adam
 
@@ -74,9 +74,7 @@ class KGNNNet(torch.nn.Module):
         elif len(argv) == 1:
             data = argv[0]
             x, p, edge_index, edge_attr, batch, \
-            x_focal_deg1, x_focal_deg2, x_focal_deg3, x_focal_deg4, \
             p_focal_deg1, p_focal_deg2, p_focal_deg3, p_focal_deg4, \
-            nei_x_deg1, nei_x_deg2, nei_x_deg3, nei_x_deg4, \
             nei_p_deg1, nei_p_deg2, nei_p_deg3, nei_p_deg4, \
             nei_edge_attr_deg1, nei_edge_attr_deg2, nei_edge_attr_deg3, \
             nei_edge_attr_deg4, \
@@ -85,12 +83,8 @@ class KGNNNet(torch.nn.Module):
             nei_index_deg1, nei_index_deg2, nei_index_deg3, nei_index_deg4 \
                 = \
                 data.x, data.p, data.edge_index, data.edge_attr, data.batch, \
-                data.x_focal_deg1, data.x_focal_deg2, data.x_focal_deg3, \
-                data.x_focal_deg4, \
                 data.p_focal_deg1, data.p_focal_deg2, data.p_focal_deg3, \
                 data.p_focal_deg4, \
-                data.nei_x_deg1, data.nei_x_deg2, data.nei_x_deg3, \
-                data.nei_x_deg4, \
                 data.nei_p_deg1, data.nei_p_deg2, data.nei_p_deg3, \
                 data.nei_p_deg4, \
                 data.nei_edge_attr_deg1, data.nei_edge_attr_deg2, \
@@ -104,18 +98,10 @@ class KGNNNet(torch.nn.Module):
 
         node_representation = self.gnn(x=x, edge_index=edge_index,
                                        edge_attr=edge_attr, p=p,
-                                       x_focal_deg1=x_focal_deg1,
-                                       x_focal_deg2=x_focal_deg2,
-                                       x_focal_deg3=x_focal_deg3,
-                                       x_focal_deg4=x_focal_deg4,
                                        p_focal_deg1=p_focal_deg1,
                                        p_focal_deg2=p_focal_deg2,
                                        p_focal_deg3=p_focal_deg3,
                                        p_focal_deg4=p_focal_deg4,
-                                       nei_x_deg1=nei_x_deg1,
-                                       nei_x_deg2=nei_x_deg2,
-                                       nei_x_deg3=nei_x_deg3,
-                                       nei_x_deg4=nei_x_deg4,
                                        nei_p_deg1=nei_p_deg1,
                                        nei_p_deg2=nei_p_deg2,
                                        nei_p_deg3=nei_p_deg3,
@@ -134,8 +120,8 @@ class KGNNNet(torch.nn.Module):
                                        nei_index_deg4=nei_index_deg4,
                                        save_score=save_score)
 
-        graph_representation = self.graph_embedding_linear(self.pool(
-            node_representation, batch))
+        graph_representation = self.graph_embedding_linear(
+            self.pool(node_representation, batch))
 
         return graph_representation
 
@@ -151,6 +137,14 @@ class KGNNNet(torch.nn.Module):
         # E.g., parser.add_argument('--GCN_arguments', type=int,
         # default=12)
         parser.add_argument('--num_layers', type=int, default=3)
+        parser.add_argument('--num_kernel1_1hop', type=int, default=10)
+        parser.add_argument('--num_kernel2_1hop', type=int, default=10)
+        parser.add_argument('--num_kernel3_1hop', type=int, default=10)
+        parser.add_argument('--num_kernel4_1hop', type=int, default=10)
+        parser.add_argument('--num_kernel1_Nhop', type=int, default=10)
+        parser.add_argument('--num_kernel2_Nhop', type=int, default=10)
+        parser.add_argument('--num_kernel3_Nhop', type=int, default=10)
+        parser.add_argument('--num_kernel4_Nhop', type=int, default=10)
 
         return parent_parser
 

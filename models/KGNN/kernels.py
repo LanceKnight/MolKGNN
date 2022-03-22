@@ -6,7 +6,7 @@ from torch.nn import ModuleList, CosineSimilarity, Module, Linear, Sigmoid
 # from torch.nn import
 from torch.nn.parameter import Parameter
 
-from itertools import permutations
+from itertools import permutations, combinations
 import math
 import pandas as pd
 
@@ -63,7 +63,7 @@ class KernelConv(Module):
                     'number of support num_supports or feature dimension '
                     'node_attr_dim is not specified')
             else:
-                init_kernel = Data(x_center=torch.randn(L, 1, node_attr_dim),
+                init_kernel = Data(x_center=torch.randn(L, node_attr_dim),
                                    x_support=torch.randn(L, num_supports,
                                                          node_attr_dim),
                                    edge_attr_support=torch.randn(L,
@@ -106,47 +106,128 @@ class KernelConv(Module):
         return self.num_kernels
 
     def permute(self, x):
-        #         print('permute')
-        #         print('x')
-        #         print(x.shape)
-        rows = x.shape[1]
-        l = [x[:, torch.tensor(permute), :]
-             for permute in list(permutations(range(rows)))]
+        """
+        Get the possible permutations given a set of neighbors in a kernel.
+
+        For 1 neighbor, there is only 1 permutation
+        For 2 neighbors, there are 2 permutations
+        For 3 neighbors, there are 6 permutations
+        For 4 neighbors, there are 24 permutations. However, if we consider
+        chirality, only 12 of the permuations are allowed. See [1] for
+        detailed explanation.
+
+        References
+        [1]Pattanaik, L., Ganea, O.-E., Coley, I., Jensen, K. F., Green, W. H.,
+        and Coley, C. W., “Message Passing Networks for Molecules with
+        Tetrahedral Chirality”, <i>arXiv e-prints</i>, 2020.
+        :param x: the matrix containing the neighbor. Size is [num_kernels,
+        degree, dim]
+        :return: a tensor of size [num_kernels, num_permutations, degree,
+        dimension]
+        """
+        degree = x.shape[1]
+        if degree != 4:
+            l = [x[:, torch.tensor(permute), :]
+                 for permute in list(permutations(range(degree)))]
+        else:
+            d4_permutations = [(0, 1, 2, 3),
+                               (0, 2, 3, 1),
+                               (0, 3, 1, 2),
+                               (1, 0, 3, 2),
+                               (1, 2, 0, 3),
+                               (1, 3, 2, 0),
+                               (2, 0, 1, 3),
+                               (2, 1, 3, 0),
+                               (2, 3, 0, 1),
+                               (3, 0, 2, 1),
+                               (3, 1, 0, 2),
+                               (3, 2, 1, 0)
+                               ]
+            l = [x[:, torch.tensor(permute), :]
+                 for permute in d4_permutations]
         output = torch.stack(l, dim=1)
-        #         print('permuted')
-        #         print(output.shape)
+        # print(f'output:{output}')
         return output
 
-    def intra_angle(self, p):
+    def intra_angle(self, input):
         """
-        Calculate angle score from a
-        :param p:
-        :return:
+        Calculate cosine of angles between all pairs of vectors stored in a
+        tensor
+        :param input: Shape[num_vectors, dim]
+        :return: a tensor of Shape[num_combination, dim]
         """
+        all_vecotr = input.unbind()
+        num_vector = len(all_vecotr)
 
-
+        # Get cosine angle between all paris of tensors in the input
         cos = CosineSimilarity(dim=-1)
-        new_p = torch.roll(p, 1, dims=-2)
-        #         print(f'new p:')
-        #         print(new_p)
-        sc = cos(new_p, p)
-        #         print(f'intra angle sc:{sc.shape}')
+        res_list = []
+        all_combination = combinations(range(num_vector), 2)  # All
+        for combination in all_combination:
+            t1 = all_vecotr[combination[0]]
+            t2 = all_vecotr[combination[1]]
+            res_list.append(cos(t1, t2))
+        result = torch.stack(res_list)
+        result = torch.acos(result) # Convert to angle in radian
+        return result
+
+        # cos = CosineSimilarity(dim=-1)
+        # new_p = torch.roll(p, 1, dims=-2)
+        # sc = cos(new_p, p)
+        # #         print(f'intra angle sc:{sc.shape}')
+        # return sc
+
+    def calculate_average_similarity_score(self, tensor1, tensor2, sim_dim=None, avg_dim=None):
+        """
+        Calculate the similarity between two tensors.
+
+        This similarity is both calculated using a CosineSimilarity and an
+        average.
+        E.g.
+        t1 = torch.tensor([[[1, 2, 3], [3, 2, 1]], [[1, 2, 3], [3, 2, 1]]],
+        dtype=torch.double) # 2*2*3 tensor
+        t2 = torch.tensor([[[1, 2, 3], [3, 2, 1]], [[1, 2, 1], [1, 2, 1]]],
+        dtype=torch.double) # 2*2*3 tensor
+        if sim_dim=-1, avg_dim = -2,
+        This will first calculate cos similarity along dim -1, and then
+        average over dim -2 (original dim -2, not the dim after cos
+        similarity).
+        The result is tensor([1.000, 0.8729]) because the average of the two
+        similarity scores are 1.000 and 0.9729 respectively
+
+        :param tensor1: input1
+        :param tensor2: input1
+        :param sim_dim: the dimension along which similarity is calculated
+        This dimension becomes 1 after calculation. The sim_dim has to be
+        expressed as a negative interger (for the ease of implementation).
+        :param avg_dim: the dimension along which an arithmetic average is
+        calculated. The sim_dim has to be expressed as a negative integer (for
+        the ease of implementation).
+        :return: a tensor of average scores
+        """
+        if sim_dim >= 0 or (avg_dim is not None and avg_dim >= 0):
+            raise NotImplementedError("kernels.py::arctan_sc(). Currently "
+                                      "this function is implemented assuming "
+                                      "sim_dim and avg_dim both are negative. "
+                                      "Change the implementation if using "
+                                      "positive dimension")
+
+        cos = CosineSimilarity(dim=sim_dim)
+        sc = cos(tensor1, tensor2)
+        if avg_dim is not None:
+            if sim_dim > avg_dim:  # The sim_dim disappear after Cos,
+                # so avg_dim
+                # changes as well
+                avg_dim = avg_dim - sim_dim
+            sc = torch.mean(sc, dim=avg_dim)
         return sc
 
-    def arctan_sc(self, tensor1, tensor2, dim=None):
-        """
-        Calculate
-        :param tensor1:
-        :param tensor2:
-        :param dim:
-        :return:
-        """
-        diff = torch.square(tensor1 - tensor2)
-        if dim is not None:
-            sc = torch.sum(diff, dim=dim)
-        else:
-            sc = torch.sum(diff)
-        sc = torch.atan(1 / (sc + 1e-8))
+        # diff = torch.square(tensor1 - tensor2)
+        # if dim is not None:
+        #     sc = torch.sum(diff, dim=dim)
+        # else:
+        #     sc = torch.sum(diff)
+        # sc = torch.atan(1 / (sc + 1e-8))
         return sc
 
     def get_angle_score(self, p_neighbor, p_support):
@@ -154,108 +235,351 @@ class KernelConv(Module):
         Calculate angle scores between the coordinates of neighbors and
         supports.
 
-        :param p_neighbor: a tensor of size [num_neighborhoood, degree,
-        D] for the neighborhood,
-        where num_degree is the number of neighborhood of a certain degree,
-        the degree is that degree, D is the dimension,
-        :param p_support: a tensor of size [num_neighborhoood, degree,
-        D] for the kernel
-        :return: returns the angle score
+        It first calculates angles between each pairs of vectors in the
+        neighbors/supports. Then these pairs of angles are compared between
+        neighbors and supports
+
+        :param p_neighbor: a tensor of size [num_nodes_of_this_degree, degree,
+        space_dim] for the neighborhood
+        :param p_support: a tensor of size [num_kernels,
+        num_nodes_of_this_degree, degree, space_dim] for the kernel
+        :return: returns the angle score, a tensor of Shape[num_kernels,
+        num_nodes_of_this_degree]
         """
 
-        # If the degree is 1, always return
-        if (p_support.shape[-2] == 1):
-            return torch.full((p_support.shape[0], p_neighbor.shape[0]),
-                              math.pi / 2, device=p_neighbor.device)
-        #         cos = CosineSimilarity(dim = 1)
+        # If the degree is 1, always return a tensor of max similarity (i.e.,1)
+        deg = p_support.shape[-2]
+        if ( deg == 1):
+            num_kernel = p_support.shape[0]
+            num_nodes_of_this_degree = p_neighbor.shape[0]
+            return torch.full((num_kernel, num_nodes_of_this_degree),
+                             1, device=p_neighbor.device)
 
-        p_neighbor = p_neighbor.unsqueeze(0).unsqueeze(0).expand(
-            p_support.shape[0], p_support.shape[1], p_neighbor.shape[-3],
-            p_neighbor.shape[-2], p_neighbor.shape[-1])
-        #         p_neighbor = p_neighbor.unsqueeze(0).expand(p_support.shape)
-        #         print(f'p_neighbor:{p_neighbor.shape}')
-        intra_p_neighbor_angle = self.intra_angle(p_neighbor)
-        #         intra_p_neighbor_dist = intra_p_neighbor_dist.unsqueeze(
-        #         0).expand(p_support.shape[0], p_neighbor.shape[0],
-        #         p_neighbor.shape[1])
-        #         print(f'intra_p_neighbor_dist:{intra_p_neighbor_dist.shape}')
+        # # Debug
+        # if deg == 2 or deg == 3 or deg == 4:
+        #     print(f'======================')
+        #     print(f'get_angle():p_neighbor:{p_neighbor}')
+        #     print(f'get_angle():p_support:{p_support}')
 
-        #         p_support = p_support.expand(p_neighbor.shape)
-        #         print(f'p_support:{p_support.shape}')
-        intra_p_support_angle = self.intra_angle(p_support)
-        #         intra_p_support_dist = intra_p_support_dist.unsqueeze(
-        #         1).expand(p_support.shape[0], p_neighbor.shape[0],
-        #         p_support.shape[1])
-        #         print(f'intra_p_support_dist:{intra_p_support_dist.shape}')
+        p_neighbor_for_all_node = p_neighbor.unbind()
+        p_support_for_all_kernel = p_support.unbind()
 
-        #         sc = cos(intra_p_neighbor_dist, intra_p_support_dist)
-        #         sc = torch.dot(intra_p_neighbor_dist, intra_p_support_dist.T)
-        sc = self.arctan_sc(intra_p_neighbor_angle,
-                            intra_p_support_angle, dim=(-1))
-        #         print(f'inner angle_sc:{sc.shape}')
-        return sc.squeeze(1)
+        res_list_for_all_kernel = []
+        for p_support_each_kernel in p_support_for_all_kernel:
+            p_support_for_all_node = p_support_each_kernel.unbind()
+            res_list_for_all_node = []
+            for node_id, p_support_each_node in \
+                    enumerate(p_support_for_all_node):
+                support_intra_angle = self.intra_angle(p_support_each_node)
+                support_intra_angle = (support_intra_angle * 10).round() / 10
+                # print(f'support_intra_angle:{support_intra_angle}')
 
-    def get_length_score(self, p_neighbor, p_support):
-        len_p_neighbor = torch.norm(p_neighbor, dim=-1)
-        len_p_support = torch.norm(p_support, dim=-1)
+                neighbor_intra_angle = self.intra_angle(
+                    p_neighbor_for_all_node[node_id])
+                neighbor_intra_angle = (neighbor_intra_angle * 10).round()/10
+                # print(f'neighbor_intra_angle:{neighbor_intra_angle}')
+                intra_angle_similarity = \
+                    self.calculate_average_similarity_score(
+                        support_intra_angle, neighbor_intra_angle, sim_dim
+                        =-1)
+                res_list_for_all_node.append(intra_angle_similarity)
+            res_list_for_all_kernel.append(res_list_for_all_node)
+        result = torch.tensor(res_list_for_all_kernel, device =
+        p_support.device)
 
-        #         print('len_p_neighbor')
-        #         print(f'len_p_neighbor:{len_p_neighbor.shape}')
-        #         print(f'len_p_support:{len_p_support.shape}')
+        # # Debug
+        # if deg == 2 or deg == 3 or deg == 4:
+        #     print(f'get_angle():result:{result}')
 
-        # inverse of L2 norm
-        sc = self.arctan_sc(len_p_neighbor, len_p_support, dim=(-1))
-        #         diff = torch.square(len_p_neighbor - len_p_support)
-        #         sc = torch.sum(diff)
-        #         sc = torch.atan(1/sc)
+        return result
 
-        # #         print(sc)
-        return sc
+        # p_neighbor = p_neighbor.unsqueeze(0).unsqueeze(0).expand(
+        #     p_support.shape[0], p_support.shape[1], p_neighbor.shape[-3],
+        #     p_neighbor.shape[-2], p_neighbor.shape[-1])
+        #
+        # intra_p_neighbor_angle = self.intra_angle(p_neighbor)
+        #
+        # intra_p_support_angle = self.intra_angle(p_support)
+        #
+        # sc = self.arctan_sc(intra_p_neighbor_angle,
+        #                     intra_p_support_angle, sim_dim=(-1))
+        #
+        # # Debug
+        # print(f'get_angle():sc:{sc.shape}')
+        # return sc.squeeze(1)
+
+    # def get_length_score(self, p_neighbor, p_support):
+    #     """
+    #     Compare the length of the neighbors and supports
+    #
+    #     It calculates the norm for all vectors in neighbors/supports first
+    #     and then calculates similarities between those norms
+    #     :param p_neighbor: Shape[num_nodes_in_this_degree, degree, dim]
+    #     :param p_support: Shape[num_kernels, num_nodes_in_this_degree,
+    #     degree, dim]
+    #     :return: a tensor. Shape[num_kernel, num_nodes_in_this_degree]
+    #     """
+    #     len_p_neighbor = torch.norm(p_neighbor, dim=-1)
+    #     len_p_support = torch.norm(p_support, dim=-1)
+    #
+    #
+    #
+    #     # Round the length of neighbors to 0.1. E.g., 1.512 becomes 1.5
+    #     # This eliminates the impact of small difference in lengths
+    #     len_p_neighbor = (len_p_neighbor * 10).round()/10
+    #
+    #     # Debug
+    #     # deg = p_neighbor.shape[-2]
+    #     # if deg == 4:
+    #     #     print(f'get_length():p_neighbor:{p_neighbor}')
+    #     #     print(f'get_length_score():p_neighbor:{p_neighbor.shape} p_support:'
+    #     #           f'{p_support.shape}')
+    #     #     print(f'get_length_score():\nlen_p_neighbor:\n'
+    #     #           f'{len_p_neighbor}\nlen_p_support:\n{len_p_support}')
+    #
+    #     # Get the similarity score
+    #     sc = self.calculate_average_similarity_score(len_p_neighbor, len_p_support, sim_dim=(-1))
+    #     return sc
+
+    def get_the_permutation_with_best_alignment_id(self, input_tensor,
+                                                   best_alignment_id):
+        """
+        Get the permutations and the input_tensor and choose the best one
+        specified by the best_alignement_id
+        :param input_tensor: an input to be permuted. Shape[num_kernel,
+        degree, dim]
+        :param best_alignment_idx: a tensor specifying the best alignment
+        id. Shape[num_kernel, num_nodes_of_this_degree]
+        :return: a tensor of shape [num_kernel, num_nodes_of_this_degree,
+        degree, dim]
+        """
+
+        permuted_input = self.permute(input_tensor)  # After permutation,
+        # Shape[num_kernel, num_permutation, degree, dim]
+        alignment_for_all_kernels = permuted_input.unbind()  # A tuple,
+        # with each element being permutations for one kernel.
+        id_for_all_kernels = best_alignment_id.unbind()  # A tuple,
+        # with each element being best permutation index for each kernel
+
+        # Get the best alignment for each kernel and store in the res_list.
+        res_list = []
+        for i, alignment_each_kernel in enumerate(alignment_for_all_kernels):
+            res_list.append(alignment_each_kernel[id_for_all_kernels[i], :,
+                            :])
+
+        result = torch.stack(
+            res_list)  # convert list of kernels back to tensor
+        return result
+
+    def mem_size(self, ten):
+        return ten.element_size() * ten.nelement()
 
     def get_support_attribute_score(self, x_nei, x_support):
-        #         print(f'x_nei:{x_nei.shape}')
-        #         print(f'x_suppport:{x_support.shape}')
-        x_nei = x_nei.unsqueeze(0).unsqueeze(0).expand(
-            x_support.shape[0], x_support.shape[1], x_nei.shape[0],
-            x_nei.shape[1], x_nei.shape[2])
-        x_support = x_support.unsqueeze(2).expand(x_nei.shape)
+        """
 
-        sc = self.arctan_sc(x_nei, x_support, dim=(-2, -1))
+        :param x_nei: [num_nodes_of_this_degree, deg, attr_dim]
+        :param x_support: Shape[num_kernel, num_permute, deg, attr_dim]
+        :return: a tensor of Shape[num_kernels,
+        num_permute, num_node_of_this_degree]
+        """
+        # print('===start==')
+        # print(f'before x_nei:{x_nei.shape} numel: '
+        #       f'{torch.numel(x_nei)/1000000}M mem:'
+        #       f'{self.mem_size(x_nei)/1000000} '
+        #       f'MB')
+        # print(f'before x_suppport:{x_support.shape} numel:'
+        #       f' {torch.numel(x_support)/1000000}M mem:'
+        #       f'{self.mem_size(x_support)/1000000}MB')
+
+
+
+        res_permute = []
+        x_support_permute_list = x_support.unbind(dim=1)
+        x_nei = x_nei.unsqueeze(0).expand(x_support.shape[0],
+                                          x_nei.shape[0], x_nei.shape[1],
+                                          x_nei.shape[2])
+        for x_support_permute in x_support_permute_list:
+            x_support_permute = x_support_permute.unsqueeze(1).expand(
+                x_nei.shape)
+            sc = self.calculate_average_similarity_score(x_nei,
+                                                         x_support_permute,
+                                                         sim_dim=-1,
+                                                             avg_dim=-2)
+            res_permute.append(sc)
+        sc = torch.stack(res_permute, dim=1)
         return sc
 
+
+        # x_nei_node_list = x_nei.unbind()
+        # x_support_kernel_list = x_support.unbind()
+        # res_kernel = []
+        # for x_support_kernel in x_support_kernel_list:
+        #     x_support_permute_list = x_support_kernel.unbind()
+        #     res_permute = []
+        #     for x_support_permute in x_support_permute_list:
+        #         def sim(input):
+        #             sc = self.calculate_average_similarity_score(input,
+        #                                                          x_support_permute,
+        #                                                          sim_dim=-1,
+        #                                                          avg_dim=-2)
+        #             return sc
+        #
+        #         res_node = list(map(sim, x_nei_node_list))
+        #         # for x_nei_node in x_nei_node_list:
+        #
+        #             # res_node.append(sc)
+        #         res_permute.append(res_node)
+        #     res_kernel.append(res_permute)
+        # sc = torch.tensor(res_kernel, device=x_nei.device)
+        # return sc
+
+
+
+
+
+
+
+
+        # # ====================
+        # # Debugging
+        # # deg = x_support.shape[-2]
+        # # if deg == 4:
+        # #     print(f'kernels.py::\nx_nei:\n{x_nei}\nx_support:\n{x_support}')
+        #
+        # x_nei = x_nei.unsqueeze(0).unsqueeze(0).expand(
+        #     x_support.shape[0], x_support.shape[1], x_nei.shape[0],
+        #     x_nei.shape[1], x_nei.shape[2])
+        # x_support = x_support.unsqueeze(2).expand(x_nei.shape)
+        # sc = self.calculate_average_similarity_score(x_nei, x_support, sim_dim=-1, avg_dim=-2)
+        # # print(f'kernels.py::sc:{sc.shape}')
+        # # # =====================
+        # #
+        # # print(f'after x_nei shape:{x_nei.shape}, numel:'
+        # #       f'{torch.numel(x_nei)/1000000}M mem:'
+        # #       f'{self.mem_size(x_nei)/1000000}MB')
+        # # print(f'x_support shape:{x_support.shape}, numel:'
+        # #       f'{torch.numel(x_support)/1000000}M mem:'
+        # #       f'{self.mem_size(x_support)/(1024*1024)}MB')
+        # # print(f'sc shape:{sc.shape}')
+        # # print('===end==')
+        # return sc
+
     def get_center_attribute_score(self, x_focal, x_center):
-        # inverse of L2 norm
-        #         print(f'center attri:{type(x_focal)}, {type(x_center)}')
-        #         print(f'x_focal:{x_focal.shape}, x_center:{x_center.shape}')
-        #         print(x_focal)
-        #         print(x_center)
-        #         diff = torch.square(x_focal - x_center)
-        #         sc = torch.sum(diff)
-        #         sc:'shape([])' = torch.atan(1/sc)
+        """
+        Get the similarity score between center and focal atoms in the
+        neighborhood and filter
+        :param x_focal: Shape[num_node, node_attr_dim]
+        :param x_center: Shape[num_kernels, node_attr_dim]
+        :return: a tensor of Shape[num_kernels, num_node]
+        """
+
+        # x_focal_node_list = x_focal.unbind()
+        # x_center_kernel_list = x_center.unbind()
+        # res_kernel = []
+        # for x_center_kernel in x_center_kernel_list:
+        #     res_node = []
+        #     for x_focal_node in x_focal_node_list:
+        #         sc = self.calculate_average_similarity_score(x_focal_node,
+        #                                                      x_center_kernel,
+        #                                                 sim_dim=(-1))
+        #         res_node.append(sc)
+        #     res_kernel.append(res_node)
+        # sc = torch.tensor(res_kernel, device = x_focal.device)
+
         x_focal = x_focal.unsqueeze(0).expand(
             x_center.shape[0], x_focal.shape[0], x_focal.shape[1])
-        x_center = x_center.expand(x_focal.shape)
-        #         print('x_focal')
-        #         print(x_focal)
-        #         print('x_center')
-        #         print(x_center)
+        x_center = x_center.unsqueeze(1).expand(x_focal.shape)
 
-        sc = self.arctan_sc(x_focal, x_center, dim=(-1))
+        sc = self.calculate_average_similarity_score(x_focal, x_center,
+                                                     sim_dim=-1)
+
         return sc
 
     def get_edge_attribute_score(self, edge_attr_nei, edge_attr_support):
-        #         print('edge_attr_nei')
-        #         print(edge_attr_nei)
-        #         print('edge_attr_support')
-        #         print(edge_attr_support)
-        #         diff = torch.square(edge_attr_nei - edge_attr_support)
-        #         sc = torch.sum(diff)
-        #         sc:'shape([])' = torch.atan(1/sc)
-        sc = self.arctan_sc(edge_attr_nei, edge_attr_support, dim=(-2, -1))
+        sc = self.calculate_average_similarity_score(edge_attr_nei, edge_attr_support, sim_dim=-1,
+                                                     avg_dim=-2)
         return sc
+
+
+
+    def get_chirality_sign(self, p_nei, x_nei, p_support):
+        """
+        Calculate the sign for an atom with four neighbors using signed
+        tetrahedral volume [1]. If all four neighbors have different
+        attributes, the sign is either 1 or -1. If any two of the four
+        neighbors have the same attributes, the sign is still 1 (no chirality)
+
+        References:
+        [1] Sliwoski G, Lowe EW, Butkiewicz M, Meiler J. BCL::EMAS--
+        enantioselective molecular asymmetry descriptor for 3D-QSAR. Molecules.
+         2012 Aug 20;17(8):9971-89. doi: 10.3390/molecules17089971. P
+         MID: 22907158; PMCID: PMC3805266.
+        :param p_nei: The neighbors' calibrated coordinates (centered at
+        the origin). A tensor of Shape[num_nodes_of_this_degree, 4, space_dim]
+        :param x_nei: The neighbor attributes. A tensor of Shape[
+        num_nodes_of_this_degree, 4, dim]
+        :param p_support: The filters' coordinates. A tensor of Shape[num_kernels,
+        num_nodes_of_this_degree, 4, space_dim]
+        :return: a tensor of Shape[num_kernel, num_nodes_of_this_degree].
+        Element is 1
+        or -1
+        """
+
+        num_kernel = p_support.shape[0]
+        x_nei_node_list = x_nei.unbind()
+        node_res_list = []
+        for node_id, x_nei_node in enumerate(x_nei_node_list):
+            neighbor_list = x_nei_node.unbind()
+            is_chiral = True
+
+            # If any two of the four attributes are the same, not chiral
+            combination_list = combinations(range(4), 2)
+            for combination in combination_list:
+                neighbor1 = neighbor_list[combination[0]]
+                neighbor2 = neighbor_list[combination[1]]
+                if torch.equal(neighbor1, neighbor2):
+                    node_res_list.append([1]*num_kernel) # Return 1 for all
+                    # kernels
+                    is_chiral = False
+                    break
+
+            if is_chiral:
+                support_kernel_list = p_support.unbind()
+                p_nei_node_list = p_nei.unbind()
+                kernel_res_list = []
+                for kernel_id, kernel in enumerate(support_kernel_list):
+                    support_node_list = kernel.unbind()
+                    support_list = support_node_list[node_id].unbind()
+                    neighbor_list = p_nei_node_list[node_id].unbind()
+                    t1_nei = neighbor_list[0]
+                    t2_nei = neighbor_list[1]
+                    t3_nei = neighbor_list[2]
+
+                    t1_support = support_list[0]
+                    t2_support = support_list[1]
+                    t3_support = support_list[2]
+
+                    # Calculate the tetrahedral volume sign
+                    sign_nei = torch.sign(torch.dot(t3_nei, torch.cross(
+                        t1_nei, t2_nei)))
+                    sign_support = torch.sign(torch.dot(t3_support,
+                                                        torch.cross(
+                                                            t1_support,
+                                                            t2_support)))
+
+                    if sign_nei == sign_support:
+                        kernel_res_list.append(1)
+                    else:
+                        kernel_res_list.append(-1)
+                node_res_list.append(kernel_res_list)
+
+        result = torch.tensor(node_res_list, device = x_nei.device).T
+        return result
+
 
     def calculate_total_score(self, x_focal, p_focal, x_neighbor, p_neighbor,
                               edge_attr_neighbor):
+        a = time.time()
         # Calibrate neighbor coordinates
         # Calibrated coordinates = original coordinates - center coordinates
         p_neighbor = p_neighbor - p_focal.unsqueeze(1)
@@ -266,44 +590,64 @@ class KernelConv(Module):
         edge_attr_support = self.edge_attr_support
         p_support = self.p_support
 
+        # Just for debugging
+        deg = p_support.shape[-2]
+        # if deg == 4:
+        #     print(f'total_score():deg:{deg}-------------------')
+            # print(f'total_score():x_focal:{x_focal}')
+            # print(f'total_score():x_neighbor:{x_neighbor}')
+
         # Because every sub-score is calculated using actan function,
         # which peaks at pi/2, so this max_atn is used to normalized the
         # score so it is in [0,1]
-        max_atan = torch.tensor([math.pi / 2], device=p_neighbor.device)
+        # max_atan = torch.tensor([math.pi / 2], device=p_neighbor.device)
 
         # Calculate the support attribute score
         permuted_x_support = self.permute(x_support)
         support_attr_sc = self.get_support_attribute_score(x_neighbor,
-                                                           permuted_x_support) / max_atan
+                                                           permuted_x_support)
 
         # Get the best support_attr_sc and its index
         best_support_attr_sc, best_support_attr_sc_index = torch.max(
             support_attr_sc, dim=1)
 
-        # Calculate the angle score
-        # permuted_p_support = self.permute(p_support)
-        # permuted_p_support = permuted_p_support.unsqueeze(2).expand(
-        #     permuted_p_support.shape[0], permuted_p_support.shape[1],
-        #     best_support_attr_sc_index.shape[1], permuted_p_support.shape[2],
-        #     permuted_p_support.shape[3])
-        # #         print(f'permuted_p_support:{permuted_p_support}')
-        # selected_index = best_support_attr_sc_index.unsqueeze(1).unsqueeze(
-        #     -1).unsqueeze(-1).expand(
-        #     permuted_p_support.shape[0], 1,
-        #     best_support_attr_sc_index.shape[-1], permuted_p_support.shape[3],
-        #     permuted_p_support.shape[4])
-        # best_p_support = torch.gather(permuted_p_support, 1, selected_index)
-        # angle_sc = self.get_angle_score(p_neighbor, best_p_support) / max_atan
+        # # Debug
+        # if deg==3:
+        #     print(f'KernelConv()::deg={deg} p_neighbor:\n{p_neighbor}')
 
-        # Calculate length score
+        # # Calculate position score
+        # best_p_support = self.get_the_permutation_with_best_alignment_id(
+        #     p_support, best_support_attr_sc_index)
+        # position_sc = self.get_position_score(p_neighbor, best_p_support)
+
+        # # Calculate the angle score
+        best_p_support = self.get_the_permutation_with_best_alignment_id(
+            p_support, best_support_attr_sc_index)
+        # # permuted_p_support = self.permute(p_support)
+        # # permuted_p_support = permuted_p_support.unsqueeze(2).expand(
+        # #     permuted_p_support.shape[0], permuted_p_support.shape[1],
+        # #     best_support_attr_sc_index.shape[1], permuted_p_support.shape[2],
+        # #     permuted_p_support.shape[3])
+        # # selected_index = best_support_attr_sc_index.unsqueeze(1).unsqueeze(
+        # #     -1).unsqueeze(-1).expand(
+        # #     permuted_p_support.shape[0], 1,
+        # #     best_support_attr_sc_index.shape[-1],
+        # #     permuted_p_support.shape[3],
+        # #     permuted_p_support.shape[4])
+        # # best_p_support = torch.gather(permuted_p_support, 1, selected_index)
+        # angle_sc = self.get_angle_score(p_neighbor, best_p_support)
+        #
+        # # print(f'best_p_support:{best_p_support}')
+        #
+        # # Calculate length score
         # best_p_support = best_p_support.squeeze(1)
         # length_sc = self.get_length_score(p_neighbor,
-        #                                   best_p_support) / max_atan
-
+        #                                   best_p_support)
 
         # Calculate the center attribute score
         center_attr_sc = self.get_center_attribute_score(x_focal,
-                                                         x_center) / max_atan
+                                                         x_center)
+
 
         # Calculate the edge attribute score
         selected_index = best_support_attr_sc_index.unsqueeze(-1).unsqueeze(
@@ -315,20 +659,55 @@ class KernelConv(Module):
         best_edge_attr_support = torch.gather(
             permuted_edge_attr_support, 1, selected_index)
         edge_attr_support_sc = self.get_edge_attribute_score(
-            edge_attr_neighbor, best_edge_attr_support) / max_atan
+            edge_attr_neighbor, best_edge_attr_support)
         support_attr_sc = best_support_attr_sc
 
+        # Debug
+        # if deg == 4:
+        #     # print(f'best_support_attr_sc:{best_support_attr_sc}\n '
+        #     #       f'best_support_attr_sc_index:{best_support_attr_sc_index}'
+        #     #       f'\n ')
+        #     print(f'best_position_sc:{position_sc}')
 
+        if deg == 4:
+            chirality_sign = self.get_chirality_sign(p_neighbor,
+                                                     x_neighbor,
+                                                     best_p_support
+                                                     )
+            # print(f'chirality sign: support_attr_sc:{support_attr_sc.shape}')
+            # print(f'chirality sign: chirality_sign:{chirality_sign.shape}')
+            support_attr_sc = support_attr_sc * chirality_sign
+
+
+        # Debug
+        # if (deg == 4):
+        #     # print(f'kernels.py::length:{length_sc}')
+        #     # print(f'kernels.py::angle:{angle_sc}')
+        #     print(f'==============')
+        #     print(f'kernels.py::support_attr_sc:{support_attr_sc}')
+        #     print(f'kernels.py::center_attr_sc:{center_attr_sc}')
+        #     print(f'kernels.py::edge_attr_support_sc:'
+        #           f'{edge_attr_support_sc}')
+        #     print(f'neighborhood:----')
+        #     torch.set_printoptions(profile="full")
+        #     print(f'x_focal:\n{x_focal}')
+        #     print(f'kernels:----------')
+        #     print(f'x_center:\n{x_center}')
+        #     print(f'x_support:\n{x_support}')
+
+
+
+        # Each score is of Shape[num_kernel, num_nodes_of_this_degree]
         sc = (
-                     # length_sc * self.length_sc_weight
-                     # + angle_sc * self.angle_sc_weight
-                     support_attr_sc * self.support_attr_sc_weight
-                     + center_attr_sc * self.center_attr_sc_weight
-                     + edge_attr_support_sc *
-                     self.edge_attr_support_sc_weight) / 3
-
-
-
+                 # length_sc * self.length_sc_weight
+                 # + angle_sc * self.angle_sc_weight
+                 support_attr_sc * self.support_attr_sc_weight
+                 + center_attr_sc * self.center_attr_sc_weight
+                 + edge_attr_support_sc * self.edge_attr_support_sc_weight
+                 # + position_sc * self.length_sc_weight
+             ) / (self.support_attr_sc_weight+self.center_attr_sc_weight +
+                  self.edge_attr_support_sc_weight)
+        b = time.time()
         return sc
         # return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, \
         #        edge_attr_support_sc
@@ -347,7 +726,8 @@ class KernelConv(Module):
             p_neighbor = kwargv['p_neighbor']
             edge_attr_neighbor = kwargv['edge_attr_neighbor']
 
-        # Check if neighborhood and kernel agrees in degree
+        # Check if neighborhood and kernel agrees in space dimension (i.e.,
+        # 2D or 3D).
         if (p_focal.shape[-1] != self.p_support.shape[-1]):
             raise Exception(
                 f'data coordinates is of {p_focal.shape[-1]}D, but the '
@@ -522,6 +902,19 @@ class BaseKernelSetConv(Module):
 
     def convert_graph_to_receptive_field(self, deg, x, p, edge_index,
                                          edge_attr, selected_index, nei_index):
+        """
+        Convert a graph into receptive fields for a certain degree. Return
+        None if there is no nodes with that degree.
+
+        :param deg:
+        :param x:
+        :param p:
+        :param edge_index:
+        :param edge_attr:
+        :param selected_index:
+        :param nei_index:
+        :return:
+        """
 
         x_focal = self.get_focal_nodes_of_degree(
             x=x, p=p, selected_index=selected_index)
@@ -590,16 +983,10 @@ class BaseKernelSetConv(Module):
             edge_attr = kwargv['data'].edge_attr
             p = kwargv['data'].p
 
-            x_focal_list = [kwargv['data'].x_focal_deg1,
-                            kwargv['data'].x_focal_deg2,
-                            kwargv['data'].x_focal_deg3,
-                            kwargv['data'].x_focal_deg4]
             p_focal_list = [kwargv['data'].p_focal_deg1,
                             kwargv['data'].p_focal_deg2,
                             kwargv['data'].p_focal_deg3,
                             kwargv['data'].p_focal_deg4]
-            nei_x_list = [kwargv['data'].nei_x_deg1, kwargv['data'].nei_x_deg2,
-                          kwargv['data'].nei_x_deg3, kwargv['data'].nei_x_deg4]
             nei_p_list = [kwargv['data'].nei_p_deg1, kwargv['data'].nei_p_deg2,
                           kwargv['data'].nei_p_deg3, kwargv['data'].nei_p_deg4]
             nei_edge_attr_list = [kwargv['data'].nei_edge_attr_deg1,
@@ -622,12 +1009,8 @@ class BaseKernelSetConv(Module):
             edge_attr = kwargv['edge_attr']
             p = kwargv['p']
 
-            x_focal_list = [kwargv['x_focal_deg1'], kwargv['x_focal_deg2'],
-                            kwargv['x_focal_deg3'], kwargv['x_focal_deg4']]
             p_focal_list = [kwargv['p_focal_deg1'], kwargv['p_focal_deg2'],
                             kwargv['p_focal_deg3'], kwargv['p_focal_deg4']]
-            nei_x_list = [kwargv['nei_x_deg1'], kwargv['nei_x_deg2'],
-                          kwargv['nei_x_deg3'], kwargv['nei_x_deg4']]
             nei_p_list = [kwargv['nei_p_deg1'], kwargv['nei_p_deg2'],
                           kwargv['nei_p_deg3'], kwargv['nei_p_deg4']]
             nei_edge_attr_list = [kwargv['nei_edge_attr_deg1'],
@@ -705,60 +1088,61 @@ class BaseKernelSetConv(Module):
                 # print('edge_attr_neighbor')
                 # print(edge_attr_neighbor.shape)
 
-                # print('===fixed_degree_sc===')
+                # Depanding on whether fixed kernels are used, choose the
+                # correct KernelConv to use (either fixed_kernelConv,
+                # trainable_kernel_conv, or both)
                 if self.fixed_kernelconv_set[deg - 1] is not None:
                     fixed_degree_sc = self.fixed_kernelconv_set[deg - 1](
                         data=data)
                     if self.trainable_kernelconv_set[deg - 1] is not None:
-                        # print('---trainable_degree_sc---')
                         trainable_degree_sc = self.trainable_kernelconv_set[
                             deg - 1](data=data)
-                        # print(f'trianable_degree_sc {
-                        # trainable_degree_sc.shape}')
                         degree_sc = torch.cat(
                             [fixed_degree_sc, trainable_degree_sc])
                     else:
                         degree_sc = fixed_degree_sc
                 else:
-
                     if self.trainable_kernelconv_set[deg - 1] is not None:
-                        # print('---trainable_degree_sc---')
                         trainable_degree_sc = self.trainable_kernelconv_set[
                             deg - 1](data=data)
-                        # print(f'trianable_degree_sc {
-                        # trainable_degree_sc.shape}')
                         degree_sc = trainable_degree_sc
 
                     else:
                         raise Exception(
                             f'kernels.py::BaseKernelSet:both fixed and '
-                            f'trainable kernelconv_set are None for degree {deg}')
+                            f'trainable kernelconv_set are '
+                            f'None for degree {deg}')
 
+                # Fill a zero tensor will score for each degree in
+                # corresponding positions
                 zeros[
                 start_row_id:start_row_id + self.num_kernel_list[deg - 1],
                 start_col_id:start_col_id + x_focal.shape[0]] = degree_sc
 
+                # Update the start_row_id and start_col_id so that next
+                # iteration can use those to find correct position for
+                # filling the zero tensor with score for each degree
                 index_list.append(selected_index)
                 start_row_id += self.num_kernel_list[deg - 1]
                 start_col_id += x_focal.shape[0]
+                #
+                # if(deg == 4):
+                #     torch.set_printoptions(profile="full")
+                #     print(f'kernels.py::shape:{zeros.shape} zeros:{zeros}')
             else:
-
                 start_row_id += self.num_kernel_list[deg - 1]
 
+        # Reorder the output score tensor so that its rows correspond to the
+        # original index in the feature matrix x. Score tensor has shape
+        # [num_nodes, num_total_kernels]
         sc = zeros
-
         index_list = torch.cat(index_list)
-
         new_index = self.get_reorder_index(index_list)
-
         sc = sc[:, new_index]
         sc = sc.T
 
-        # print(f'sc:{sc}')
         if (save_score == True):
             self.save_score(sc)  # save scores for analysis
-        # end = time.time()
-        # print(f'BaseKernelSetConv time:{end -start}')
         return sc
 
 
@@ -766,6 +1150,7 @@ class KernelSetConv(BaseKernelSetConv):
     """
     Do the convolution on kernels of degree 1 to 4.
     """
+
     def __init__(self, L1, L2, L3, L4, D, node_attr_dim, edge_attr_dim):
         self.L = [L1, L2, L3, L4]
 
@@ -778,7 +1163,8 @@ class KernelSetConv(BaseKernelSetConv):
         x_support = torch.tensor(
             [[6.0000, 12.0110, 1.7000, 4.0000, 4.0000]]).unsqueeze(0)
 
-        edge_attr_support = torch.tensor([[2]], dtype=torch.float).unsqueeze(0)
+        edge_attr_support = torch.tensor([[2]],
+                                         dtype=torch.double).unsqueeze(0)
 
         kernel1_std = Data(p_support=p_support, x_support=x_support,
                            x_center=x_center,
@@ -798,7 +1184,7 @@ class KernelSetConv(BaseKernelSetConv):
             [[6.0000, 12.0110, 1.7000, 4.0000, 4.0000]]).unsqueeze(0)
 
         edge_attr_support = torch.tensor(
-            [[2], [1], [1]], dtype=torch.float).unsqueeze(0)
+            [[2], [1], [1]], dtype=torch.double).unsqueeze(0)
 
         kernel3_std = Data(p_support=p_support, x_support=x_support,
                            x_center=x_center,
@@ -1199,11 +1585,11 @@ class PredefinedKernelSetConv(BaseKernelSetConv):
 
 if __name__ == "__main__":
     print('testing')
-    model = Predefined1HopKernelSetConv(D=2, node_attr_dim=5, edge_attr_dim=1,
-                                        L1=2, L2=3, L3=4, L4=2)
-    model = KernelSetConv(D=2, node_attr_dim=5, edge_attr_dim=1, L1=15, L2=15,
-                          L3=15, L4=15)
-    for param in model.parameters():
-        print(param)
+    # model = Predefined1HopKernelSetConv(D=2, node_attr_dim=5, edge_attr_dim=1,
+    #                                     L1=2, L2=3, L3=4, L4=2)
+    # model = KernelSetConv(D=2, node_attr_dim=5, edge_attr_dim=1, L1=15, L2=15,
+    #                       L3=15, L4=15)
+    # for param in model.parameters():
+    #     print(param)
     # num = model.get_num_kernel()
     # print(num)

@@ -4,8 +4,9 @@ from wrapper import QSARDataset, D4DCHPDataset, ToXAndPAndEdgeAttrForDeg
 from pytorch_lightning import LightningDataModule
 import torch
 from torch.nn import functional as F
+from torch.nn import BCEWithLogitsLoss, MSELoss
 from torch.utils.data import WeightedRandomSampler
-from torch_geometric.data import DataLoader
+from torch_geometric.loader import DataLoader
 from torchvision.transforms import Lambda
 from functools import partial
 
@@ -34,8 +35,9 @@ def get_dataset(dataset_name='435034'):
     :param dataset_name:
     :return:
     """
-    if dataset_name in ['435008', '1798', '435034']:
-        qsar_dataset = QSARDataset(root='../dataset/qsar',
+    if dataset_name in ['435008', '1798', '435034', '1843', '2258',
+                                '463087', '488997','2689', '485290']:
+        qsar_dataset = QSARDataset(root='../dataset/qsar/clean_sdf',
                                    dataset=dataset_name,
                                    pre_transform=ToXAndPAndEdgeAttrForDeg(),
                                    )
@@ -43,14 +45,38 @@ def get_dataset(dataset_name='435034'):
             'num_class': 1,
             'dataset': qsar_dataset,
             'num_samples': len(qsar_dataset),
+            'metrics': ['ppv', 'logAUC', 'f1_score'],
+            'loss_func': BCEWithLogitsLoss()
         }
-    elif dataset_name in ['CHIRAL1', 'DIFF5']:
+
+
+    elif dataset_name in ['CHIRAL1', 'DIFF5', 'D4DCHP', "dummy"]:
+        if dataset_name == 'CHIRAL1':
+            data_file =  '../dataset/d4_docking/d4_docking_rs.csv'
+            label_column_name = 'labels'
+            index_file = '../dataset/d4_docking/rs/split0.npy'
+            metrics = ['accuracy']
+            loss_func = BCEWithLogitsLoss()
+        elif dataset_name == 'D4DCHP':
+            data_file = '../dataset/d4_docking/d4_docking.csv'
+            label_column_name = 'docking_score'
+            index_file = '../dataset/d4_docking/full/split0.npy'
+            metrics = ['RMSE']
+            loss_func = MSELoss(reduction='sum')
+        elif dataset_name == 'dummy':
+            data_file = '../dataset/d4_docking/dummy/dummy.csv'
+            label_column_name = 'labels'
+            index_file = '../dataset/d4_docking/dummy/split.npy'
+            metrics = ['accuracy']
+            loss_func = BCEWithLogitsLoss()
+
+
         d4_dchp_dataset = D4DCHPDataset(
-            root='../../dataset/d4_docking/',
+            root='../dataset/d4_docking/',
             subset_name=dataset_name,
-            data_file=
-            '../dataset/d4_docking/d4_docking_rs.csv',
-            idx_file='../dataset/d4_docking/rs/split0.npy',
+            data_file= data_file,
+            label_column_name=label_column_name,
+            idx_file=index_file,
             D=3,
             pre_transform=ToXAndPAndEdgeAttrForDeg(),
         )
@@ -58,12 +84,14 @@ def get_dataset(dataset_name='435034'):
         dataset = {
             'num_class': 1,
             'dataset': d4_dchp_dataset,
-            'num_samples': len(d4_dchp_dataset)
+            'num_samples': len(d4_dchp_dataset),
+            'metrics':metrics,
+            'loss_func': loss_func
         }
 
     else:
-        print(f'dataset_name:{dataset_name}')
-        raise NotImplementedError(f'data.py::get_dataset: dataset_name is '
+        raise NotImplementedError(f'data.py::get_dataset: dataset_name '
+                                  f'{dataset_name} is '
                                   f'not found')
 
     print(f'dataset {dataset_name} loaded!')
@@ -87,24 +115,21 @@ class DataLoaderModule(LightningDataModule):
             num_workers,
             batch_size,
             seed,
-            enable_oversampling_with_replacement=True,
-            *args,
-            **kwargs,
+            enable_oversampling_with_replacement,
     ):
-        super().__init__(*args, **kwargs)
+        super().__init__()
         self.dataset_name = dataset_name
         self.dataset = get_dataset(self.dataset_name)
         self.num_workers = num_workers
         self.batch_size = batch_size
         self.seed = seed
-        self.enable_oversampling_with_replacement = \
-            enable_oversampling_with_replacement
+        self.enable_oversampling_with_replacement = enable_oversampling_with_replacement
         self.dataset_train = ...
         self.dataset_val = ...
 
     def setup(self, stage: str = None):
-        split_idx = self.dataset['dataset'].get_idx_split()
-        print(f'split_idx:{split_idx}')
+        split_idx = self.dataset['dataset'].get_idx_split(seed=self.seed)
+        # print(f'split_idx:{split_idx}')
 
         self.dataset_train = self.dataset['dataset'][split_idx["train"]]
         print(f'training len:{len(self.dataset_train)})')
@@ -125,12 +150,14 @@ class DataLoaderModule(LightningDataModule):
             f'{num_train_active}')
 
         if self.enable_oversampling_with_replacement:
+            print('data.py::with resampling')
             # Sample weights equal the inverse of number of samples
             train_sampler_weight = torch.tensor([(1. / num_train_inactive)
                                                  if data.y == 0
                                                  else (1. / num_train_active)
                                                  for data in
                                                  self.dataset_train])
+            print(f'data.py::train_sampler weight:{train_sampler_weight}')
 
             generator = torch.Generator()
             generator.manual_seed(self.seed)
@@ -147,6 +174,7 @@ class DataLoaderModule(LightningDataModule):
                 num_workers=self.num_workers,
             )
         else:  # Regular sampling without oversampling
+            print('data.py::no resampling')
             print(f'dataset_train:{self.dataset_train[0]}')
             train_loader = DataLoader(
                 self.dataset_train,
@@ -160,18 +188,55 @@ class DataLoaderModule(LightningDataModule):
         return train_loader
 
     def val_dataloader(self):
-        print(f'dataset_train:{self.dataset_train[0]}')
+        # Validation laader
+        print(f'dataset_valid:{self.dataset_val[0]}')
+        num_valid_active = len(torch.nonzero(
+            torch.tensor([data.y for data in self.dataset_val])))
+        num_valid_inactive = len(self.dataset_val) - num_valid_active
+
+        valid_sampler_weight = torch.tensor([(1. / num_valid_inactive)
+                                             if data.y == 0
+                                             else (1. / num_valid_active)
+                                             for data in
+                                             self.dataset_val])
+        generator = torch.Generator()
+        generator.manual_seed(self.seed)
+        valid_sampler = WeightedRandomSampler(weights=valid_sampler_weight,
+                                              num_samples=len(
+                                                  valid_sampler_weight),
+                                              generator=generator)
+
         val_loader = DataLoader(
             self.dataset_val,
-            batch_size=len(self.dataset_val),
-            shuffle=True,
+            batch_size=self.batch_size,
+            # sampler=valid_sampler,
+            shuffle=False,
             num_workers=self.num_workers,
         )
+
+        # Train loader in evaluation mode
         print(f'dataset_train:{self.dataset_train[0]}')
+        num_train_active = len(torch.nonzero(
+            torch.tensor([data.y for data in self.dataset_train])))
+        num_train_inactive = len(self.dataset_train) - num_train_active
+
+        train_sampler_weight = torch.tensor([(1. / num_train_inactive)
+                                             if data.y == 0
+                                             else (1. / num_train_active)
+                                             for data in
+                                             self.dataset_train])
+        generator = torch.Generator()
+        generator.manual_seed(self.seed)
+        train_sampler = WeightedRandomSampler(weights=train_sampler_weight,
+                                              num_samples=len(
+                                                  train_sampler_weight),
+                                              generator=generator)
+
         train_loader = DataLoader(
             self.dataset_train,
-            batch_size=len(self.dataset_train),
-            shuffle=True,
+            batch_size=self.batch_size,
+            # sampler=train_sampler,
+            shuffle=False,
             num_workers=self.num_workers,
         )
         return val_loader, train_loader
@@ -200,6 +265,7 @@ class DataLoaderModule(LightningDataModule):
         parser.add_argument('--dataset_name', type=str, default="435034")
         parser.add_argument('--num_workers', type=int, default=1)
         parser.add_argument('--batch_size', type=int, default=32)
+        parser.add_argument('--enable_oversampling_with_replacement', action='store_true', default=False)
         return parent_parser
 #
 # class AugmentedDataModule(LightningDataModule):
