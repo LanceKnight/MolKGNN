@@ -34,12 +34,23 @@ def add_args(gnn_type):
     # Custom arguments
     parser.add_argument("--enable_pretraining", default=False)  # TODO: \
     # Pretraining
+
+    # Experiment labels arguments for tagging the task
+    parser.add_argument("--machine", default='barium')
+
+
     args = parser.parse_args()
     args.tot_iterations = round(len(get_dataset(
         args.dataset_name)['dataset']) * 0.8 / args.batch_size) * \
         args.max_epochs + 1
     args.max_steps = args.tot_iterations + 1
     print(args)
+
+    if use_clearml:
+        task.add_tags(args.machine)
+        task.add_tags(args.dataset_name)
+
+
     return args
 
 
@@ -69,7 +80,7 @@ def prepare_actual_model(args):
     enable_pretraining = args.enable_pretraining
     if enable_pretraining:
         # Check if pretrained model exists
-        if args.pretrained_model_dir is "":
+        if args.pretrained_model_dir == "":
             raise Exception(
                 "entry.py::pretrain_models(): pretrained_model_dir is blank")
         if not os.path.exists(args.pretrain_model_dir + '/last.ckpt'):
@@ -253,10 +264,9 @@ if __name__ == '__main__':
 
     use_clearml = False
     if use_clearml:
-        task = Task.init(project_name=f"Tests/{gnn_type}",
-                         task_name="435034-full-barium",
-                         tags=["barium", "435034", "full", "debug"
-                               ])
+        task = Task.init(project_name=f"Tests/kgnn",
+                         task_name=f"{gnn_type}",
+                         tags=["debug"])
 
         logger = task.get_logger()
         # logger = pl.loggers.tensorboard
