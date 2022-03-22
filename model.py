@@ -97,7 +97,7 @@ class GNNModel(pl.LightningModule):
         data.x = self.atom_encoder(data.atomic_num)
 
         graph_embedding = self.gnn_model(data)
-        # print(f'model.py::emb:{graph_embedding}')
+        print(f'model.py::emb:{graph_embedding}')
         prediction = self.ffn(graph_embedding)
 
         # # Debug

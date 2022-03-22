@@ -1,36 +1,12 @@
 import torch
-from torch.nn import ModuleList, ParameterList
+from torch.nn import ModuleList
 from torch.optim import Adam
 from torch_geometric.nn import GCNConv, global_mean_pool
 import pytorch_lightning as pl
 from lr import PolynomialDecayLR
+
+
 # import pytorch_warmup as warmup
-from torch_geometric.utils import add_remaining_self_loops, degree, add_self_loops
-from torch_scatter import scatter
-from torch.nn import Parameter
-import torch.nn.functional as F
-import math
-
-
-def propagate(x, edge_index, edge_weight=None):
-    """ feature propagation procedure: sparsematrix
-    """
-    # print(edge_index.shape)
-    edge_index, _ = add_remaining_self_loops(edge_index, num_nodes=x.size(0))
-
-    # calculate the degree normalize term
-    row, col = edge_index
-    deg = degree(row, x.size(0), dtype=x.dtype)
-
-    deg_inv_sqrt = deg.pow(-0.5)
-    # for the first order appro of laplacian matrix in GCN, we use deg_inv_sqrt[row]*deg_inv_sqrt[col]
-    if(edge_weight == None):
-        edge_weight = deg_inv_sqrt[row] * deg_inv_sqrt[col]
-
-    # normalize the features on the starting point of the edge
-    out = edge_weight.view(-1, 1) * x[col]
-
-    return scatter(out, edge_index[0], dim=0, dim_size=x.size(0), reduce='add')
 
 
 class GCNNet(torch.nn.Module):
@@ -43,39 +19,23 @@ class GCNNet(torch.nn.Module):
 
     def __init__(self, input_dim, hidden_dim, num_layers):
         super(GCNNet, self).__init__()
-        self.lins = ParameterList()
-        self.biases = ParameterList()
-
-        self.lins.append(Parameter(torch.FloatTensor(
-            input_dim, hidden_dim)))
-        self.biases.append(Parameter(torch.Tensor(hidden_dim)))
+        self.layers = ModuleList()
+        gcn_conv = GCNConv(input_dim, hidden_dim)
+        self.layers.append(gcn_conv)
         if num_layers > 1:
             for i in range(num_layers - 1):
-                self.lins.append(
-                    Parameter(torch.FloatTensor(hidden_dim, hidden_dim)))
-                self.biases.append(Parameter(torch.Tensor(hidden_dim)))
-
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        for i in range(len(self.lins)):
-            stdv = 1. / math.sqrt(self.lins[i].size(1))
-            self.lins[i].data.uniform_(-stdv, stdv)
-            self.biases[i].data.uniform_(-stdv, stdv)
+                gcn_conv = GCNConv(hidden_dim, hidden_dim)
+                self.layers.append(gcn_conv)
 
     def forward(self, data):
         h = data.x
         edge_index = data.edge_index
         batch = data.batch
 
-        for i in range(len(self.lins)):
-            h = torch.mm(h, self.lins[i])
-            h = propagate(h, edge_index, edge_weight=None) + self.biases[i]
-            h = F.relu(h)
+        for i in range(len(self.layers)):
+            h = self.layers[i](h, edge_index)
 
         graph_embedding = global_mean_pool(h, batch)
-
-        # print(graph_embedding)
 
         return graph_embedding
 
@@ -116,3 +76,4 @@ class GCNNet(torch.nn.Module):
             'frequency': 1,
         }
         return optimizer, scheduler
+
