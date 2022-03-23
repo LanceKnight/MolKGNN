@@ -32,7 +32,8 @@ class GNNModel(pl.LightningModule):
                  gnn_type,
                  dataset_name,
                  num_layers,
-                 input_dim,
+                 node_feature_dim,
+                 edge_feature_dim,
                  hidden_dim,
                  output_dim,
                  warmup_iterations,
@@ -44,26 +45,11 @@ class GNNModel(pl.LightningModule):
         super(GNNModel, self).__init__()
         print(f'kwargs:{args}')
         if gnn_type == 'gcn':
-            self.gnn_model = GCNNet(input_dim, hidden_dim, num_layers)
+            self.gnn_model = GCNNet(node_feature_dim, hidden_dim, num_layers)
         if gnn_type == 'chebnet':
-            self.gnn_model = ChebNet(input_dim, hidden_dim, num_layers, args.K)
+            self.gnn_model = ChebNet(node_feature_dim, hidden_dim, num_layers, args.K)
         if gnn_type == 'kgnn':
             self.gnn_model = KGNNNet(num_layers=num_layers,
-                                     # num_kernel1_1hop=kwargs['num_kernel1_1hop'],
-                                     # num_kernel2_1hop=kwargs[
-                                     #     'num_kernel2_1hop'],
-                                     # num_kernel3_1hop=kwargs[
-                                     #     'num_kernel3_1hop'],
-                                     # num_kernel4_1hop=kwargs[
-                                     #     'num_kernel4_1hop'],
-                                     # num_kernel1_Nhop=kwargs[
-                                     #     'num_kernel1_Nhop'],
-                                     # num_kernel2_Nhop=kwargs[
-                                     #     'num_kernel2_Nhop'],
-                                     # num_kernel3_Nhop=kwargs[
-                                     #     'num_kernel3_Nhop'],
-                                     # num_kernel4_Nhop=kwargs[
-                                     #     'num_kernel4_Nhop'],
                                      num_kernel1_1hop = args.num_kernel1_1hop,
                                      num_kernel2_1hop = args.num_kernel2_1hop,
                                      num_kernel3_1hop = args.num_kernel3_1hop,
@@ -72,7 +58,7 @@ class GNNModel(pl.LightningModule):
                                      num_kernel2_Nhop = args.num_kernel2_Nhop,
                                      num_kernel3_Nhop = args.num_kernel3_Nhop,
                                      num_kernel4_Nhop = args.num_kernel4_Nhop,
-                                     x_dim = input_dim,
+                                     x_dim = hidden_dim,
                                      graph_embedding_dim = hidden_dim,
                                      predefined_kernelsets=False
                                      )
@@ -80,7 +66,8 @@ class GNNModel(pl.LightningModule):
             raise ValueError("model.py::GNNModel: GNN model type is not "
                              "defined.")
         # self.atom_encoder = Embedding(118, hidden_dim)
-        self.atom_encoder = Linear(input_dim, hidden_dim)
+        self.atom_encoder = Linear(node_feature_dim, hidden_dim)
+        self.bond_encoder = Linear(edge_feature_dim, hidden_dim)
         self.lin1 = Linear(hidden_dim, hidden_dim)
         self.lin2 = Linear(hidden_dim, output_dim)
         self.ffn = Linear(hidden_dim, output_dim)
@@ -96,9 +83,10 @@ class GNNModel(pl.LightningModule):
 
 
     def forward(self, data):
-
         # data.x = self.atom_encoder(data.x)
-        data.x = atom_encoder
+        data.x = self.atom_encoder(data.x)
+        print(f'model.py::data.x:{data.x.shape}')
+        data.edge_attr = self.bond_encoder(data.edge_attr)
         graph_embedding = self.gnn_model(data)
         # print(f'emb:{graph_embedding}')
         prediction = self.ffn(graph_embedding)
@@ -294,7 +282,8 @@ class GNNModel(pl.LightningModule):
         # E.g., parser.add_argument('--general_model_args', type=int,
         # default=12)
         parser.add_argument('--seed', type=int, default=42)
-        parser.add_argument('--input_dim', type=int, default=32)
+        parser.add_argument('--node_feature_dim', type=int, default=27)
+        parser.add_argument('--edge_feature_dim', type=int, default=7)
         parser.add_argument('--hidden_dim', type=int, default=32)
         parser.add_argument('--output_dim', type=int, default=32)
         parser.add_argument('--validate', action='store_true', default=False)

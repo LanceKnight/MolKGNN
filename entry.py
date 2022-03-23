@@ -68,7 +68,7 @@ def prepare_actual_model(args):
     enable_pretraining = args.enable_pretraining
     if enable_pretraining:
         # Check if pretrained model exists
-        if args.pretrained_model_dir is "":
+        if args.pretrained_model_dir == "":
             raise Exception(
                 "entry.py::pretrain_models(): pretrained_model_dir is blank")
         if not os.path.exists(args.pretrain_model_dir + '/last.ckpt'):
@@ -80,7 +80,8 @@ def prepare_actual_model(args):
         print(f'Creating a model from scratch...')
 
         model = GNNModel(gnn_type, args.dataset_name, args.num_layers,
-                         args.input_dim,
+                         args.node_feature_dim,
+                         args.edge_feature_dim,
                          args.hidden_dim, args.output_dim,
                          args.warmup_iterations, args.tot_iterations,
                          args.peak_lr, args.end_lr, args=args)

@@ -70,7 +70,13 @@ max_elem_num = 118
 element_nums = [x + 1 for x in range(max_elem_num)]
 elem_lst = generate_element_rep_list(element_nums)
 
-
+def one_hot_vector(val, lst):
+	'''
+	Converts a value to a one-hot vector based on options in lst
+	'''
+	if val not in lst:
+		val = lst[-1]
+	return map(lambda x: x == val, lst)
 # def get_element_rep(atomic_num):
 #     '''use rdkit to generate atom representation
 #     '''
@@ -86,8 +92,8 @@ elem_lst = generate_element_rep_list(element_nums)
 
 def get_atom_rep(atom):
     features = []
-    features.append(atom.GetAtomicNum())
-    features.append(len(atom.GetNeighbors()))
+    features += one_hot_vector(atom.GetAtomicNum(), [6, 7, 8, 9, 15, 16, 17, 35, 53, 999])  # list(range(1, 53))))
+    features += one_hot_vector(len(atom.GetNeighbors()), list(range(0, 5)))
     # features.append(atom.GetTotalNumHs())
     features.append(atom.GetFormalCharge())
     features.append(atom.IsInRing())
@@ -176,24 +182,19 @@ def mol2graph(mol, D=3):
     # get bond attributes
     edge_list = []
     edge_attr_list = []
-    for idx, edge in enumerate(mol.GetBonds()):
-        i = edge.GetBeginAtomIdx()
-        j = edge.GetEndAtomIdx()
+    for idx, bond in enumerate(mol.GetBonds()):
+        i = bond.GetBeginAtomIdx()
+        j = bond.GetEndAtomIdx()
 
-        bond_attr = None
-        bond_type = edge.GetBondType()
-        if bond_type == Chem.rdchem.BondType.SINGLE:
-            bond_attr = [1]
-        elif bond_type == Chem.rdchem.BondType.DOUBLE:
-            bond_attr = [2]
-        elif bond_type == Chem.rdchem.BondType.TRIPLE:
-            bond_attr = [3]
-        elif bond_type == Chem.rdchem.BondType.AROMATIC:
-            bond_attr = [4]
+        bond_attr = []
+        bond_attr += one_hot_vector(
+            bond.GetBondTypeAsDouble(),
+            [1.0, 1.5, 2.0, 3.0]
+        )
 
-        is_aromatic = edge.GetIsAromatic()
-        is_conjugate = edge.GetIsConjugated()
-        is_in_ring = edge.IsInRing()
+        is_aromatic = bond.GetIsAromatic()
+        is_conjugate = bond.GetIsConjugated()
+        is_in_ring = bond.IsInRing()
         bond_attr.append(is_aromatic)
         bond_attr.append(is_conjugate)
         bond_attr.append(is_in_ring)
@@ -206,11 +207,11 @@ def mol2graph(mol, D=3):
         edge_attr_list.append(bond_attr)
     #         print(f'j:{j} j:{i} bond_attr:{bond_attr}')
 
-    x = torch.tensor(all_atom_features, dtype=torch.double)
-    p = torch.tensor(atom_pos, dtype=torch.double)
+    x = torch.tensor(all_atom_features, dtype=torch.float32)
+    p = torch.tensor(atom_pos, dtype=torch.float32)
     edge_index = torch.tensor(edge_list).t().contiguous()
-    edge_attr = torch.tensor(edge_attr_list, dtype=torch.double)
-    atomic_num = torch.tensor(atomic_num_list, dtype=torch.long)
+    edge_attr = torch.tensor(edge_attr_list, dtype=torch.float32)
+    atomic_num = torch.tensor(atomic_num_list, dtype=torch.int)
 
     # graphormer-specific features
     # adj = torch.zeros([N, N], dtype=torch.bool)
@@ -789,7 +790,11 @@ class ToXAndPAndEdgeAttrForDeg(object):
 
 if __name__ == "__main__":
     pass
-    qsar_dataset = QSARDataset(root='../dataset/qsar',
-                               dataset='485290',
+    qsar_dataset = QSARDataset(root='../dataset/qsar/clean_sdf',
+                               dataset='435034',
                                pre_transform=ToXAndPAndEdgeAttrForDeg(),
                                )
+    data = qsar_dataset[0]
+    print(f'data:{data}')
+    print('\n')
+    print(f'x:{data.x.dtype}')
