@@ -87,7 +87,7 @@ class GNNModel(pl.LightningModule):
     def forward(self, data):
         # data.x = self.atom_encoder(data.x)
         data.x = self.atom_encoder(data.x)
-        print(f'model.py::data.x:{data.x.shape}')
+        # print(f'model.py::data.x:{data.x.shape}')
         data.edge_attr = self.bond_encoder(data.edge_attr)
         graph_embedding = self.gnn_model(data)
         # print(f'emb:{graph_embedding}')
@@ -126,7 +126,7 @@ class GNNModel(pl.LightningModule):
         results={}
         results = self.get_evaluations(results, true_y, pred_y)
 
-        self.log(f"train performance by step", results, on_step=True, prog_bar=True, logger=True)
+        # self.log(f"train performance by step", results, on_step=True, prog_bar=True, logger=True)
         return results
 
     def training_epoch_end(self, train_step_outputs):
@@ -147,7 +147,7 @@ class GNNModel(pl.LightningModule):
             train_epoch_outputs[key] = mean_output
 
         self.train_epoch_outputs = train_epoch_outputs
-        self.log(f"train performance by epoch", train_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
+        # self.log(f"train performance by epoch", train_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
     def validation_step(self, batch_data, batch_idx, dataloader_idx):
         """
@@ -208,7 +208,7 @@ class GNNModel(pl.LightningModule):
                     new_key = key+"_no_dropout"
                     self.valid_epoch_outputs[new_key] = results[key]
         # Logging
-        self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
+        # self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
     def configure_optimizers(self):
         """

@@ -5,7 +5,8 @@ from data import DataLoaderModule, get_dataset
 from model import GNNModel
 from monitors import LossMonitor, LossNoDropoutMonitor, LogAUCMonitor, \
     LogAUCNoDropoutMonitor, PPVMonitor, PPVNoDropoutMonitor, \
-    AccuracyMonitor, AccuracyNoDropoutMonitor, RMSEMonitor, RMSENoDropoutMonitor
+    AccuracyMonitor, AccuracyNoDropoutMonitor, RMSEMonitor, \
+    RMSENoDropoutMonitor, F1ScoreMonitor, F1ScoreNoDropoutMonitor
 
 from argparse import ArgumentParser
 from pprint import pprint
@@ -110,8 +111,8 @@ def actual_training(model, data_module, use_clearml, args):
 
     if use_clearml:
         # Loss monitors
-        trainer.callbacks.append(
-            LossMonitor(stage='train', logger=logger, logging_interval='step'))
+        # trainer.callbacks.append(
+        #     LossMonitor(stage='train', logger=logger, logging_interval='step'))
         trainer.callbacks.append(
             LossMonitor(stage='train', logger=logger,
                         logging_interval='epoch'))
@@ -179,6 +180,19 @@ def actual_training(model, data_module, use_clearml, args):
                 trainer.callbacks.append(
                     PPVNoDropoutMonitor(stage='valid', logger=logger,
                                         logging_interval='epoch'))
+                continue
+
+            if metric == 'f1_score':
+                # F1 monitors
+                trainer.callbacks.append(
+                    F1ScoreMonitor(stage='train', logger=logger,
+                                   logging_interval='epoch'))
+                trainer.callbacks.append(
+                    F1ScoreMonitor(stage='valid', logger=logger,
+                                   logging_interval='epoch'))
+                trainer.callbacks.append(
+                    F1ScoreNoDropoutMonitor(stage='valid', logger=logger,
+                                            logging_interval='epoch'))
                 continue
 
     if args.test:
