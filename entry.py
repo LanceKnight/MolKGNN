@@ -84,7 +84,8 @@ def prepare_actual_model(args):
                          args.edge_feature_dim,
                          args.hidden_dim, args.output_dim,
                          args.warmup_iterations, args.tot_iterations,
-                         args.peak_lr, args.end_lr, args=args)
+                         args.peak_lr, args.end_lr, args.dropout_rate,
+                         args=args)
     return model
 
 
@@ -239,7 +240,7 @@ if __name__ == '__main__':
     gnn_type = 'kgnn'  # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
 
-    use_clearml = False
+    use_clearml = True
     if use_clearml:
         task = Task.init(project_name=f"Tests/{gnn_type}",
                          task_name=f"435034-{gnn_type}",

@@ -11,7 +11,7 @@ from lr import PolynomialDecayLR
 import os
 import pytorch_lightning as pl
 from sklearn.metrics import mean_squared_error
-from torch.nn import Linear, Sigmoid, ReLU, Embedding
+from torch.nn import Linear, Sigmoid, ReLU, Embedding, Dropout
 from torch_geometric.data import Data
 import torch
 from torch.optim import Adam
@@ -40,6 +40,7 @@ class GNNModel(pl.LightningModule):
                  tot_iterations,
                  peak_lr,
                  end_lr,
+                 dropout_rate,
                  args=None
                  ):
         super(GNNModel, self).__init__()
@@ -71,6 +72,7 @@ class GNNModel(pl.LightningModule):
         self.lin1 = Linear(hidden_dim, hidden_dim)
         self.lin2 = Linear(hidden_dim, output_dim)
         self.ffn = Linear(hidden_dim, output_dim)
+        self.dropout = Dropout(p= dropout_rate)
         self.activate_func = ReLU()
         self.warmup_iterations = warmup_iterations
         self.tot_iterations = tot_iterations
@@ -89,6 +91,7 @@ class GNNModel(pl.LightningModule):
         data.edge_attr = self.bond_encoder(data.edge_attr)
         graph_embedding = self.gnn_model(data)
         # print(f'emb:{graph_embedding}')
+        graph_embedding = self.dropout(graph_embedding)
         prediction = self.ffn(graph_embedding)
 
         # # Debug
@@ -286,6 +289,7 @@ class GNNModel(pl.LightningModule):
         parser.add_argument('--edge_feature_dim', type=int, default=7)
         parser.add_argument('--hidden_dim', type=int, default=32)
         parser.add_argument('--output_dim', type=int, default=32)
+        parser.add_argument('--dropout_rate', type=float, default=0.25)
         parser.add_argument('--validate', action='store_true', default=False)
         parser.add_argument('--test', action='store_true', default=False)
         parser.add_argument('--warmup_iterations', type=int, default=60000)
