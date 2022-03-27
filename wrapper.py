@@ -593,8 +593,8 @@ class QSARDataset(InMemoryDataset):
                               : num_inactive_train
                                 + num_inactive_valid
                                 + num_inactive_test]
-        for i in range(136,146):
-            print(f'wrapper.py::first 10 of train:{split_dict["train"][i]}')
+        # for i in range(136,146):
+        #     print(f'wrapper.py::first 10 of train:{split_dict["train"][i]}')
         # print(f'wrapper.py::train{len(split_dict["train"])}  valid:'
         #       f'{len(split_dict["valid"])}  test:{len(split_dict["test"])}')
 
