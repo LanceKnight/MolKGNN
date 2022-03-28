@@ -94,7 +94,8 @@ class DimeNet(tf.keras.Model):
         return angle
 
     def call(self, inputs):
-        Z, R                         = inputs['Z'], inputs['R']
+        Z, R                         = tf.int32, tf.float32#inputs['Z'],
+        # inputs['R']
         batch_seg                    = inputs['batch_seg']
         idnb_i, idnb_j               = inputs['idnb_i'], inputs['idnb_j']
         id_expand_kj, id_reduce_ji   = inputs['id_expand_kj'], inputs['id_reduce_ji']
@@ -130,6 +131,7 @@ class DimeNet(tf.keras.Model):
         """
         parser = parent_parser.add_argument_group("DimeNet")
         parser.add_argument('--num_layers', type=int, default=3)
+        print(f'DimeNet.py::here')
         # Add specific model arguments below
         # E.g., parser.add_argument('--GCN_arguments', type=int,
         # default=12)

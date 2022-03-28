@@ -40,6 +40,9 @@ def add_args(gnn_type):
                           args.max_epochs + 1
     args.max_steps = args.tot_iterations + 1
     print(args)
+
+    if use_clearml:
+        task.add_tags(args.dataset_name)
     return args
 
 
@@ -251,17 +254,15 @@ def main(gnn_type, use_clearml):
 
 
 if __name__ == '__main__':
-    gnn_type = 'kgnn'
-    # gnn_type = 'dimenet'  # The reason that gnn_type cannot be a cmd line
+    # gnn_type = 'kgnn'
+    gnn_type = 'dimenet'  # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
 
     use_clearml = False
     if use_clearml:
         task = Task.init(project_name=f"Tests/{gnn_type}",
-                         task_name=f"435034-{gnn_type}",
-                         tags=["barium", "435034", "full","debug",
-                               "more_features"
-                               ])
+                         task_name=f"{gnn_type}",
+                         tags=["debug", "more_features"])
 
         logger = task.get_logger()
         # logger = pl.loggers.tensorboard

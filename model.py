@@ -310,10 +310,16 @@ class GNNModel(pl.LightningModule):
 
         if gnn_type == 'gcn':
             GCNNet.add_model_specific_args(parent_parser)
-        if gnn_type == 'chebnet':
+        elif gnn_type == 'chebnet':
             ChebNet.add_model_specific_args(parent_parser)
         elif gnn_type == 'kgnn':
             KGNNNet.add_model_specific_args(parent_parser)
+        elif gnn_type == 'dimenet':
+            DimeNet.add_model_specific_args(parent_parser)
+        else:
+            NotImplementedError('model.py::GNNModel::add_model_args(): '
+                                'gnn_type is not defined for args groups')
+
         return parent_parser
 
     def get_evaluations(self, results, true_y, pred_y):
