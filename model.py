@@ -3,6 +3,7 @@ import numpy as np
 from data import get_dataset
 from models.GCNNet.GCNNet import GCNNet
 from models.KGNN.KGNNNet import KGNNNet
+from models.DimeNet.DimeNet import DimeNet
 from models.ChebNet.ChebNet import ChebNet
 from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy, \
     calculate_f1_score
@@ -47,9 +48,16 @@ class GNNModel(pl.LightningModule):
         print(f'kwargs:{args}')
         if gnn_type == 'gcn':
             self.gnn_model = GCNNet(node_feature_dim, hidden_dim, num_layers)
-        if gnn_type == 'chebnet':
+        elif gnn_type == 'chebnet':
             self.gnn_model = ChebNet(node_feature_dim, hidden_dim, num_layers, args.K)
-        if gnn_type == 'kgnn':
+        elif gnn_type == 'dimenet':
+            self.gnn_model = DimeNet(emb_size=hidden_dim,
+                                     num_blocks=num_layers,
+                                     num_bilinear=1, num_spherical=7,
+            num_radial=6, cutoff=5.0, envelope_exponent=5, num_before_skip=1,
+            num_after_skip=2, num_dense_output=3, num_targets=12,
+            output_init='zeros', name='dimenet')
+        elif gnn_type == 'kgnn':
             self.gnn_model = KGNNNet(num_layers=num_layers,
                                      num_kernel1_1hop = args.num_kernel1_1hop,
                                      num_kernel2_1hop = args.num_kernel2_1hop,
@@ -64,8 +72,8 @@ class GNNModel(pl.LightningModule):
                                      predefined_kernelsets=False
                                      )
         else:
-            raise ValueError("model.py::GNNModel: GNN model type is not "
-                             "defined.")
+            raise ValueError(f"model.py::GNNModel: GNN model type is not "
+                             f"defined. gnn_type={gnn_type}")
         # self.atom_encoder = Embedding(118, hidden_dim)
         self.atom_encoder = Linear(node_feature_dim, hidden_dim)
         self.bond_encoder = Linear(edge_feature_dim, hidden_dim)
@@ -86,6 +94,8 @@ class GNNModel(pl.LightningModule):
 
     def forward(self, data):
         # data.x = self.atom_encoder(data.x)
+        print(f'model.py::data.x:{data.x.shape}')
+        print(f'model.py::atom_encoder:{self.atom_encoder}')
         data.x = self.atom_encoder(data.x)
         # print(f'model.py::data.x:{data.x.shape}')
         data.edge_attr = self.bond_encoder(data.edge_attr)
@@ -296,6 +306,7 @@ class GNNModel(pl.LightningModule):
         parser.add_argument('--tot_iterations', type=int, default=1000000)
         parser.add_argument('--peak_lr', type=float, default=2e-4)
         parser.add_argument('--end_lr', type=float, default=1e-9)
+        # parser.add_argument('--num_layers', type=int, default=3)
 
         if gnn_type == 'gcn':
             GCNNet.add_model_specific_args(parent_parser)
