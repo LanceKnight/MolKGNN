@@ -3,9 +3,12 @@
 
 from data import DataLoaderModule, get_dataset
 from model import GNNModel
-from monitors import LossMonitor, LossNoDropoutMonitor, LogAUCMonitor, \
-    LogAUCNoDropoutMonitor, PPVMonitor, PPVNoDropoutMonitor,\
-    RMSENoDropoutMonitor, F1ScoreMonitor, F1ScoreNoDropoutMonitor
+from monitors import LossMonitor, LossNoDropoutMonitor, \
+    LogAUCMonitor, LogAUCNoDropoutMonitor, \
+    PPVMonitor, PPVNoDropoutMonitor,\
+    RMSEMonitor, RMSENoDropoutMonitor,\
+    AccuracyMonitor, AccuracyNoDropoutMonitor,\
+    F1ScoreMonitor, F1ScoreNoDropoutMonitor
 from argparse import ArgumentParser
 from pprint import pprint
 import pytorch_lightning as pl
@@ -258,12 +261,13 @@ def main(gnn_type, use_clearml):
     actual_training(model, actual_training_data_module, use_clearml,
                     gnn_type, args)
 
-    # Save relevant data for analyses
-    model.save_atom_encoder(dir='utils/atom_encoder/',
-                            file_name='atom_encoder.pt')
-    model.save_kernels(dir='utils/atom_encoder/', file_name='kernels.pt')
-    model.print_graph_embedding()
-    model.save_graph_embedding('utils/atom_encoder/graph_embedding')
+    if gnn_type=='kgnn':
+        # Save relevant data for analyses
+        model.save_atom_encoder(dir = 'utils/atom_encoder/',
+        file_name='atom_encoder.pt')
+        model.save_kernels(dir='utils/atom_encoder/', file_name='kernels.pt')
+        model.print_graph_embedding()
+        model.save_graph_embedding('utils/atom_encoder/graph_embedding')
 
 
 if __name__ == '__main__':
