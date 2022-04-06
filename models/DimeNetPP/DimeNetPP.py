@@ -1,3 +1,5 @@
+from ..ChIRoNet.gnn_3D.dimenet_pp import DimeNetPlusPlus
+
 import json
 
 from .alpha_encoder import Encoder
@@ -12,32 +14,65 @@ import pytorch_lightning as pl
 # import pytorch_warmup as warmup
 
 
-class ChIRoNet(torch.nn.Module):
+class DimeNetPP(torch.nn.Module):
     """
-
+        codes adapted from https://github.com/PattanaikL/chiral_gnn
+        DimeNet++ implementation based on https://github.com/klicperajo/dimenet.
+    Args:
+        hidden_channels (int): Hidden embedding size.
+        out_channels (int): Size of each output sample.
+        num_blocks (int): Number of building blocks.
+        int_emb_size (int): Embedding size used for interaction triplets
+        basis_emb_size (int): Embedding size used in the basis transformation
+        out_emb_channels(int): Embedding size used for atoms in the output block
+        num_spherical (int): Number of spherical harmonics.
+        num_radial (int): Number of radial basis functions.
+        cutoff: (float, optional): Cutoff distance for interatomic
+            interactions. (default: :obj:`5.0`)
+        envelope_exponent (int, optional): Shape of the smooth cutoff.
+            (default: :obj:`5`)
+        num_before_skip: (int, optional): Number of residual layers in the
+            interaction blocks before the skip connection. (default: :obj:`1`)
+        num_after_skip: (int, optional): Number of residual layers in the
+            interaction blocks after the skip connection. (default: :obj:`2`)
+        num_output_layers: (int, optional): Number of linear layers for the
+            output blocks. (default: :obj:`3`)
+        act: (function, optional): The activation funtion.
+            (default: :obj:`swish`)
     """
-    def __init__(self, F_z_list, F_H, F_H_embed, F_E_embed, F_H_EConv, layers_dict, activation_dict, GAT_N_heads = 1, chiral_message_passing = False, CMP_EConv_MLP_hidden_sizes = [64], CMP_GAT_N_layers = 2, CMP_GAT_N_heads = 1, c_coefficient_normalization = None, encoder_reduction = 'mean', output_concatenation_mode = 'none', EConv_bias = True, GAT_bias = True, encoder_biases = True, dropout = 0.0):
-        super(ChIRoNet, self).__init__()
-        self.encoder = Encoder(
-            F_z_list,
-            F_H,
-            F_H_embed,
-            F_E_embed,
-            F_H_EConv,
-            layers_dict,
-            activation_dict,
-            GAT_N_heads,
-            chiral_message_passing,
-            CMP_EConv_MLP_hidden_sizes,
-            CMP_GAT_N_layers,
-            CMP_GAT_N_heads,
-            c_coefficient_normalization,
-            encoder_reduction,
-            output_concatenation_mode,
-            EConv_bias,
-            GAT_bias,
-            encoder_biases,
-            dropout,
+    def __init__(self,
+            hidden_channels,
+            out_channels,
+            num_blocks,
+            int_emb_size,
+            basis_emb_size,
+            out_emb_channels,
+            num_spherical,
+            num_radial,
+            cutoff=5.0,
+            envelope_exponent=5,
+            num_before_skip=1,
+            num_after_skip=2,
+            num_output_layers=3,
+            act=swish,
+            MLP_hidden_sizes = [],):
+        super(DimeNetPP, self).__init__()
+        self.encoder = DimeNetPlusPlus(
+            hidden_channels=params['hidden_channels'],  # 128
+            out_channels=params['out_channels'],  # 1
+            num_blocks=params['num_blocks'],  # 4
+            int_emb_size=params['int_emb_size'],  # 64
+            basis_emb_size=params['basis_emb_size'],  # 8
+            out_emb_channels=params['out_emb_channels'],  # 256
+            num_spherical=params['num_spherical'],  # 7
+            num_radial=params['num_radial'],  # 6
+            cutoff=params['cutoff'],  # 5.0
+            envelope_exponent=params['envelope_exponent'],  # 5
+            num_before_skip=params['num_before_skip'],  # 1
+            num_after_skip=params['num_after_skip'],  # 2
+            num_output_layers=params['num_output_layers'],  # 3
+            act=swish,
+            MLP_hidden_sizes=[],  # [] for contrastive
         )
 
 
@@ -64,13 +99,13 @@ class ChIRoNet(torch.nn.Module):
         :param parent_parser: parent parser for adding arguments
         :return: parent parser with added arguments
         """
-        parser = parent_parser.add_argument_group("ChIRoNet")
+        parser = parent_parser.add_argument_group("DimeNetPP")
 
         # Add specific model arguments below
         # E.g., parser.add_argument('--GCN_arguments', type=int,
         # default=12)
-        parser.add_argument('--F_z_list', type=list, default=[32,32,32],
-                            help='dimension of latent space')
+        parser.add_argument('--num_blocks', type=int, default=4,
+                            help='')
         # parser.add_argument('--F_H', type=int, default=32,
         #                     help='dimension of final node embeddings, after EConv and GAT layers')
         # parser.add_argument('--F_H_embed', type=int, default=52,

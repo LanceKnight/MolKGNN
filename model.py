@@ -1,7 +1,7 @@
 from data import get_dataset
 from models.GCNNet.GCNNet import GCNNet
 from models.KGNN.KGNNNet import KGNNNet
-# from models.DimeNet.DimeNet import DimeNet
+from models.DimeNetPP.DimeNetPP import DimeNetPP
 from models.ChebNet.ChebNet import ChebNet
 from models.ChIRoNet.ChIRoNet import ChIRoNet
 from models.ChIRoNet.params_interpreter import string_to_object
@@ -97,6 +97,24 @@ class GNNModel(pl.LightningModule):
                 encoder_biases=args.encoder_biases,
                 dropout=args.dropout,
             )
+        elif gnn_type == 'dimenet_pp':
+            self.gnn_model = DimeNetPP(
+                hidden_channels=params['hidden_channels'],  # 128
+                out_channels=params['out_channels'],  # 1
+                num_blocks=params['num_blocks'],  # 4
+                int_emb_size=params['int_emb_size'],  # 64
+                basis_emb_size=params['basis_emb_size'],  # 8
+                out_emb_channels=params['out_emb_channels'],  # 256
+                num_spherical=params['num_spherical'],  # 7
+                num_radial=params['num_radial'],  # 6
+                cutoff=params['cutoff'],  # 5.0
+                envelope_exponent=params['envelope_exponent'],  # 5
+                num_before_skip=params['num_before_skip'],  # 1
+                num_after_skip=params['num_after_skip'],  # 2
+                num_output_layers=params['num_output_layers'],  # 3
+                act=swish,
+                MLP_hidden_sizes=[],  # [] for contrastive)
+            )
         elif gnn_type == 'kgnn':
             self.gnn_model = KGNNNet(num_layers=num_layers,
                                      num_kernel1_1hop = args.num_kernel1_1hop,
@@ -110,7 +128,7 @@ class GNNModel(pl.LightningModule):
                                      x_dim = hidden_dim,
                                      graph_embedding_dim = hidden_dim,
                                      predefined_kernelsets=False
-                                     )
+            )
         else:
             raise ValueError(f"model.py::GNNModel: GNN model type is not "
                              f"defined. gnn_type={gnn_type}")
@@ -144,7 +162,6 @@ class GNNModel(pl.LightningModule):
 
 
         graph_embedding = self.gnn_model(data)
-        print(f'emb:{graph_embedding.shape}')
         graph_embedding = self.dropout(graph_embedding)
         prediction = self.ffn(graph_embedding)
 
