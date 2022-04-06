@@ -127,11 +127,15 @@ class GNNModel(pl.LightningModule):
         self.peak_lr = peak_lr
         self.end_lr = end_lr
         self.loss_func = get_dataset(dataset_name=dataset_name,
-                                     gnn_type=gnn_type)['loss_func']
+                                     gnn_type=gnn_type, 
+                                     dataset_path=args.dataset_path
+                                    )['loss_func']
         self.graph_embedding = None
         self.smiles_list = None
-        self.metrics = get_dataset(dataset_name=dataset_name, gnn_type=gnn_type)[
-            'metrics']
+        self.metrics = get_dataset(dataset_name=dataset_name, 
+                                   gnn_type=gnn_type,
+                                   dataset_path=args.dataset_path
+                                   )['metrics']
 
 
     def forward(self, data):
