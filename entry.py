@@ -274,9 +274,9 @@ if __name__ == '__main__':
 
     # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
-    # gnn_type = 'kgnn'
+    gnn_type = 'kgnn'
     # gnn_type = 'dimenet'
-    gnn_type = 'chironet'
+    # gnn_type = 'chironet'
 
 
     use_clearml = False

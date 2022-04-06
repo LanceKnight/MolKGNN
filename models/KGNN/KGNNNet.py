@@ -41,6 +41,8 @@ class KGNNNet(torch.nn.Module):
                           predefined_kernelsets=predefined_kernelsets)
 
         self.pool = global_add_pool
+        self.atom_encoder = Linear(x_dim, graph_embedding_dim)
+        self.bond_encoder = Linear(edge_attr_dim, graph_embedding_dim)
 
     def save_kernellayer(self, path, time_stamp):
         layers = self.gnn.layers
@@ -95,6 +97,9 @@ class KGNNNet(torch.nn.Module):
                 data.nei_index_deg3, data.nei_index_deg4
         else:
             raise ValueError("unmatched number of arguments.")
+
+        data.x = self.atom_encoder(data.x)
+        data.edge_attr = self.bond_encoder(data.edge_attr)
 
         node_representation = self.gnn(x=x, edge_index=edge_index,
                                        edge_attr=edge_attr, p=p,

@@ -106,7 +106,8 @@ class GNNModel(pl.LightningModule):
                                      num_kernel2_Nhop = args.num_kernel2_Nhop,
                                      num_kernel3_Nhop = args.num_kernel3_Nhop,
                                      num_kernel4_Nhop = args.num_kernel4_Nhop,
-                                     x_dim = hidden_dim,
+                                     x_dim = node_feature_dim,
+                                     edge_attr_dim=edge_feature_dim,
                                      graph_embedding_dim = hidden_dim,
                                      predefined_kernelsets=False
                                      )
@@ -114,8 +115,6 @@ class GNNModel(pl.LightningModule):
             raise ValueError(f"model.py::GNNModel: GNN model type is not "
                              f"defined. gnn_type={gnn_type}")
         # self.atom_encoder = Embedding(118, hidden_dim)
-        self.atom_encoder = Linear(node_feature_dim, hidden_dim)
-        self.bond_encoder = Linear(edge_feature_dim, hidden_dim)
         self.lin1 = Linear(hidden_dim, hidden_dim)
         self.lin2 = Linear(hidden_dim, output_dim)
         self.ffn = Linear(hidden_dim, output_dim)
@@ -137,13 +136,6 @@ class GNNModel(pl.LightningModule):
                                    )['metrics']
 
     def forward(self, data):
-        # data.x = self.atom_encoder(data.x)
-        # print(f'model.py::data.x:{data.x.shape}')
-        # print(f'model.py::atom_encoder:{self.atom_encoder}')
-        # data.x = self.atom_encoder(data.x)
-        # # print(f'model.py::data.x:{data.x.shape}')
-        # data.edge_attr = self.bond_encoder(data.edge_attr)
-
 
         graph_embedding = self.gnn_model(data)
         graph_embedding = self.dropout(graph_embedding)
@@ -176,8 +168,7 @@ class GNNModel(pl.LightningModule):
         pred_y, _ = self(batch_data)
         pred_y = pred_y.view(-1)
         true_y = batch_data.y.view(-1)
-        print(f"models.py::true_y:{true_y}")
-        print(f"models.py::pred_y:{pred_y}")
+
         # Get metrics
         results = {}
         results = self.get_evaluations(results, true_y, pred_y)
