@@ -94,6 +94,7 @@ class DimeNet(tf.keras.Model):
         return angle
 
     def call(self, inputs):
+        print
         Z, R                         = tf.int32, tf.float32#inputs['Z'],
         # inputs['R']
         batch_seg                    = inputs['batch_seg']

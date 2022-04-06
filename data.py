@@ -29,18 +29,26 @@ dataset = None
 #         print(f'after convert:{data.y.dtype}')
 #         return data
 
-def get_dataset(dataset_name='435034'):
+def get_dataset(dataset_name='435034', gnn_type='kgnn'):
     """
     Get the requested dataset
     :param dataset_name:
     :return:
     """
+    if gnn_type == 'kgnn':
+        pre_transform=ToXAndPAndEdgeAttrForDeg()
+    else:
+        pre_transform=None
+
+    print(f'data.py::gnn_type:{gnn_type}')
     if dataset_name in ['435008', '1798', '435034', '1843', '2258',
-                                '463087', '488997','2689', '485290']:
+                                '463087', '488997','2689', '485290', '9999']:
         qsar_dataset = QSARDataset(root='../dataset/qsar/clean_sdf',
                                    dataset=dataset_name,
-                                   pre_transform=ToXAndPAndEdgeAttrForDeg(),
+                                   gnn_type=gnn_type,
+                                   pre_transform=pre_transform,
                                    )
+
         dataset = {
             'num_class': 1,
             'dataset': qsar_dataset,
@@ -116,16 +124,18 @@ class DataLoaderModule(LightningDataModule):
             batch_size,
             seed,
             enable_oversampling_with_replacement,
+            gnn_type
     ):
         super().__init__()
         self.dataset_name = dataset_name
-        self.dataset = get_dataset(self.dataset_name)
+        self.dataset = get_dataset(dataset_name=self.dataset_name, gnn_type=gnn_type)
         self.num_workers = num_workers
         self.batch_size = batch_size
         self.seed = seed
         self.enable_oversampling_with_replacement = enable_oversampling_with_replacement
         self.dataset_train = ...
         self.dataset_val = ...
+        self.gnn_type = gnn_type
 
     def setup(self, stage: str = None):
         split_idx = self.dataset['dataset'].get_idx_split(seed=self.seed)
@@ -249,7 +259,8 @@ class DataLoaderModule(LightningDataModule):
             num_workers=self.num_workers,
             pin_memory=False,
             collate_fn=partial(collator,
-                               max_node=get_dataset(self.dataset_name)[
+                               max_node=get_dataset(self.dataset_name,
+                                                    gnn_type=self.gnn_type)[
                                    'max_node'],
                                multi_hop_max_dist=self.multi_hop_max_dist,
                                spatial_pos_max=self.spatial_pos_max),

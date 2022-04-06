@@ -1,14 +1,16 @@
-import numpy as np
-
 from data import get_dataset
 from models.GCNNet.GCNNet import GCNNet
 from models.KGNN.KGNNNet import KGNNNet
-from models.DimeNet.DimeNet import DimeNet
+# from models.DimeNet.DimeNet import DimeNet
 from models.ChebNet.ChebNet import ChebNet
+from models.ChIRoNet.ChIRoNet import ChIRoNet
+from models.ChIRoNet.params_interpreter import string_to_object
 from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy, \
     calculate_f1_score
 from lr import PolynomialDecayLR
+
 # Public libraries
+from copy import deepcopy
 import os
 import pytorch_lightning as pl
 from sklearn.metrics import mean_squared_error
@@ -57,6 +59,44 @@ class GNNModel(pl.LightningModule):
             num_radial=6, cutoff=5.0, envelope_exponent=5, num_before_skip=1,
             num_after_skip=2, num_dense_output=3, num_targets=12,
             output_init='zeros', name='dimenet')
+        elif gnn_type == 'chironet':
+
+            layers_dict = deepcopy(args.layers_dict)
+
+            activation_dict = deepcopy(args.activation_dict)
+
+            for key, value in args.activation_dict.items():
+                activation_dict[key] = string_to_object[
+                    value]  # convert strings to actual python
+                # objects/functions using pre-defined mapping
+            print(
+                f'model.py::chironet argument:'
+                f'{type(args.activation_dict["EConv_mlp_hidden_activation"])}')
+            self.gnn_model = ChIRoNet(
+                F_z_list=args.F_z_list,  # dimension of latent space
+                F_H=hidden_dim,
+                # dimension of final node embeddings, after EConv and GAT layers
+                F_H_embed=node_feature_dim,
+                # dimension of initial node feature vector, currently 41
+                F_E_embed=edge_feature_dim,
+                # dimension of initial edge feature vector, currently 12
+                F_H_EConv=hidden_dim,
+                # dimension of node embedding after EConv layer
+                layers_dict=args.layers_dict,
+                activation_dict= activation_dict,
+                GAT_N_heads=args.GAT_N_heads,
+                chiral_message_passing=args.use_chiral_message_passing,
+                CMP_EConv_MLP_hidden_sizes=args.CMP_EConv_MLP_hidden_sizes,
+                CMP_GAT_N_layers=args.CMP_GAT_N_layers,
+                CMP_GAT_N_heads=args.CMP_GAT_N_heads,
+                c_coefficient_normalization=args.c_coefficient_normalization,
+                encoder_reduction=args.encoder_reduction,
+                output_concatenation_mode=args.output_concatenation_mode,
+                EConv_bias=args.EConv_bias,
+                GAT_bias=args.GAT_bias,
+                encoder_biases=args.encoder_biases,
+                dropout=args.dropout,
+            )
         elif gnn_type == 'kgnn':
             self.gnn_model = KGNNNet(num_layers=num_layers,
                                      num_kernel1_1hop = args.num_kernel1_1hop,
@@ -86,21 +126,25 @@ class GNNModel(pl.LightningModule):
         self.tot_iterations = tot_iterations
         self.peak_lr = peak_lr
         self.end_lr = end_lr
-        self.loss_func = get_dataset(dataset_name=dataset_name)['loss_func']
+        self.loss_func = get_dataset(dataset_name=dataset_name,
+                                     gnn_type=gnn_type)['loss_func']
         self.graph_embedding = None
         self.smiles_list = None
-        self.metrics = get_dataset(dataset_name=dataset_name)['metrics']
+        self.metrics = get_dataset(dataset_name=dataset_name, gnn_type=gnn_type)[
+            'metrics']
 
 
     def forward(self, data):
         # data.x = self.atom_encoder(data.x)
-        print(f'model.py::data.x:{data.x.shape}')
-        print(f'model.py::atom_encoder:{self.atom_encoder}')
-        data.x = self.atom_encoder(data.x)
         # print(f'model.py::data.x:{data.x.shape}')
-        data.edge_attr = self.bond_encoder(data.edge_attr)
+        # print(f'model.py::atom_encoder:{self.atom_encoder}')
+        # data.x = self.atom_encoder(data.x)
+        # # print(f'model.py::data.x:{data.x.shape}')
+        # data.edge_attr = self.bond_encoder(data.edge_attr)
+
+
         graph_embedding = self.gnn_model(data)
-        # print(f'emb:{graph_embedding}')
+        print(f'emb:{graph_embedding.shape}')
         graph_embedding = self.dropout(graph_embedding)
         prediction = self.ffn(graph_embedding)
 
@@ -316,6 +360,8 @@ class GNNModel(pl.LightningModule):
             KGNNNet.add_model_specific_args(parent_parser)
         elif gnn_type == 'dimenet':
             DimeNet.add_model_specific_args(parent_parser)
+        elif gnn_type == 'chironet':
+            ChIRoNet.add_model_specific_args(parent_parser)
         else:
             NotImplementedError('model.py::GNNModel::add_model_args(): '
                                 'gnn_type is not defined for args groups')

@@ -1,3 +1,5 @@
+from models.ChIRoNet.embedding_functions import embedConformerWithAllPaths
+
 import math
 import os
 import pandas as pd
@@ -474,11 +476,13 @@ class QSARDataset(InMemoryDataset):
                  pre_filter=None,
                  dataset='435008',
                  empty=False,
+                 gnn_type='kgnn',
                  seed = 42):
 
         self.dataset = dataset
         self.root = root
         self.D = D
+        self.gnn_type = gnn_type
         super(QSARDataset, self).__init__(root, transform, pre_transform,
                                           pre_filter)
         self.transform, self.pre_transform, self.pre_filter = transform, \
@@ -507,7 +511,7 @@ class QSARDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return f'{self.dataset}-{self.D}D.pt'
+        return f'{self.gnn_type}-{self.dataset}-{self.D}D.pt'
 
     def download(self):
         raise NotImplementedError('Must indicate valid location of raw data. '
@@ -518,12 +522,17 @@ class QSARDataset(InMemoryDataset):
 
     def process(self):
         if self.dataset not in ['435008', '1798', '435034', '1843', '2258',
-                                '463087', '488997','2689', '485290']:
+                                '463087', '488997','2689', '485290','9999']:
             # print(f'dataset:{self.dataset}')
             raise ValueError('Invalid dataset name')
 
-        data_list, data_smiles_list = process_sdf(self.dataset, self.root)
+        RDLogger.DisableLog('rdApp.*')
+        if self.gnn_type == 'chironet':
+            data_list, data_smiles_list = self.chiro_process()
+        else:
+            data_list, data_smiles_list = self.regular_process()
 
+        # Apply pre_filter and pre_transform
         if self.pre_filter is not None:
             data_list = [data for data in data_list if self.pre_filter(data)]
 
@@ -534,17 +543,61 @@ class QSARDataset(InMemoryDataset):
                 new_data_list.append(self.pre_transform(data))
             data_list = new_data_list
 
-        # write data_smiles_list in processed paths
+        # Write data_smiles_list in processed paths
         data_smiles_series = pd.Series(data_smiles_list)
         data_smiles_series.to_csv(os.path.join(
             self.processed_dir, f'{self.dataset}-smiles.csv'), index=False,
             header=False)
 
-        # print(f'data length:{len(data_list)}')
-        # for data in data_list:
-        #     print(data)
+        # Write to processed file
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
+
+
+    def chiro_process(self):
+        dataset = self.dataset
+        root = self.root
+        data_smiles_list = []
+        data_list = []
+        for file_name, label in [(f'{dataset}_actives_new.sdf', 1),
+                                 (f'{dataset}_inactives_new.sdf', 0)]:
+            sdf_path = os.path.join(root, 'raw', file_name)
+            sdf_supplier = Chem.SDMolSupplier(sdf_path)
+            for i, mol in tqdm(enumerate(sdf_supplier)):
+                atom_symbols, edge_index, edge_features, node_features, \
+                bond_distances, bond_distance_index, bond_angles, \
+                bond_angle_index, dihedral_angles, dihedral_angle_index = \
+                    embedConformerWithAllPaths(
+                    mol, repeats=False)
+
+                bond_angles = bond_angles % (2 * np.pi)
+                dihedral_angles = dihedral_angles % (2 * np.pi)
+
+                data = Data(
+                    x=torch.as_tensor(node_features),
+                    edge_index=torch.as_tensor(edge_index, dtype=torch.long),
+                    edge_attr=torch.as_tensor(edge_features))
+                data.bond_distances = torch.as_tensor(bond_distances)
+                data.bond_distance_index = torch.as_tensor(bond_distance_index,
+                                                           dtype=torch.long).T
+                data.bond_angles = torch.as_tensor(bond_angles)
+                data.bond_angle_index = torch.as_tensor(bond_angle_index,
+                                                        dtype=torch.long).T
+                data.dihedral_angles = torch.as_tensor(dihedral_angles)
+                data.dihedral_angle_index = torch.as_tensor(
+                    dihedral_angle_index, dtype=torch.long).T
+                data.smiles = AllChem.MolToSmiles(mol)
+
+                data_list.append(data)
+
+                data_smiles_list.append(data.smiles)
+                data.y = torch.tensor([label], dtype=torch.int)
+        return data_list, data_smiles_list
+
+    def regular_process(self):
+        data_list, data_smiles_list = process_sdf(self.dataset, self.root)
+        return data_list, data_smiles_list
+
 
     def get_idx_split(self, seed):
         num_active = len(torch.nonzero(self.data.y))
@@ -792,7 +845,8 @@ if __name__ == "__main__":
     pass
     qsar_dataset = QSARDataset(root='../dataset/qsar/clean_sdf',
                                dataset='435034',
-                               pre_transform=ToXAndPAndEdgeAttrForDeg(),
+                               # pre_transform=ToXAndPAndEdgeAttrForDeg(),
+                               gnn_type='chironet'
                                )
     data = qsar_dataset[0]
     print(f'data:{data}')

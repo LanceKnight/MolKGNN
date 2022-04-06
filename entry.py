@@ -36,7 +36,8 @@ def add_args(gnn_type):
 
     args = parser.parse_args()
     args.tot_iterations = round(len(get_dataset(
-        args.dataset_name)['dataset']) * 0.8 / args.batch_size) * \
+        dataset_name=args.dataset_name, gnn_type=gnn_type)['dataset']) * 0.8 /
+                                args.batch_size) * \
                           args.max_epochs + 1
     args.max_steps = args.tot_iterations + 1
     print(args)
@@ -46,7 +47,7 @@ def add_args(gnn_type):
     return args
 
 
-def prepare_data(args, enable_pretraining=False):
+def prepare_data(args, enable_pretraining=False, gnn_type='kgnn'):
     """
     Prepare data modules for actual training, and if needed, for pretraining
     :param args: arguments for creating data modules
@@ -93,7 +94,7 @@ def prepare_actual_model(args):
     return model
 
 
-def actual_training(model, data_module, use_clearml, args):
+def actual_training(model, data_module, use_clearml, gnn_type, args):
     # Add checkpoint
     actual_training_checkpoint_dir = args.default_root_dir
     actual_training_checkpoint_callback = ModelCheckpoint(
@@ -133,7 +134,8 @@ def actual_training(model, data_module, use_clearml, args):
         trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 
         # Other metrics monitors
-        metrics = get_dataset(data_module.dataset_name)['metrics']
+        metrics = get_dataset(dataset_name=data_module.dataset_name, gnn_type=gnn_type,
+                              )['metrics']
         for metric in metrics:
             if metric == 'accuracy':
                 # Accuracy monitors
@@ -229,6 +231,7 @@ def main(gnn_type, use_clearml):
     # Prepare data
     enable_pretraining = args.enable_pretraining
     print(f'enable_pretraining:{enable_pretraining}')
+    args.gnn_type = gnn_type
     data_modules = prepare_data(args, enable_pretraining) # A list of
     # data_module to accommodate different pretraining data
     actual_training_data_module = data_modules[0]
@@ -243,7 +246,8 @@ def main(gnn_type, use_clearml):
     model = prepare_actual_model(args)
 
     # Start actual training
-    actual_training(model, actual_training_data_module, use_clearml, args)
+    actual_training(model, actual_training_data_module, use_clearml,
+                    gnn_type, args)
 
     # Save relevant data for analyses
     model.save_atom_encoder(dir = 'utils/atom_encoder/',
@@ -254,13 +258,16 @@ def main(gnn_type, use_clearml):
 
 
 if __name__ == '__main__':
-    # gnn_type = 'kgnn'
-    gnn_type = 'dimenet'  # The reason that gnn_type cannot be a cmd line
+    # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
+    # gnn_type = 'kgnn'
+    # gnn_type = 'dimenet'
+    gnn_type = 'chironet'
 
-    use_clearml = False
+
+    use_clearml = True
     if use_clearml:
-        task = Task.init(project_name=f"Tests/{gnn_type}",
+        task = Task.init(project_name=f"Tests/kgnn",
                          task_name=f"{gnn_type}",
                          tags=["debug", "more_features"])
 
