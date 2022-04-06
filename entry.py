@@ -5,9 +5,7 @@ from data import DataLoaderModule, get_dataset
 from model import GNNModel
 from monitors import LossMonitor, LossNoDropoutMonitor, LogAUCMonitor, \
     LogAUCNoDropoutMonitor, PPVMonitor, PPVNoDropoutMonitor,\
-    AccuracyMonitor, AccuracyNoDropoutMonitor, RMSEMonitor, \
     RMSENoDropoutMonitor, F1ScoreMonitor, F1ScoreNoDropoutMonitor
-
 from argparse import ArgumentParser
 from pprint import pprint
 import pytorch_lightning as pl
@@ -41,20 +39,21 @@ def add_args(gnn_type):
 
     args = parser.parse_args()
     args.tot_iterations = round(len(get_dataset(
-        args.dataset_name)['dataset']) * 0.8 / args.batch_size) * \
-        args.max_epochs + 1
+                                                dataset_name=args.dataset_name,
+                                                gnn_type=gnn_type,
+                                                dataset_path=args.dataset_path
+                                                )['dataset'],
+                                    ) * 0.8 /args.batch_size) \
+                          * args.max_epochs + 1
     args.max_steps = args.tot_iterations + 1
     print(args)
 
     if use_clearml:
-        task.add_tags(args.machine)
         task.add_tags(args.dataset_name)
-
-
     return args
 
 
-def prepare_data(args, enable_pretraining=False):
+def prepare_data(args, enable_pretraining=False, gnn_type='kgnn'):
     """
     Prepare data modules for actual training, and if needed, for pretraining
     :param args: arguments for creating data modules
@@ -92,14 +91,16 @@ def prepare_actual_model(args):
         print(f'Creating a model from scratch...')
 
         model = GNNModel(gnn_type, args.dataset_name, args.num_layers,
-                         args.input_dim,
+                         args.node_feature_dim,
+                         args.edge_feature_dim,
                          args.hidden_dim, args.output_dim,
                          args.warmup_iterations, args.tot_iterations,
-                         args.peak_lr, args.end_lr, args=args)
+                         args.peak_lr, args.end_lr, args.dropout_rate,
+                         args=args)
     return model
 
 
-def actual_training(model, data_module, use_clearml, args):
+def actual_training(model, data_module, use_clearml, gnn_type, args):
     # Add checkpoint
     actual_training_checkpoint_dir = args.default_root_dir
     actual_training_checkpoint_callback = ModelCheckpoint(
@@ -120,8 +121,8 @@ def actual_training(model, data_module, use_clearml, args):
 
     if use_clearml:
         # Loss monitors
-        trainer.callbacks.append(
-            LossMonitor(stage='train', logger=logger, logging_interval='step'))
+        # trainer.callbacks.append(
+        #     LossMonitor(stage='train', logger=logger, logging_interval='step'))
         trainer.callbacks.append(
             LossMonitor(stage='train', logger=logger,
                         logging_interval='epoch'))
@@ -139,7 +140,10 @@ def actual_training(model, data_module, use_clearml, args):
         trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 
         # Other metrics monitors
-        metrics = get_dataset(data_module.dataset_name)['metrics']
+        metrics = get_dataset(dataset_name=args.dataset_name,
+                              gnn_type=gnn_type,
+                              dataset_path=args.dataset_path
+                              )['metrics']
         for metric in metrics:
             if metric == 'accuracy':
                 # Accuracy monitors
@@ -195,12 +199,13 @@ def actual_training(model, data_module, use_clearml, args):
                 # F1 monitors
                 trainer.callbacks.append(
                     F1ScoreMonitor(stage='train', logger=logger,
-                             logging_interval='epoch'))
+                                   logging_interval='epoch'))
                 trainer.callbacks.append(
-                    F1ScoreMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+                    F1ScoreMonitor(stage='valid', logger=logger,
+                                   logging_interval='epoch'))
                 trainer.callbacks.append(
                     F1ScoreNoDropoutMonitor(stage='valid', logger=logger,
-                                        logging_interval='epoch'))
+                                            logging_interval='epoch'))
                 continue
 
     if args.test:
@@ -234,7 +239,9 @@ def main(gnn_type, use_clearml):
     # Prepare data
     enable_pretraining = args.enable_pretraining
     print(f'enable_pretraining:{enable_pretraining}')
-    data_modules = prepare_data(args, enable_pretraining)  # A list of
+    args.gnn_type = gnn_type
+    data_modules = prepare_data(args, enable_pretraining) # A list of
+
     # data_module to accommodate different pretraining data
     actual_training_data_module = data_modules[0]
 
@@ -248,7 +255,8 @@ def main(gnn_type, use_clearml):
     model = prepare_actual_model(args)
 
     # Start actual training
-    actual_training(model, actual_training_data_module, use_clearml, args)
+    actual_training(model, actual_training_data_module, use_clearml,
+                    gnn_type, args)
 
     # Save relevant data for analyses
     model.save_atom_encoder(dir='utils/atom_encoder/',
@@ -259,14 +267,19 @@ def main(gnn_type, use_clearml):
 
 
 if __name__ == '__main__':
-    gnn_type = 'gcn'  # The reason that gnn_type cannot be a cmd line
+
+    # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
+    # gnn_type = 'kgnn'
+    # gnn_type = 'dimenet'
+    gnn_type = 'chironet'
+
 
     use_clearml = False
     if use_clearml:
         task = Task.init(project_name=f"Tests/kgnn",
                          task_name=f"{gnn_type}",
-                         tags=["debug"])
+                         tags=["debug", "more_features"])
 
         logger = task.get_logger()
         # logger = pl.loggers.tensorboard

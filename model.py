@@ -1,17 +1,20 @@
-import numpy as np
-
 from data import get_dataset
 from models.GCNNet.GCNNet import GCNNet
 from models.KGNN.KGNNNet import KGNNNet
+# from models.DimeNet.DimeNet import DimeNet
 from models.ChebNet.ChebNet import ChebNet
+from models.ChIRoNet.ChIRoNet import ChIRoNet
+from models.ChIRoNet.params_interpreter import string_to_object
 from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy, \
     calculate_f1_score
 from lr import PolynomialDecayLR
+
 # Public libraries
+from copy import deepcopy
 import os
 import pytorch_lightning as pl
 from sklearn.metrics import mean_squared_error
-from torch.nn import Linear, Sigmoid, ReLU, Embedding
+from torch.nn import Linear, Sigmoid, ReLU, Embedding, Dropout
 from torch_geometric.data import Data
 import torch
 from torch.optim import Adam
@@ -31,73 +34,119 @@ class GNNModel(pl.LightningModule):
                  gnn_type,
                  dataset_name,
                  num_layers,
-                 input_dim,
+                 node_feature_dim,
+                 edge_feature_dim,
                  hidden_dim,
                  output_dim,
                  warmup_iterations,
                  tot_iterations,
                  peak_lr,
                  end_lr,
+                 dropout_rate,
                  args=None
                  ):
         super(GNNModel, self).__init__()
         print(f'kwargs:{args}')
         if gnn_type == 'gcn':
-            self.gnn_model = GCNNet(input_dim, hidden_dim, num_layers)
+            self.gnn_model = GCNNet(node_feature_dim, hidden_dim, num_layers)
         elif gnn_type == 'chebnet':
-            self.gnn_model = ChebNet(input_dim, hidden_dim, num_layers, args.K)
+            self.gnn_model = ChebNet(node_feature_dim, hidden_dim, num_layers, args.K)
+        elif gnn_type == 'dimenet':
+            self.gnn_model = DimeNet(emb_size=hidden_dim,
+                                     num_blocks=num_layers,
+                                     num_bilinear=1, num_spherical=7,
+            num_radial=6, cutoff=5.0, envelope_exponent=5, num_before_skip=1,
+            num_after_skip=2, num_dense_output=3, num_targets=12,
+            output_init='zeros', name='dimenet')
+        elif gnn_type == 'chironet':
+
+            layers_dict = deepcopy(args.layers_dict)
+
+            activation_dict = deepcopy(args.activation_dict)
+
+            for key, value in args.activation_dict.items():
+                activation_dict[key] = string_to_object[
+                    value]  # convert strings to actual python
+                # objects/functions using pre-defined mapping
+            print(
+                f'model.py::chironet argument:'
+                f'{type(args.activation_dict["EConv_mlp_hidden_activation"])}')
+            self.gnn_model = ChIRoNet(
+                F_z_list=args.F_z_list,  # dimension of latent space
+                F_H=hidden_dim,
+                # dimension of final node embeddings, after EConv and GAT layers
+                F_H_embed=node_feature_dim,
+                # dimension of initial node feature vector, currently 41
+                F_E_embed=edge_feature_dim,
+                # dimension of initial edge feature vector, currently 12
+                F_H_EConv=hidden_dim,
+                # dimension of node embedding after EConv layer
+                layers_dict=args.layers_dict,
+                activation_dict= activation_dict,
+                GAT_N_heads=args.GAT_N_heads,
+                chiral_message_passing=args.use_chiral_message_passing,
+                CMP_EConv_MLP_hidden_sizes=args.CMP_EConv_MLP_hidden_sizes,
+                CMP_GAT_N_layers=args.CMP_GAT_N_layers,
+                CMP_GAT_N_heads=args.CMP_GAT_N_heads,
+                c_coefficient_normalization=args.c_coefficient_normalization,
+                encoder_reduction=args.encoder_reduction,
+                output_concatenation_mode=args.output_concatenation_mode,
+                EConv_bias=args.EConv_bias,
+                GAT_bias=args.GAT_bias,
+                encoder_biases=args.encoder_biases,
+                dropout=args.dropout,
+            )
         elif gnn_type == 'kgnn':
             self.gnn_model = KGNNNet(num_layers=num_layers,
-                                     # num_kernel1_1hop=kwargs['num_kernel1_1hop'],
-                                     # num_kernel2_1hop=kwargs[
-                                     #     'num_kernel2_1hop'],
-                                     # num_kernel3_1hop=kwargs[
-                                     #     'num_kernel3_1hop'],
-                                     # num_kernel4_1hop=kwargs[
-                                     #     'num_kernel4_1hop'],
-                                     # num_kernel1_Nhop=kwargs[
-                                     #     'num_kernel1_Nhop'],
-                                     # num_kernel2_Nhop=kwargs[
-                                     #     'num_kernel2_Nhop'],
-                                     # num_kernel3_Nhop=kwargs[
-                                     #     'num_kernel3_Nhop'],
-                                     # num_kernel4_Nhop=kwargs[
-                                     #     'num_kernel4_Nhop'],
-                                     num_kernel1_1hop=args.num_kernel1_1hop,
-                                     num_kernel2_1hop=args.num_kernel2_1hop,
-                                     num_kernel3_1hop=args.num_kernel3_1hop,
-                                     num_kernel4_1hop=args.num_kernel4_1hop,
-                                     num_kernel1_Nhop=args.num_kernel1_Nhop,
-                                     num_kernel2_Nhop=args.num_kernel2_Nhop,
-                                     num_kernel3_Nhop=args.num_kernel3_Nhop,
-                                     num_kernel4_Nhop=args.num_kernel4_Nhop,
-                                     x_dim=input_dim,
-                                     graph_embedding_dim=hidden_dim,
+                                     num_kernel1_1hop = args.num_kernel1_1hop,
+                                     num_kernel2_1hop = args.num_kernel2_1hop,
+                                     num_kernel3_1hop = args.num_kernel3_1hop,
+                                     num_kernel4_1hop = args.num_kernel4_1hop,
+                                     num_kernel1_Nhop = args.num_kernel1_Nhop,
+                                     num_kernel2_Nhop = args.num_kernel2_Nhop,
+                                     num_kernel3_Nhop = args.num_kernel3_Nhop,
+                                     num_kernel4_Nhop = args.num_kernel4_Nhop,
+                                     x_dim = hidden_dim,
+                                     graph_embedding_dim = hidden_dim,
                                      predefined_kernelsets=False
                                      )
         else:
-            raise ValueError("model.py::GNNModel: GNN model type is not "
-                             "defined.")
-        self.atom_encoder = Embedding(118, hidden_dim)
+            raise ValueError(f"model.py::GNNModel: GNN model type is not "
+                             f"defined. gnn_type={gnn_type}")
+        # self.atom_encoder = Embedding(118, hidden_dim)
+        self.atom_encoder = Linear(node_feature_dim, hidden_dim)
+        self.bond_encoder = Linear(edge_feature_dim, hidden_dim)
         self.lin1 = Linear(hidden_dim, hidden_dim)
         self.lin2 = Linear(hidden_dim, output_dim)
         self.ffn = Linear(hidden_dim, output_dim)
+        self.dropout = Dropout(p= dropout_rate)
         self.activate_func = ReLU()
         self.warmup_iterations = warmup_iterations
         self.tot_iterations = tot_iterations
         self.peak_lr = peak_lr
         self.end_lr = end_lr
-        self.loss_func = get_dataset(dataset_name=dataset_name)['loss_func']
+        self.loss_func = get_dataset(dataset_name=dataset_name,
+                                     gnn_type=gnn_type, 
+                                     dataset_path=args.dataset_path
+                                    )['loss_func']
         self.graph_embedding = None
         self.smiles_list = None
-        self.metrics = get_dataset(dataset_name=dataset_name)['metrics']
+        self.metrics = get_dataset(dataset_name=dataset_name, 
+                                   gnn_type=gnn_type,
+                                   dataset_path=args.dataset_path
+                                   )['metrics']
 
     def forward(self, data):
+        # data.x = self.atom_encoder(data.x)
+        # print(f'model.py::data.x:{data.x.shape}')
+        # print(f'model.py::atom_encoder:{self.atom_encoder}')
+        # data.x = self.atom_encoder(data.x)
+        # # print(f'model.py::data.x:{data.x.shape}')
+        # data.edge_attr = self.bond_encoder(data.edge_attr)
 
-        data.x = self.atom_encoder(data.atomic_num)
 
         graph_embedding = self.gnn_model(data)
-        print(f'model.py::emb:{graph_embedding}')
+        graph_embedding = self.dropout(graph_embedding)
         prediction = self.ffn(graph_embedding)
 
         # # Debug
@@ -133,8 +182,7 @@ class GNNModel(pl.LightningModule):
         results = {}
         results = self.get_evaluations(results, true_y, pred_y)
 
-        self.log(f"train performance by step", results,
-                 on_step=True, prog_bar=True, logger=True)
+        # self.log(f"train performance by step", results, on_step=True, prog_bar=True, logger=True)
         return results
 
     def training_epoch_end(self, train_step_outputs):
@@ -155,8 +203,7 @@ class GNNModel(pl.LightningModule):
             train_epoch_outputs[key] = mean_output
 
         self.train_epoch_outputs = train_epoch_outputs
-        self.log(f"train performance by epoch", train_epoch_outputs,
-                 on_epoch=True, prog_bar=True, logger=True)
+        # self.log(f"train performance by epoch", train_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
     def validation_step(self, batch_data, batch_idx, dataloader_idx):
         """
@@ -216,8 +263,7 @@ class GNNModel(pl.LightningModule):
                     new_key = key + "_no_dropout"
                     self.valid_epoch_outputs[new_key] = results[key]
         # Logging
-        self.log(f"valid performance by epoch", self.valid_epoch_outputs,
-                 on_epoch=True, prog_bar=True, logger=True)
+        # self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
     def configure_optimizers(self):
         """
@@ -293,22 +339,33 @@ class GNNModel(pl.LightningModule):
         # E.g., parser.add_argument('--general_model_args', type=int,
         # default=12)
         parser.add_argument('--seed', type=int, default=42)
-        parser.add_argument('--input_dim', type=int, default=32)
+        parser.add_argument('--node_feature_dim', type=int, default=27)
+        parser.add_argument('--edge_feature_dim', type=int, default=7)
         parser.add_argument('--hidden_dim', type=int, default=32)
         parser.add_argument('--output_dim', type=int, default=32)
+        parser.add_argument('--dropout_rate', type=float, default=0.25)
         parser.add_argument('--validate', action='store_true', default=False)
         parser.add_argument('--test', action='store_true', default=False)
         parser.add_argument('--warmup_iterations', type=int, default=60000)
         parser.add_argument('--tot_iterations', type=int, default=1000000)
         parser.add_argument('--peak_lr', type=float, default=2e-4)
         parser.add_argument('--end_lr', type=float, default=1e-9)
+        # parser.add_argument('--num_layers', type=int, default=3)
 
         if gnn_type == 'gcn':
             GCNNet.add_model_specific_args(parent_parser)
-        if gnn_type == 'chebnet':
+        elif gnn_type == 'chebnet':
             ChebNet.add_model_specific_args(parent_parser)
         elif gnn_type == 'kgnn':
             KGNNNet.add_model_specific_args(parent_parser)
+        elif gnn_type == 'dimenet':
+            DimeNet.add_model_specific_args(parent_parser)
+        elif gnn_type == 'chironet':
+            ChIRoNet.add_model_specific_args(parent_parser)
+        else:
+            NotImplementedError('model.py::GNNModel::add_model_args(): '
+                                'gnn_type is not defined for args groups')
+
         return parent_parser
 
     def get_evaluations(self, results, true_y, pred_y):

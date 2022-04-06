@@ -3,7 +3,7 @@ from lr import PolynomialDecayLR
 
 import torch
 from torch.nn import Linear, Sigmoid
-from torch_geometric.nn import global_mean_pool
+from torch_geometric.nn import global_add_pool
 from torch.optim import Adam
 
 
@@ -40,7 +40,7 @@ class KGNNNet(torch.nn.Module):
                           p_dim=p_dim, edge_attr_dim=edge_attr_dim,
                           predefined_kernelsets=predefined_kernelsets)
 
-        self.pool = global_mean_pool
+        self.pool = global_add_pool
 
     def save_kernellayer(self, path, time_stamp):
         layers = self.gnn.layers
