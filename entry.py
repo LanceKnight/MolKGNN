@@ -36,9 +36,12 @@ def add_args(gnn_type):
 
     args = parser.parse_args()
     args.tot_iterations = round(len(get_dataset(
-        dataset_name=args.dataset_name, gnn_type=gnn_type)['dataset']) * 0.8 /
-                                args.batch_size) * \
-                          args.max_epochs + 1
+                                                dataset_name=args.dataset_name,
+                                                gnn_type=gnn_type,
+                                                dataset_path=args.dataset_path
+                                                )['dataset'],
+                                    ) * 0.8 /args.batch_size) \
+                          * args.max_epochs + 1
     args.max_steps = args.tot_iterations + 1
     print(args)
 
@@ -134,7 +137,9 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 
         # Other metrics monitors
-        metrics = get_dataset(dataset_name=data_module.dataset_name, gnn_type=gnn_type,
+        metrics = get_dataset(dataset_name=args.dataset_name,
+                              gnn_type=gnn_type,
+                              dataset_path=args.dataset_path
                               )['metrics']
         for metric in metrics:
             if metric == 'accuracy':
