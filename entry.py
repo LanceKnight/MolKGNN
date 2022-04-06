@@ -4,16 +4,15 @@
 from data import DataLoaderModule, get_dataset
 from model import GNNModel
 from monitors import LossMonitor, LossNoDropoutMonitor, LogAUCMonitor, \
-    LogAUCNoDropoutMonitor, PPVMonitor, PPVNoDropoutMonitor, \
-    AccuracyMonitor, AccuracyNoDropoutMonitor, RMSEMonitor, \
+    LogAUCNoDropoutMonitor, PPVMonitor, PPVNoDropoutMonitor,\
     RMSENoDropoutMonitor, F1ScoreMonitor, F1ScoreNoDropoutMonitor
-
 from argparse import ArgumentParser
 from pprint import pprint
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 import os
 from clearml import Task
+
 
 def add_args(gnn_type):
     """
@@ -33,6 +32,10 @@ def add_args(gnn_type):
     # Custom arguments
     parser.add_argument("--enable_pretraining", default=False)  # TODO: \
     # Pretraining
+
+    # Experiment labels arguments for tagging the task
+    parser.add_argument("--machine", default='barium')
+
 
     args = parser.parse_args()
     args.tot_iterations = round(len(get_dataset(
@@ -111,7 +114,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
             f'{actual_training_checkpoint_dir}/last.ckpt'):
         print('Resuming from actual training checkpoint')
         args.resume_from_checkpoint = actual_training_checkpoint_dir + \
-                                      '/last.ckpt'
+            '/last.ckpt'
 
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks.append(actual_training_checkpoint_callback)
@@ -159,23 +162,23 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 # Accuracy monitors
                 trainer.callbacks.append(
                     RMSEMonitor(stage='train', logger=logger,
-                                    logging_interval='epoch'))
+                                logging_interval='epoch'))
                 trainer.callbacks.append(
                     RMSEMonitor(stage='valid', logger=logger,
-                                    logging_interval='epoch'))
+                                logging_interval='epoch'))
                 trainer.callbacks.append(
                     RMSENoDropoutMonitor(stage='valid', logger=logger,
-                                             logging_interval='epoch'))
+                                         logging_interval='epoch'))
                 continue
 
             if metric == 'logAUC':
                 # LogAUC monitors
                 trainer.callbacks.append(
                     LogAUCMonitor(stage='train', logger=logger,
-                    logging_interval='epoch'))
+                                  logging_interval='epoch'))
                 trainer.callbacks.append(
                     LogAUCMonitor(stage='valid', logger=logger,
-                    logging_interval='epoch'))
+                                  logging_interval='epoch'))
                 trainer.callbacks.append(
                     LogAUCNoDropoutMonitor(stage='valid', logger=logger,
                                            logging_interval='epoch'))
@@ -238,6 +241,7 @@ def main(gnn_type, use_clearml):
     print(f'enable_pretraining:{enable_pretraining}')
     args.gnn_type = gnn_type
     data_modules = prepare_data(args, enable_pretraining) # A list of
+
     # data_module to accommodate different pretraining data
     actual_training_data_module = data_modules[0]
 
@@ -255,14 +259,15 @@ def main(gnn_type, use_clearml):
                     gnn_type, args)
 
     # Save relevant data for analyses
-    model.save_atom_encoder(dir = 'utils/atom_encoder/',
-    file_name='atom_encoder.pt')
+    model.save_atom_encoder(dir='utils/atom_encoder/',
+                            file_name='atom_encoder.pt')
     model.save_kernels(dir='utils/atom_encoder/', file_name='kernels.pt')
     model.print_graph_embedding()
     model.save_graph_embedding('utils/atom_encoder/graph_embedding')
 
 
 if __name__ == '__main__':
+
     # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
     # gnn_type = 'kgnn'
@@ -270,7 +275,7 @@ if __name__ == '__main__':
     gnn_type = 'chironet'
 
 
-    use_clearml = True
+    use_clearml = False
     if use_clearml:
         task = Task.init(project_name=f"Tests/kgnn",
                          task_name=f"{gnn_type}",
@@ -279,5 +284,3 @@ if __name__ == '__main__':
         logger = task.get_logger()
         # logger = pl.loggers.tensorboard
     main(gnn_type, use_clearml)
-
-

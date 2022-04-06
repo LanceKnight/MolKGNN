@@ -24,4 +24,4 @@ root_dir
 
 Here is an exmaple for running the code:
 
-`python entry.py ---dataset_name CHIRAL1 --input_dim 5 --hidden_dim 32 --output_dim 1 --warmup_iterations 600 --tot_iterations 10000 --peak_lr 2e-4 --end_lr 1e-9 --batch_size 64 --default_root_dir actual_training_checkpoints --gpus 1 --num_layers 3`
+`python entry.py --dataset_name CHIRAL1 --input_dim 5 --hidden_dim 32 --output_dim 1 --warmup_iterations 600 --tot_iterations 10000 --peak_lr 2e-4 --end_lr 1e-9 --batch_size 64 --default_root_dir actual_training_checkpoints --gpus 1 --num_layers 3`
