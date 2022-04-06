@@ -106,16 +106,17 @@ class DimeNetPP(torch.nn.Module):
         # default=12)
         parser.add_argument('--num_blocks', type=int, default=4,
                             help='')
-        # parser.add_argument('--F_H', type=int, default=32,
-        #                     help='dimension of final node embeddings, after EConv and GAT layers')
-        # parser.add_argument('--F_H_embed', type=int, default=52,
-        #                     help='dimension of initial node feature vector, '
-        #                          'currently 52')
-        # parser.add_argument('--F_E_embed', type=int, default=14,
-        #                     help='dimension of initial edge feature vector, '
-        #                          'currently 14')
-        # parser.add_argument('--F_H_EConv', type=int, default=64,
-        #                     help='dimension of node embedding after EConv layer')
+        parser.add_argument('--int_emb_size', type=int, default=64,
+                            help='')
+        parser.add_argument('--basis_emb_size', type=int, default=8,
+                            help='')
+        parser.add_argument('--basis_emb_size', type=int, default=8,
+                            help='')
+        parser.add_argument('--F_E_embed', type=int, default=14,
+                            help='dimension of initial edge feature vector, '
+                                 'currently 14')
+        parser.add_argument('--F_H_EConv', type=int, default=64,
+                            help='dimension of node embedding after EConv layer')
         parser.add_argument('--layers_dict', type=json.loads, default='{'
                                                                    '"EConv_mlp_hidden_sizes": [32, 32],'
                                                                    '"GAT_hidden_node_sizes": [8],'
