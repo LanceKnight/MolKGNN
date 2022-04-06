@@ -20,7 +20,6 @@ import torch
 from torch.optim import Adam
 
 
-
 class GNNModel(pl.LightningModule):
     """
     A wrapper for different GNN models
@@ -145,12 +144,15 @@ class GNNModel(pl.LightningModule):
         self.peak_lr = peak_lr
         self.end_lr = end_lr
         self.loss_func = get_dataset(dataset_name=dataset_name,
-                                     gnn_type=gnn_type)['loss_func']
+                                     gnn_type=gnn_type, 
+                                     dataset_path=args.dataset_path
+                                    )['loss_func']
         self.graph_embedding = None
         self.smiles_list = None
-        self.metrics = get_dataset(dataset_name=dataset_name, gnn_type=gnn_type)[
-            'metrics']
-
+        self.metrics = get_dataset(dataset_name=dataset_name, 
+                                   gnn_type=gnn_type,
+                                   dataset_path=args.dataset_path
+                                   )['metrics']
 
     def forward(self, data):
         # data.x = self.atom_encoder(data.x)
@@ -174,7 +176,6 @@ class GNNModel(pl.LightningModule):
         self.smiles_list = data.smiles
         return prediction, graph_embedding
 
-
     def training_step(self, batch_data, batch_idx):
         """
         Training operations for each iteration includes getting the loss and
@@ -189,12 +190,14 @@ class GNNModel(pl.LightningModule):
         """
 
         # Get prediction and ground truth
+        # print(batch_data.edge_index)
         pred_y, _ = self(batch_data)
         pred_y = pred_y.view(-1)
         true_y = batch_data.y.view(-1)
-        # print(f"models.py::true_y:{true_y}")
+        print(f"models.py::true_y:{true_y}")
+        print(f"models.py::pred_y:{pred_y}")
         # Get metrics
-        results={}
+        results = {}
         results = self.get_evaluations(results, true_y, pred_y)
 
         # self.log(f"train performance by step", results, on_step=True, prog_bar=True, logger=True)
@@ -214,7 +217,7 @@ class GNNModel(pl.LightningModule):
             # the first dictionary. See return function description from
             # function training_step() above
             mean_output = sum(output[key] for output in train_step_outputs) \
-                          / len(train_step_outputs)
+                / len(train_step_outputs)
             train_epoch_outputs[key] = mean_output
 
         self.train_epoch_outputs = train_epoch_outputs
@@ -243,7 +246,6 @@ class GNNModel(pl.LightningModule):
         valid_step_output['true_y'] = true_y
         return valid_step_output
 
-
     def validation_epoch_end(self, valid_step_outputs):
         """
         Evaluate on both the validation and training datasets. Besides in the
@@ -271,12 +273,12 @@ class GNNModel(pl.LightningModule):
             all_true = [output['true_y'] for output in outputs_each_dataloader]
             results = self.get_evaluations(
                 results, torch.cat(all_true),
-                                 torch.cat(all_pred))
+                torch.cat(all_pred))
             if i == 0:
                 self.valid_epoch_outputs = results
             else:
                 for key in results.keys():
-                    new_key = key+"_no_dropout"
+                    new_key = key + "_no_dropout"
                     self.valid_epoch_outputs[new_key] = results[key]
         # Logging
         # self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
@@ -304,7 +306,6 @@ class GNNModel(pl.LightningModule):
         }
         # return optimizer, scheduler
 
-
         # optimizer, scheduler = self.gnn_model.configure_optimizers(
         #     self.warmup_iterations, self.tot_iterations, self.peak_lr,
         #     self.end_lr)
@@ -313,7 +314,7 @@ class GNNModel(pl.LightningModule):
     def save_atom_encoder(self, dir, file_name):
         if not os.path.exists(dir):
             os.mkdir(dir)
-        torch.save(self.atom_encoder.state_dict(), dir+file_name)
+        torch.save(self.atom_encoder.state_dict(), dir + file_name)
 
     def save_graph_embedding(self, dir):
         if not os.path.exists(dir):
@@ -321,7 +322,7 @@ class GNNModel(pl.LightningModule):
         torch.save(self.graph_embedding, f'{dir}/graph_embedding.pt')
         with open(f'{dir}/smiles_for_graph_embedding.txt', 'w+') as f:
             for smiles in self.smiles_list:
-                f.write(smiles+ "\n")
+                f.write(smiles + "\n")
 
     def save_kernels(self, dir, file_name):
         """
@@ -333,14 +334,14 @@ class GNNModel(pl.LightningModule):
             if not os.path.exists(dir):
                 os.mkdir(dir)
             torch.save(self.gnn_model.gnn.layers[
-                           0].trainable_kernelconv_set.state_dict(),
-                       dir+file_name)
+                0].trainable_kernelconv_set.state_dict(),
+                dir + file_name)
         else:
             raise Exception("model.py::GNNModel.sve_kernels(): only "
                             "implemented for Kernel GNN")
+
     def print_graph_embedding(self):
         print(self.graph_embedding)
-
 
     @staticmethod
     def add_model_args(gnn_type, parent_parser):
@@ -408,7 +409,7 @@ class GNNModel(pl.LightningModule):
                 continue
             if metric == 'RMSE':
                 rmse = mean_squared_error(numpy_y, numpy_prediction,
-                                          squared=False) # Setting
+                                          squared=False)  # Setting
                 # squared=False returns RMSE
                 results['RMSE'] = rmse
             if metric == 'logAUC':

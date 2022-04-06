@@ -214,6 +214,7 @@ class RMSENoDropoutMonitor(MetricMonitor):
                                                         f'{logging_interval}',
                                               series='no_dropout')
 
+        
 # F1 score
 class F1ScoreMonitor(MetricMonitor):
     def __init__(self, stage='valid', logger =None, logging_interval=None,

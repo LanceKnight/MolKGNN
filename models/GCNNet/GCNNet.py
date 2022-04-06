@@ -4,6 +4,8 @@ from torch.optim import Adam
 from torch_geometric.nn import GCNConv, global_mean_pool
 import pytorch_lightning as pl
 from lr import PolynomialDecayLR
+
+
 # import pytorch_warmup as warmup
 
 
@@ -14,17 +16,16 @@ class GCNNet(torch.nn.Module):
     It consist of num_layers GCNConv layers and a mean pooling layer
     It outputs a graph embedding
     """
+
     def __init__(self, input_dim, hidden_dim, num_layers):
         super(GCNNet, self).__init__()
         self.layers = ModuleList()
         gcn_conv = GCNConv(input_dim, hidden_dim)
         self.layers.append(gcn_conv)
-        if num_layers>1:
-            for i in range(num_layers-1):
+        if num_layers > 1:
+            for i in range(num_layers - 1):
                 gcn_conv = GCNConv(hidden_dim, hidden_dim)
                 self.layers.append(gcn_conv)
-
-
 
     def forward(self, data):
         h = data.x
@@ -37,7 +38,6 @@ class GCNNet(torch.nn.Module):
         graph_embedding = global_mean_pool(h, batch)
 
         return graph_embedding
-
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -53,7 +53,6 @@ class GCNNet(torch.nn.Module):
         # default=12)
 
         return parent_parser
-
 
     def configure_optimizers(self, warmup_iterations, tot_iterations,
                              peak_lr, end_lr):
@@ -77,5 +76,4 @@ class GCNNet(torch.nn.Module):
             'frequency': 1,
         }
         return optimizer, scheduler
-
 

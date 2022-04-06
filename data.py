@@ -29,7 +29,8 @@ dataset = None
 #         print(f'after convert:{data.y.dtype}')
 #         return data
 
-def get_dataset(dataset_name='435034', gnn_type='kgnn'):
+def get_dataset(dataset_name='435034', gnn_type='kgnn',
+                dataset_path='../dataset/'):
     """
     Get the requested dataset
     :param dataset_name:
@@ -43,11 +44,12 @@ def get_dataset(dataset_name='435034', gnn_type='kgnn'):
     print(f'data.py::gnn_type:{gnn_type}')
     if dataset_name in ['435008', '1798', '435034', '1843', '2258',
                                 '463087', '488997','2689', '485290', '9999']:
-        qsar_dataset = QSARDataset(root='../dataset/qsar/clean_sdf',
-                                   dataset=dataset_name,
-                                   gnn_type=gnn_type,
-                                   pre_transform=pre_transform,
-                                   )
+        qsar_dataset = QSARDataset(
+            root=dataset_path+'qsar/clean_sdf',
+            dataset=dataset_name,
+            gnn_type=gnn_type,
+            pre_transform=pre_transform,
+            )
 
         dataset = {
             'num_class': 1,
@@ -124,11 +126,15 @@ class DataLoaderModule(LightningDataModule):
             batch_size,
             seed,
             enable_oversampling_with_replacement,
-            gnn_type
+            gnn_type,
+            dataset_path
     ):
         super().__init__()
         self.dataset_name = dataset_name
-        self.dataset = get_dataset(dataset_name=self.dataset_name, gnn_type=gnn_type)
+        self.dataset = get_dataset(dataset_name=self.dataset_name,
+                                   gnn_type=gnn_type,
+                                   dataset_path = dataset_path
+                                   )
         self.num_workers = num_workers
         self.batch_size = batch_size
         self.seed = seed
@@ -136,6 +142,7 @@ class DataLoaderModule(LightningDataModule):
         self.dataset_train = ...
         self.dataset_val = ...
         self.gnn_type = gnn_type
+        self.dataset_path = dataset_path
 
     def setup(self, stage: str = None):
         split_idx = self.dataset['dataset'].get_idx_split(seed=self.seed)
@@ -259,9 +266,11 @@ class DataLoaderModule(LightningDataModule):
             num_workers=self.num_workers,
             pin_memory=False,
             collate_fn=partial(collator,
-                               max_node=get_dataset(self.dataset_name,
-                                                    gnn_type=self.gnn_type)[
-                                   'max_node'],
+                               max_node=get_dataset(
+                                   self.dataset_name,
+                                   gnn_type=self.gnn_type,
+                                   dataset_path=self.dataset_path
+                               )['max_node'],
                                multi_hop_max_dist=self.multi_hop_max_dist,
                                spatial_pos_max=self.spatial_pos_max),
         )
@@ -277,6 +286,7 @@ class DataLoaderModule(LightningDataModule):
         parser.add_argument('--num_workers', type=int, default=1)
         parser.add_argument('--batch_size', type=int, default=32)
         parser.add_argument('--enable_oversampling_with_replacement', action='store_true', default=False)
+        parser.add_argument('--dataset_path', type=str, default="../dataset/")
         return parent_parser
 #
 # class AugmentedDataModule(LightningDataModule):

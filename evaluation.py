@@ -83,6 +83,7 @@ def calculate_logAUC(true_y, predicted_score, FPR_range=(0.001, 0.1)):
     trim_y = y[lower_bound_idx:upper_bound_idx + 1]
 
     area = auc(trim_x, trim_y) / 2
+    print(f'evaluation.py::fpr:{trim_x} tpr:{trim_y}')
 
     return area
 
@@ -100,11 +101,13 @@ def calculate_ppv(true_y, predicted_score):
 
     tn, fp, fn, tp = confusion_matrix(
         true_y, predicted_y, labels=[0, 1]).ravel()
-    # print(f'\ntn:{tn}, fp:{fp}, fn:{fn}, tp:{tp}, tp+fp:{tp + fp}')
+
     if (tp + fp) != 0:
         ppv = (tp / (tp + fp))
     else:
         ppv = np.NAN
+    print(f'\nevaluation.py::tn:{tn}, fp:{fp}, fn:{fn}, tp:{tp}, tp+fp'
+          f':{tp + fp} ppv:{ppv}')
     return ppv
 
 def calculate_accuracy(true_y, predicted_score):
