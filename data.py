@@ -286,7 +286,7 @@ class DataLoaderModule(LightningDataModule):
         parser.add_argument('--num_workers', type=int, default=1)
         parser.add_argument('--batch_size', type=int, default=32)
         parser.add_argument('--enable_oversampling_with_replacement', action='store_true', default=False)
-        parser.add_argument('--dataset_path, type=str, default="../dataset/"')
+        parser.add_argument('--dataset_path', type=str, default="../dataset/")
         return parent_parser
 #
 # class AugmentedDataModule(LightningDataModule):
