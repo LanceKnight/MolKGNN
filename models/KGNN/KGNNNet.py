@@ -145,6 +145,10 @@ class KGNNNet(torch.nn.Module):
         parser.add_argument('--num_kernel2_Nhop', type=int, default=10)
         parser.add_argument('--num_kernel3_Nhop', type=int, default=10)
         parser.add_argument('--num_kernel4_Nhop', type=int, default=10)
+        parser.add_argument('--node_feature_dim', type=int, default=27)
+        parser.add_argument('--edge_feature_dim', type=int, default=7)
+        parser.add_argument('--hidden_dim', type=int, default=32)
+        parser.add_argument('--output_dim', type=int, default=32)
 
         return parent_parser
 

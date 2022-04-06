@@ -69,27 +69,27 @@ class ChIRoNet(torch.nn.Module):
         # Add specific model arguments below
         # E.g., parser.add_argument('--GCN_arguments', type=int,
         # default=12)
-        parser.add_argument('--F_z_list', type=list, default=[32,32,32],
+        parser.add_argument('--F_z_list', type=list, default=[8,8,8],
                             help='dimension of latent space')
-        # parser.add_argument('--F_H', type=int, default=32,
-        #                     help='dimension of final node embeddings, after EConv and GAT layers')
-        # parser.add_argument('--F_H_embed', type=int, default=52,
-        #                     help='dimension of initial node feature vector, '
-        #                          'currently 52')
-        # parser.add_argument('--F_E_embed', type=int, default=14,
-        #                     help='dimension of initial edge feature vector, '
-        #                          'currently 14')
-        # parser.add_argument('--F_H_EConv', type=int, default=64,
-        #                     help='dimension of node embedding after EConv layer')
+        parser.add_argument('--F_H', type=int, default=64,
+                            help='dimension of final node embeddings, after EConv and GAT layers')
+        parser.add_argument('--F_H_embed', type=int, default=52,
+                            help='dimension of initial node feature vector, '
+                                 'currently 52')
+        parser.add_argument('--F_E_embed', type=int, default=14,
+                            help='dimension of initial edge feature vector, '
+                                 'currently 14')
+        parser.add_argument('--F_H_EConv', type=int, default=64,
+                            help='dimension of node embedding after EConv layer')
         parser.add_argument('--layers_dict', type=json.loads, default='{'
                                                                    '"EConv_mlp_hidden_sizes": [32, 32],'
-                                                                   '"GAT_hidden_node_sizes": [8],'
-                                                                   '"encoder_hidden_sizes_D": [8, 8],'
-                                                                   '"encoder_hidden_sizes_phi": [8, 8],'
-                                                                   '"encoder_hidden_sizes_c": [8, 8],'
-                                                                   '"encoder_hidden_sizes_alpha": [8, 8],'
-                                                                   '"encoder_hidden_sizes_sinusoidal_shift": [8, 8],'
-                                                                   '"output_mlp_hidden_sizes": [8, 8]'
+                                                                   '"GAT_hidden_node_sizes": [64],'
+                                                                   '"encoder_hidden_sizes_D": [64, 64],'
+                                                                   '"encoder_hidden_sizes_phi": [64, 64],'
+                                                                   '"encoder_hidden_sizes_c": [64, 64],'
+                                                                   '"encoder_hidden_sizes_alpha": [64, 64],'
+                                                                   '"encoder_hidden_sizes_sinusoidal_shift": [64, 64],'
+                                                                   '"output_mlp_hidden_sizes": [128, 128]'
                                                                    '}',
                             help='')
         parser.add_argument('--activation_dict', type=json.loads, default='{'
@@ -113,7 +113,7 @@ class ChIRoNet(torch.nn.Module):
                             help='')
         parser.add_argument('--use_chiral_message_passing', action='store_true')
         parser.add_argument('--CMP_EConv_MLP_hidden_sizes', type=str,
-                            default="[8,8]", help='')
+                            default="[256,256]", help='')
         parser.add_argument('--CMP_GAT_N_layers', type=int, default=3,
                             help='')
         parser.add_argument('--CMP_GAT_N_heads', type=int, default=2,
@@ -124,16 +124,14 @@ class ChIRoNet(torch.nn.Module):
                             help='mean or sum')
         parser.add_argument('--output_concatenation_mode', type=str,
                             default='molecule', help='')
-        parser.add_argument('--EConv_bias', action='store_true',
+        parser.add_argument('--EConv_bias', action='store_true', default=True,
                             help='')
-        parser.add_argument('--GAT_bias', action='store_true',
+        parser.add_argument('--GAT_bias', action='store_true', default=True,
                             help='')
         parser.add_argument('--encoder_biases', action='store_true',
-                            help='')
+                            default=True, help='')
         parser.add_argument('--dropout', type=float, default=0.0,
                             help='applied to hidden layers (not input/output layer) of Encoder MLPs, hidden layers (not input/output layer) of EConv MLP, and all GAT layers (using their dropout parameter)')
-        parser.add_argument('--num_layers', type=int, default=3,
-                            help='not used')
 
         return parent_parser
 

@@ -83,7 +83,7 @@ def calculate_logAUC(true_y, predicted_score, FPR_range=(0.001, 0.1)):
     trim_y = y[lower_bound_idx:upper_bound_idx + 1]
 
     area = auc(trim_x, trim_y) / 2
-    print(f'evaluation.py::fpr:{trim_x} tpr:{trim_y}')
+    # print(f'evaluation.py::fpr:{trim_x} tpr:{trim_y}')
 
     return area
 

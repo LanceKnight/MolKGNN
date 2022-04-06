@@ -511,7 +511,15 @@ class QSARDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return f'{self.gnn_type}-{self.dataset}-{self.D}D.pt'
+        if self.gnn_type in ['kgnn']:
+            name = f'kgnn-based-{self.dataset}-{self.D}D.pt'
+        elif self.gnn_type in ['chironet', 'dimenet_pp', 'schnet',
+                               'spherenet']:
+            name = f'chironet-based-{self.dataset}-{self.D}D.pt'
+        else:
+            NotImplementedError('wrapper.py gnn_type is not defined for '
+                                'processed dataset')
+        return name
 
     def download(self):
         raise NotImplementedError('Must indicate valid location of raw data. '

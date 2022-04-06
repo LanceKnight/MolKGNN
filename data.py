@@ -283,8 +283,8 @@ class DataLoaderModule(LightningDataModule):
     def add_argparse_args(parent_parser):
         parser = parent_parser.add_argument_group("DataLoader")
         parser.add_argument('--dataset_name', type=str, default="435034")
-        parser.add_argument('--num_workers', type=int, default=1)
-        parser.add_argument('--batch_size', type=int, default=32)
+        parser.add_argument('--num_workers', type=int, default=2)
+        parser.add_argument('--batch_size', type=int, default=17)
         parser.add_argument('--enable_oversampling_with_replacement', action='store_true', default=False)
         parser.add_argument('--dataset_path', type=str, default="../dataset/")
         return parent_parser

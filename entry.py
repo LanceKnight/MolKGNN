@@ -93,13 +93,7 @@ def prepare_actual_model(args):
     else:  # if not using pretrained model
         print(f'Creating a model from scratch...')
 
-        model = GNNModel(gnn_type, args.dataset_name, args.num_layers,
-                         args.node_feature_dim,
-                         args.edge_feature_dim,
-                         args.hidden_dim, args.output_dim,
-                         args.warmup_iterations, args.tot_iterations,
-                         args.peak_lr, args.end_lr, args.dropout_rate,
-                         args=args)
+        model = GNNModel(gnn_type, args=args)
     return model
 
 
@@ -278,6 +272,7 @@ if __name__ == '__main__':
     # gnn_type = 'dimenet' # Not implemented
     gnn_type = 'chironet'
     # gnn_type = 'dimenet_pp'
+    # gnn_type = 'spherenet'
 
 
     use_clearml = False
