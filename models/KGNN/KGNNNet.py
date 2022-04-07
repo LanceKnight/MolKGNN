@@ -102,6 +102,7 @@ class KGNNNet(torch.nn.Module):
         # print(f'self.atom_encoder{self.atom_encoder}')
         x = self.atom_encoder(data.x)
         edge_attr = self.bond_encoder(data.edge_attr)
+        
         node_representation = self.gnn(x=x, edge_index=edge_index,
                                        edge_attr=edge_attr, p=p,
                                        p_focal_deg1=p_focal_deg1,

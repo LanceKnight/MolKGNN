@@ -149,7 +149,6 @@ class GNNModel(pl.LightningModule):
             raise ValueError(f"model.py::GNNModel: GNN model type is not "
                              f"defined. gnn_type={gnn_type}")
         # self.atom_encoder = Embedding(118, hidden_dim)
-
         self.lin1 = Linear(args.ffn_hidden_dim, args.ffn_hidden_dim)
         self.lin2 = Linear(args.ffn_hidden_dim, args.task_dim)
         self.ffn = Linear(args.ffn_hidden_dim, args.task_dim)
@@ -171,13 +170,6 @@ class GNNModel(pl.LightningModule):
                                    )['metrics']
 
     def forward(self, data):
-        # data.x = self.atom_encoder(data.x)
-        # print(f'model.py::data.x:{data.x.shape}')
-        # print(f'model.py::atom_encoder:{self.atom_encoder}')
-        # data.x = self.atom_encoder(data.x)
-        # # print(f'model.py::data.x:{data.x.shape}')
-        # data.edge_attr = self.bond_encoder(data.edge_attr)
-
 
         graph_embedding = self.gnn_model(data)
         graph_embedding = self.dropout(graph_embedding)
