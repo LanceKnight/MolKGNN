@@ -37,7 +37,6 @@ class GNNModel(pl.LightningModule):
                  args=None
                  ):
         super(GNNModel, self).__init__()
-        print(f'kwargs:{args}')
         if gnn_type == 'gcn':
             self.gnn_model = GCNNet(args.node_feature_dim, args.hidden_dim,
                                     args.num_layers)

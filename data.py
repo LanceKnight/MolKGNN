@@ -41,7 +41,6 @@ def get_dataset(dataset_name='435034', gnn_type='kgnn',
     else:
         pre_transform=None
 
-    print(f'data.py::gnn_type:{gnn_type}')
     if dataset_name in ['435008', '1798', '435034', '1843', '2258',
                                 '463087', '488997','2689', '485290', '9999']:
         qsar_dataset = QSARDataset(
@@ -90,7 +89,7 @@ def get_dataset(dataset_name='435034', gnn_type='kgnn',
             D=3,
             pre_transform=ToXAndPAndEdgeAttrForDeg(),
         )
-        print(f'd4_dchp_dataset:{d4_dchp_dataset}')
+
         dataset = {
             'num_class': 1,
             'dataset': d4_dchp_dataset,

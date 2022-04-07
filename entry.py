@@ -49,7 +49,6 @@ def add_args(gnn_type):
                                     ) * 0.8 /args.batch_size) \
                           * args.max_epochs + 1
     args.max_steps = args.tot_iterations + 1
-    print(args)
 
     if use_clearml:
         task.add_tags(args.dataset_name)
@@ -268,11 +267,11 @@ if __name__ == '__main__':
 
     # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
-    gnn_type = 'kgnn'
+    # gnn_type = 'kgnn'
     # gnn_type = 'dimenet' # Not implemented
     # gnn_type = 'chironet'
     # gnn_type = 'dimenet_pp'
-    # gnn_type = 'spherenet'
+    gnn_type = 'spherenet'
 
 
     use_clearml = False
