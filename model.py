@@ -141,7 +141,8 @@ class GNNModel(pl.LightningModule):
                                      num_kernel2_Nhop = args.num_kernel2_Nhop,
                                      num_kernel3_Nhop = args.num_kernel3_Nhop,
                                      num_kernel4_Nhop = args.num_kernel4_Nhop,
-                                     x_dim = args.hidden_dim,
+                                     x_dim = args.node_feature_dim,
+                                     edge_attr_dim=args.edge_feature_dim,
                                      graph_embedding_dim = args.hidden_dim,
                                      predefined_kernelsets=False
             )
@@ -181,6 +182,8 @@ class GNNModel(pl.LightningModule):
 
         graph_embedding = self.gnn_model(data)
         graph_embedding = self.dropout(graph_embedding)
+        print(f'graph_embedding:{graph_embedding.shape}')
+        print(f'ffn:{self.ffn}')
         prediction = self.ffn(graph_embedding)
 
         # # Debug
