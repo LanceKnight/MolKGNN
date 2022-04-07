@@ -41,7 +41,6 @@ def get_dataset(dataset_name='435034', gnn_type='kgnn',
     else:
         pre_transform=None
 
-    print(f'data.py::gnn_type:{gnn_type}')
     if dataset_name in ['435008', '1798', '435034', '1843', '2258',
                                 '463087', '488997','2689', '485290', '9999']:
         qsar_dataset = QSARDataset(
@@ -90,7 +89,7 @@ def get_dataset(dataset_name='435034', gnn_type='kgnn',
             D=3,
             pre_transform=ToXAndPAndEdgeAttrForDeg(),
         )
-        print(f'd4_dchp_dataset:{d4_dchp_dataset}')
+
         dataset = {
             'num_class': 1,
             'dataset': d4_dchp_dataset,
@@ -283,8 +282,8 @@ class DataLoaderModule(LightningDataModule):
     def add_argparse_args(parent_parser):
         parser = parent_parser.add_argument_group("DataLoader")
         parser.add_argument('--dataset_name', type=str, default="435034")
-        parser.add_argument('--num_workers', type=int, default=1)
-        parser.add_argument('--batch_size', type=int, default=32)
+        parser.add_argument('--num_workers', type=int, default=2)
+        parser.add_argument('--batch_size', type=int, default=17)
         parser.add_argument('--enable_oversampling_with_replacement', action='store_true', default=False)
         parser.add_argument('--dataset_path', type=str, default="../dataset/")
         return parent_parser

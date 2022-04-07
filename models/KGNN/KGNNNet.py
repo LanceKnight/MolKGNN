@@ -36,7 +36,7 @@ class KGNNNet(torch.nn.Module):
                           num_kernel1_Nhop=num_kernel1_Nhop,
                           num_kernel2_Nhop=num_kernel2_Nhop,
                           num_kernel3_Nhop=num_kernel3_Nhop,
-                          num_kernel4_Nhop=num_kernel4_Nhop, x_dim=x_dim,
+                          num_kernel4_Nhop=num_kernel4_Nhop, x_dim=graph_embedding_dim,
                           p_dim=p_dim, edge_attr_dim=edge_attr_dim,
                           predefined_kernelsets=predefined_kernelsets)
 
@@ -98,9 +98,11 @@ class KGNNNet(torch.nn.Module):
         else:
             raise ValueError("unmatched number of arguments.")
 
-        data.x = self.atom_encoder(data.x)
-        data.edge_attr = self.bond_encoder(data.edge_attr)
-
+        # print(f'x:{x.shape}')
+        # print(f'self.atom_encoder{self.atom_encoder}')
+        x = self.atom_encoder(data.x)
+        edge_attr = self.bond_encoder(data.edge_attr)
+        
         node_representation = self.gnn(x=x, edge_index=edge_index,
                                        edge_attr=edge_attr, p=p,
                                        p_focal_deg1=p_focal_deg1,
@@ -143,13 +145,16 @@ class KGNNNet(torch.nn.Module):
         # default=12)
         parser.add_argument('--num_layers', type=int, default=3)
         parser.add_argument('--num_kernel1_1hop', type=int, default=10)
-        parser.add_argument('--num_kernel2_1hop', type=int, default=10)
-        parser.add_argument('--num_kernel3_1hop', type=int, default=10)
-        parser.add_argument('--num_kernel4_1hop', type=int, default=10)
+        parser.add_argument('--num_kernel2_1hop', type=int, default=20)
+        parser.add_argument('--num_kernel3_1hop', type=int, default=30)
+        parser.add_argument('--num_kernel4_1hop', type=int, default=40)
         parser.add_argument('--num_kernel1_Nhop', type=int, default=10)
-        parser.add_argument('--num_kernel2_Nhop', type=int, default=10)
-        parser.add_argument('--num_kernel3_Nhop', type=int, default=10)
-        parser.add_argument('--num_kernel4_Nhop', type=int, default=10)
+        parser.add_argument('--num_kernel2_Nhop', type=int, default=20)
+        parser.add_argument('--num_kernel3_Nhop', type=int, default=30)
+        parser.add_argument('--num_kernel4_Nhop', type=int, default=40)
+        parser.add_argument('--node_feature_dim', type=int, default=27)
+        parser.add_argument('--edge_feature_dim', type=int, default=7)
+        parser.add_argument('--hidden_dim', type=int, default=64)
 
         return parent_parser
 
