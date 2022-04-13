@@ -1,10 +1,11 @@
 from data import get_dataset
 from models.GCNNet.GCNNet import GCNNet
 from models.KGNN.KGNNNet import KGNNNet
-# from models.DimeNet.DimeNet import DimeNet
+from models.DimeNetPP.DimeNetPP import DimeNetPP
 from models.ChebNet.ChebNet import ChebNet
 from models.ChIRoNet.ChIRoNet import ChIRoNet
 from models.ChIRoNet.params_interpreter import string_to_object
+from models.SphereNet.SphereNet import SphereNet
 from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy, \
     calculate_f1_score
 from lr import PolynomialDecayLR
@@ -16,6 +17,7 @@ import pytorch_lightning as pl
 from sklearn.metrics import mean_squared_error
 from torch.nn import Linear, Sigmoid, ReLU, Embedding, Dropout
 from torch_geometric.data import Data
+from torch_geometric.nn.acts import swish
 import torch
 from torch.optim import Adam
 
@@ -32,28 +34,17 @@ class GNNModel(pl.LightningModule):
 
     def __init__(self,
                  gnn_type,
-                 dataset_name,
-                 num_layers,
-                 node_feature_dim,
-                 edge_feature_dim,
-                 hidden_dim,
-                 output_dim,
-                 warmup_iterations,
-                 tot_iterations,
-                 peak_lr,
-                 end_lr,
-                 dropout_rate,
                  args=None
                  ):
         super(GNNModel, self).__init__()
-        print(f'kwargs:{args}')
         if gnn_type == 'gcn':
-            self.gnn_model = GCNNet(node_feature_dim, hidden_dim, num_layers)
+            self.gnn_model = GCNNet(args.node_feature_dim, args.hidden_dim,
+                                    args.num_layers)
         elif gnn_type == 'chebnet':
-            self.gnn_model = ChebNet(node_feature_dim, hidden_dim, num_layers, args.K)
+            self.gnn_model = ChebNet(args.node_feature_dim, args.hidden_dim, args.num_layers, args.K)
         elif gnn_type == 'dimenet':
-            self.gnn_model = DimeNet(emb_size=hidden_dim,
-                                     num_blocks=num_layers,
+            self.gnn_model = DimeNet(emb_size=args.hidden_dim,
+                                     num_blocks=args.num_layers,
                                      num_bilinear=1, num_spherical=7,
             num_radial=6, cutoff=5.0, envelope_exponent=5, num_before_skip=1,
             num_after_skip=2, num_dense_output=3, num_targets=12,
@@ -73,13 +64,13 @@ class GNNModel(pl.LightningModule):
                 f'{type(args.activation_dict["EConv_mlp_hidden_activation"])}')
             self.gnn_model = ChIRoNet(
                 F_z_list=args.F_z_list,  # dimension of latent space
-                F_H=hidden_dim,
+                F_H=args.F_H,
                 # dimension of final node embeddings, after EConv and GAT layers
-                F_H_embed=node_feature_dim,
+                F_H_embed=args.F_H_embed,
                 # dimension of initial node feature vector, currently 41
-                F_E_embed=edge_feature_dim,
+                F_E_embed=args.F_E_embed,
                 # dimension of initial edge feature vector, currently 12
-                F_H_EConv=hidden_dim,
+                F_H_EConv=args.F_H_EConv,
                 # dimension of node embedding after EConv layer
                 layers_dict=args.layers_dict,
                 activation_dict= activation_dict,
@@ -96,8 +87,51 @@ class GNNModel(pl.LightningModule):
                 encoder_biases=args.encoder_biases,
                 dropout=args.dropout,
             )
+        elif gnn_type == 'dimenet_pp':
+            self.gnn_model = DimeNetPP(
+                hidden_channels=params['hidden_channels'],  # 128
+                out_channels=params['out_channels'],  # 1
+                num_blocks=params['num_blocks'],  # 4
+                int_emb_size=params['int_emb_size'],  # 64
+                basis_emb_size=params['basis_emb_size'],  # 8
+                out_emb_channels=params['out_emb_channels'],  # 256
+                num_spherical=params['num_spherical'],  # 7
+                num_radial=params['num_radial'],  # 6
+                cutoff=params['cutoff'],  # 5.0
+                envelope_exponent=params['envelope_exponent'],  # 5
+                num_before_skip=params['num_before_skip'],  # 1
+                num_after_skip=params['num_after_skip'],  # 2
+                num_output_layers=params['num_output_layers'],  # 3
+                act=swish,
+                MLP_hidden_sizes=[],  # [] for contrastive)
+            )
+        elif gnn_type == 'spherenet':
+            self.gnn_model = SphereNet(
+                energy_and_force=False,  # False
+                cutoff=args.cutoff,  # 5.0
+                num_layers=args.num_layers,  # 4
+                hidden_channels=args.hidden_channels,  # 128
+                out_channels=args.out_channels,  # 1
+                int_emb_size=args.int_emb_size,  # 64
+                basis_emb_size_dist=args.basis_emb_size_dist,  # 8
+                basis_emb_size_angle=args.basis_emb_size_angle,  # 8
+                basis_emb_size_torsion=args.basis_emb_size_torsion,  # 8
+                out_emb_channels=args.out_emb_channels,  # 256
+                num_spherical=args.num_spherical,  # 7
+                num_radial=args.num_radial,  # 6
+                envelope_exponent=args.envelope_exponent,  # 5
+                num_before_skip=args.num_before_skip,  # 1
+                num_after_skip=args.num_after_skip,  # 2
+                num_output_layers=args.num_output_layers,  # 3
+                act=swish,
+                output_init='GlorotOrthogonal',
+                use_node_features=True,
+                MLP_hidden_sizes=args.MLP_hidden_sizes,
+                # [] for contrastive
+
+            )
         elif gnn_type == 'kgnn':
-            self.gnn_model = KGNNNet(num_layers=num_layers,
+            self.gnn_model = KGNNNet(num_layers=args.num_layers,
                                      num_kernel1_1hop = args.num_kernel1_1hop,
                                      num_kernel2_1hop = args.num_kernel2_1hop,
                                      num_kernel3_1hop = args.num_kernel3_1hop,
@@ -106,31 +140,31 @@ class GNNModel(pl.LightningModule):
                                      num_kernel2_Nhop = args.num_kernel2_Nhop,
                                      num_kernel3_Nhop = args.num_kernel3_Nhop,
                                      num_kernel4_Nhop = args.num_kernel4_Nhop,
-                                     x_dim = node_feature_dim,
-                                     edge_attr_dim=edge_feature_dim,
-                                     graph_embedding_dim = hidden_dim,
+                                     x_dim = args.node_feature_dim,
+                                     edge_attr_dim=args.edge_feature_dim,
+                                     graph_embedding_dim = args.hidden_dim,
                                      predefined_kernelsets=False
-                                     )
+            )
         else:
             raise ValueError(f"model.py::GNNModel: GNN model type is not "
                              f"defined. gnn_type={gnn_type}")
         # self.atom_encoder = Embedding(118, hidden_dim)
-        self.lin1 = Linear(hidden_dim, hidden_dim)
-        self.lin2 = Linear(hidden_dim, output_dim)
-        self.ffn = Linear(hidden_dim, output_dim)
-        self.dropout = Dropout(p= dropout_rate)
+        self.lin1 = Linear(args.ffn_hidden_dim, args.ffn_hidden_dim)
+        self.lin2 = Linear(args.ffn_hidden_dim, args.task_dim)
+        self.ffn = Linear(args.ffn_hidden_dim, args.task_dim)
+        self.dropout = Dropout(p= args.ffn_dropout_rate)
         self.activate_func = ReLU()
-        self.warmup_iterations = warmup_iterations
-        self.tot_iterations = tot_iterations
-        self.peak_lr = peak_lr
-        self.end_lr = end_lr
-        self.loss_func = get_dataset(dataset_name=dataset_name,
+        self.warmup_iterations = args.warmup_iterations
+        self.tot_iterations = args.tot_iterations
+        self.peak_lr = args.peak_lr
+        self.end_lr = args.end_lr
+        self.loss_func = get_dataset(dataset_name=args.dataset_name,
                                      gnn_type=gnn_type, 
                                      dataset_path=args.dataset_path
                                     )['loss_func']
         self.graph_embedding = None
         self.smiles_list = None
-        self.metrics = get_dataset(dataset_name=dataset_name, 
+        self.metrics = get_dataset(dataset_name=args.dataset_name,
                                    gnn_type=gnn_type,
                                    dataset_path=args.dataset_path
                                    )['metrics']
@@ -139,6 +173,8 @@ class GNNModel(pl.LightningModule):
 
         graph_embedding = self.gnn_model(data)
         graph_embedding = self.dropout(graph_embedding)
+        print(f'graph_embedding:{graph_embedding.shape}')
+        print(f'ffn:{self.ffn}')
         prediction = self.ffn(graph_embedding)
 
         # # Debug
@@ -330,18 +366,16 @@ class GNNModel(pl.LightningModule):
         # E.g., parser.add_argument('--general_model_args', type=int,
         # default=12)
         parser.add_argument('--seed', type=int, default=42)
-        parser.add_argument('--node_feature_dim', type=int, default=27)
-        parser.add_argument('--edge_feature_dim', type=int, default=7)
-        parser.add_argument('--hidden_dim', type=int, default=32)
-        parser.add_argument('--output_dim', type=int, default=32)
-        parser.add_argument('--dropout_rate', type=float, default=0.25)
         parser.add_argument('--validate', action='store_true', default=False)
         parser.add_argument('--test', action='store_true', default=False)
         parser.add_argument('--warmup_iterations', type=int, default=60000)
-        parser.add_argument('--tot_iterations', type=int, default=1000000)
-        parser.add_argument('--peak_lr', type=float, default=2e-4)
+        parser.add_argument('--peak_lr', type=float, default=5e-2)
         parser.add_argument('--end_lr', type=float, default=1e-9)
-        # parser.add_argument('--num_layers', type=int, default=3)
+
+        # For linear layer
+        parser.add_argument('--ffn_dropout_rate', type=float, default=0.25)
+        parser.add_argument('--ffn_hidden_dim', type=int, default=64)
+        parser.add_argument('--task_dim', type=int, default=1)
 
         if gnn_type == 'gcn':
             GCNNet.add_model_specific_args(parent_parser)
@@ -353,6 +387,8 @@ class GNNModel(pl.LightningModule):
             DimeNet.add_model_specific_args(parent_parser)
         elif gnn_type == 'chironet':
             ChIRoNet.add_model_specific_args(parent_parser)
+        elif gnn_type == 'spherenet':
+            SphereNet.add_model_specific_args(parent_parser)
         else:
             NotImplementedError('model.py::GNNModel::add_model_args(): '
                                 'gnn_type is not defined for args groups')
