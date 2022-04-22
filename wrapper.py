@@ -12,6 +12,7 @@ from torch_geometric.utils import degree
 from tqdm import tqdm
 import numpy as np
 import random
+import rdkit
 import rdkit.Chem.EState as EState
 import rdkit.Chem.rdMolDescriptors as rdMolDescriptors
 import rdkit.Chem.rdPartialCharges as rdPartialCharges
@@ -513,9 +514,11 @@ class QSARDataset(InMemoryDataset):
     def processed_file_names(self):
         if self.gnn_type in ['kgnn']:
             name = f'kgnn-based-{self.dataset}-{self.D}D.pt'
-        elif self.gnn_type in ['chironet', 'dimenet_pp', 'schnet',
-                               'spherenet']:
+        elif self.gnn_type in ['chironet']:
             name = f'chironet-based-{self.dataset}-{self.D}D.pt'
+        elif self.gnn_type in ['dimenet_pp', 'schnet',
+                               'spherenet']:
+            name = f'dimenetpp-based-{self.dataset}-{self.D}D.pt'
         else:
             NotImplementedError('wrapper.py gnn_type is not defined for '
                                 'processed dataset')
@@ -537,6 +540,8 @@ class QSARDataset(InMemoryDataset):
         RDLogger.DisableLog('rdApp.*')
         if self.gnn_type == 'chironet':
             data_list, data_smiles_list = self.chiro_process()
+        elif self.gnn_type in ['dimenet_pp', 'schnet', 'spherenet']:
+            data_list, data_smiles_list = self.dimenetpp_process()
         else:
             data_list, data_smiles_list = self.regular_process()
 
@@ -561,6 +566,47 @@ class QSARDataset(InMemoryDataset):
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
+    def dimenetpp_process(self):
+        dataset = self.dataset
+        root = self.root
+        data_smiles_list = []
+        data_list = []
+        for file_name, label in [(f'{dataset}_actives_new.sdf', 1),
+                                 (f'{dataset}_inactives_new.sdf', 0)]:
+            sdf_path = os.path.join(root, 'raw', file_name)
+            sdf_supplier = Chem.SDMolSupplier(sdf_path)
+            for i, mol in tqdm(enumerate(sdf_supplier)):
+                conformer = mol.GetConformer()
+                adj = rdkit.Chem.GetAdjacencyMatrix(mol)
+                adj = np.triu(np.array(adj,
+                                       dtype=int))  # keeping just upper
+                # triangular entries from sym matrix
+                array_adj = np.array(np.nonzero(adj),
+                                     dtype=int)  # indices of non-zero values in adj matrix
+                edge_index = np.zeros((2, 2 * array_adj.shape[1]),
+                                      dtype=int)  # placeholder for undirected edge list
+                edge_index[:, ::2] = array_adj
+                edge_index[:, 1::2] = np.flipud(array_adj)
+
+                atoms = rdkit.Chem.rdchem.Mol.GetAtoms(mol)
+                node_features = np.array(
+                    [atom.GetAtomicNum() for atom in atoms])  # Z
+                positions = np.array(
+                    [conformer.GetAtomPosition(atom.GetIdx()) for atom in
+                     atoms])  # xyz positions
+                edge_index, Z, pos = edge_index, node_features, positions
+                data = Data(
+                    x=torch.as_tensor(Z).unsqueeze(1),
+                    edge_index=torch.as_tensor(edge_index, dtype=torch.long))
+                data.pos = torch.as_tensor(pos, dtype=torch.float)
+
+                data.smiles = AllChem.MolToSmiles(mol)
+
+                data_list.append(data)
+
+                data_smiles_list.append(data.smiles)
+                data.y = torch.tensor([label], dtype=torch.int)
+        return data_list, data_smiles_list
 
     def chiro_process(self):
         dataset = self.dataset
