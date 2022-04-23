@@ -317,6 +317,7 @@ class DimeNetPlusPlus(torch.nn.Module):
 
     def forward(self, z, pos, batch=None):
         """"""
+        print(f'z:{z}, pos:{pos}, batch:{batch}')
         edge_index = radius_graph(pos, r=self.cutoff, batch=batch)
         j, i = edge_index
         dist = (pos[i] - pos[j]).pow(2).sum(dim=-1).sqrt()
@@ -352,10 +353,10 @@ class DimeNetPlusPlus(torch.nn.Module):
             P += output_block(x, rbf, i, num_nodes=pos.size(0))
 
         out = P.sum(dim=0) if batch is None else scatter(P, batch, dim=0)
-
-        #if we are using a MLP for downstream target prediction
-        if len(self.MLP_hidden_sizes) > 0:
-            target = self.Output_MLP(out)
-            return target, out
+        print(f'dimenet_pp:{out.shape}')
+        # #if we are using a MLP for downstream target prediction
+        # if len(self.MLP_hidden_sizes) > 0:
+        #     target = self.Output_MLP(out)
+        #     return target, out
         
         return out

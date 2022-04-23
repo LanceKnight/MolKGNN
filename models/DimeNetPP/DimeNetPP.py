@@ -1,5 +1,5 @@
 from ..ChIRoNet.gnn_3D.dimenet_pp import DimeNetPlusPlus
-
+from ..ChIRoNet.train_functions import get_local_structure_map
 import json
 
 
@@ -76,7 +76,21 @@ class DimeNetPP(torch.nn.Module):
 
 
     def forward(self, batch_data):
-        graph_embedding = self.encoder()
+        batch_data = batch_data.to(batch_data.x.device)
+
+        node_batch = batch_data.batch
+        z = batch_data.x
+        pos = batch_data.pos
+
+        # print(f'DimeNetPP.py::z:{z}')
+        # print(f'DimeNetPP.py::pos:{pos}')
+        # print(f'DimeNetPP.py::node_batch:{node_batch}')
+        try:
+            latent_vector = self.encoder(z.squeeze(), pos, node_batch)
+        except Exception as e:
+            print('failed to process batch due to error:', e)
+
+        graph_embedding = latent_vector
 
         return graph_embedding
 
@@ -93,11 +107,13 @@ class DimeNetPP(torch.nn.Module):
         # Add specific model arguments below
         # E.g., parser.add_argument('--GCN_arguments', type=int,
         # default=12)
+        parser.add_argument('--hidden_channels', type=int, default=128,
+                            help='')
+        parser.add_argument('--out_channels', type=int, default=64,
+                            help='')
         parser.add_argument('--num_blocks', type=int, default=4,
                             help='')
         parser.add_argument('--int_emb_size', type=int, default=64,
-                            help='')
-        parser.add_argument('--basis_emb_size', type=int, default=8,
                             help='')
         parser.add_argument('--basis_emb_size', type=int, default=8,
                             help='')
@@ -109,7 +125,7 @@ class DimeNetPP(torch.nn.Module):
                             help='')
         parser.add_argument('--cutoff', type=float, default=5.0,
                             help='')
-        parser.add_argument('--envelop_exponent', type=int, default=5,
+        parser.add_argument('--envelope_exponent', type=int, default=5,
                             help='')
         parser.add_argument('--num_before_skip', type=int, default=1,
                             help='')

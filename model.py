@@ -42,13 +42,13 @@ class GNNModel(pl.LightningModule):
                                     args.num_layers)
         elif gnn_type == 'chebnet':
             self.gnn_model = ChebNet(args.node_feature_dim, args.hidden_dim, args.num_layers, args.K)
-        elif gnn_type == 'dimenet':
-            self.gnn_model = DimeNet(emb_size=args.hidden_dim,
-                                     num_blocks=args.num_layers,
-                                     num_bilinear=1, num_spherical=7,
-            num_radial=6, cutoff=5.0, envelope_exponent=5, num_before_skip=1,
-            num_after_skip=2, num_dense_output=3, num_targets=12,
-            output_init='zeros', name='dimenet')
+        # elif gnn_type == 'dimenet':
+        #     self.gnn_model = DimeNet(emb_size=args.hidden_dim,
+        #                              num_blocks=args.num_layers,
+        #                              num_bilinear=1, num_spherical=7,
+        #     num_radial=6, cutoff=5.0, envelope_exponent=5, num_before_skip=1,
+        #     num_after_skip=2, num_dense_output=3, num_targets=12,
+        #     output_init='zeros', name='dimenet')
         elif gnn_type == 'chironet':
 
             layers_dict = deepcopy(args.layers_dict)
@@ -89,19 +89,19 @@ class GNNModel(pl.LightningModule):
             )
         elif gnn_type == 'dimenet_pp':
             self.gnn_model = DimeNetPP(
-                hidden_channels=params['hidden_channels'],  # 128
-                out_channels=params['out_channels'],  # 1
-                num_blocks=params['num_blocks'],  # 4
-                int_emb_size=params['int_emb_size'],  # 64
-                basis_emb_size=params['basis_emb_size'],  # 8
-                out_emb_channels=params['out_emb_channels'],  # 256
-                num_spherical=params['num_spherical'],  # 7
-                num_radial=params['num_radial'],  # 6
-                cutoff=params['cutoff'],  # 5.0
-                envelope_exponent=params['envelope_exponent'],  # 5
-                num_before_skip=params['num_before_skip'],  # 1
-                num_after_skip=params['num_after_skip'],  # 2
-                num_output_layers=params['num_output_layers'],  # 3
+                hidden_channels=args.hidden_channels,
+                out_channels=args.out_channels,
+                num_blocks=args.num_blocks,
+                int_emb_size=args.int_emb_size,
+                basis_emb_size=args.basis_emb_size,
+                out_emb_channels=args.out_emb_channels,
+                num_spherical=args.num_spherical,
+                num_radial=args.num_radial,
+                cutoff=args.cutoff,
+                envelope_exponent=args.envelope_exponent,
+                num_before_skip=args.num_before_skip,
+                num_after_skip=args.num_after_skip,
+                num_output_layers=args.num_output_layers,
                 act=swish,
                 MLP_hidden_sizes=[],  # [] for contrastive)
             )
@@ -383,8 +383,8 @@ class GNNModel(pl.LightningModule):
             ChebNet.add_model_specific_args(parent_parser)
         elif gnn_type == 'kgnn':
             KGNNNet.add_model_specific_args(parent_parser)
-        elif gnn_type == 'dimenet':
-            DimeNet.add_model_specific_args(parent_parser)
+        elif gnn_type == 'dimenet_pp':
+            DimeNetPP.add_model_specific_args(parent_parser)
         elif gnn_type == 'chironet':
             ChIRoNet.add_model_specific_args(parent_parser)
         elif gnn_type == 'spherenet':
