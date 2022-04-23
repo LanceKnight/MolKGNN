@@ -316,8 +316,6 @@ class DimeNetPlusPlus(torch.nn.Module):
         return col, row, idx_i, idx_j, idx_k, idx_kj, idx_ji
 
     def forward(self, z, pos, batch=None):
-        """"""
-        print(f'z:{z}, pos:{pos}, batch:{batch}')
         edge_index = radius_graph(pos, r=self.cutoff, batch=batch)
         j, i = edge_index
         dist = (pos[i] - pos[j]).pow(2).sum(dim=-1).sqrt()

@@ -173,8 +173,6 @@ class GNNModel(pl.LightningModule):
 
         graph_embedding = self.gnn_model(data)
         graph_embedding = self.dropout(graph_embedding)
-        print(f'graph_embedding:{graph_embedding.shape}')
-        print(f'ffn:{self.ffn}')
         prediction = self.ffn(graph_embedding)
 
         # # Debug
