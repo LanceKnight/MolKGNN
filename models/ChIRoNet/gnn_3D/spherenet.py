@@ -87,6 +87,10 @@ def xyz_to_dat(pos, edge_index, num_nodes, use_torsion = False):
     idx_k_n = adj_t[idx_j].storage.col()
     repeat = num_triplets - 1
     num_triplets_t = num_triplets.repeat_interleave(repeat)
+
+    print(f'idx_i:{idx_i.shape}')
+    print(f'spherenet.py::num_triplets_t{num_triplets_t.shape}')
+
     idx_i_t = idx_i.repeat_interleave(num_triplets_t)
     idx_j_t = idx_j.repeat_interleave(num_triplets_t)
     idx_k_t = idx_k.repeat_interleave(num_triplets_t)
@@ -644,11 +648,11 @@ class SphereNet(torch.nn.Module):
 
         if self.energy_and_force:
             pos.requires_grad_()
-        print(f'spherenet.py::pos:{pos.shape}')
-        print(f'cutoff:{self.cutoff}')
-        print(f'spherenet.py::batch:{batch.size}')
         edge_index = radius_graph(pos, r=self.cutoff, batch=batch)
         num_nodes=z.size(0)
+        print(f'spherenet.py::pos:{pos.shape}')
+        print(f'spherenet.py::edge_index:{edge_index.shape}')
+        print(f'spherenet.py::num_nodes:{edge_index.shape}')
         dist, angle, torsion, i, j, idx_kj, idx_ji = xyz_to_dat(pos, edge_index, num_nodes, use_torsion=True)
 
         emb = self.emb(dist, angle, torsion, idx_kj)

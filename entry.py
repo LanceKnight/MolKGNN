@@ -271,8 +271,8 @@ if __name__ == '__main__':
     # gnn_type = 'kgnn'
     # gnn_type = 'dimenet' # Not implemented
     # gnn_type = 'chironet'
-    gnn_type = 'dimenet_pp'
-    # gnn_type = 'spherenet'
+    # gnn_type = 'dimenet_pp'
+    gnn_type = 'spherenet'
 
     use_clearml = False
     if use_clearml:
