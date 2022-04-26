@@ -34,6 +34,7 @@ def add_args(gnn_type):
 
     # Custom arguments
     parser.add_argument("--enable_pretraining", default=False)  # TODO: \
+    parser.add_argument('--task_name', type=str, default='Unnamed')
     # Pretraining
 
     # Experiment labels arguments for tagging the task
@@ -51,7 +52,9 @@ def add_args(gnn_type):
     args.max_steps = args.tot_iterations + 1
 
     if use_clearml:
+        task.set_name(args.task_name)
         task.add_tags(args.dataset_name)
+        task.add_tags(args.batch_size)
     return args
 
 
@@ -276,9 +279,9 @@ if __name__ == '__main__':
 
     use_clearml = False
     if use_clearml:
-        task = Task.init(project_name=f"Tests/kgnn",
+        task = Task.init(project_name=f"experiments/kgnn",
                          task_name=f"{gnn_type}",
-                         tags=["debug", "more_features"])
+                         tags=["batch_size"])
 
         logger = task.get_logger()
         # logger = pl.loggers.tensorboard
