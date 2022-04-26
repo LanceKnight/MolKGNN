@@ -13,12 +13,19 @@ def gitclone(dir_name):
 	os.system('git checkout scheduler')
 	os.chdir(cwd)
 
+def gitupdate(dir_name):
+	cwd = os.getcwd()
+	os.chdir(dir_name+'/kgnn')
+	os.system('git pull')
+	os.chdir(cwd)
+
 def run(batch_size):
 	print(f'running batch_size={batch_size}')
 	dir_name = f'../experiments/exp_batch_size{batch_size}'
 	if not os.path.exists(dir_name):
 		os.mkdir(dir_name)
 		gitclone(dir_name)
+	gitupdate(dir_name)
 
 	os.chdir(dir_name+'/kgnn')
 

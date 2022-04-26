@@ -54,7 +54,7 @@ def add_args(gnn_type):
     if use_clearml:
         task.set_name(args.task_name)
         task.add_tags(args.dataset_name)
-        task.add_tags(args.batch_size)
+        task.add_tags(str(args.batch_size))
     return args
 
 
