@@ -9,6 +9,7 @@ def gitclone(dir_name):
 	cwd = os.getcwd()
 	os.chdir(dir_name)
 	os.system('git clone git@github.com:LanceKnight/kgnn.git')
+	os.system('git checkout scheduler')
 	os.chdir(cwd)
 
 def run(batch_size):
