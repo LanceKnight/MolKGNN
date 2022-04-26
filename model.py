@@ -290,6 +290,67 @@ class GNNModel(pl.LightningModule):
         # Logging
         # self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
+    def test_step(self, batch_data, batch_idx, dataloader_idx):
+        """
+        Process the data in validation dataloader in test mode
+        :param batch_data:
+        :param batch_idx:
+        :param dataloader_idx:
+        :return: It returns a list of lists. The 0th item in the list is the
+        outputs (a list) from the validation datasets while the 1st item is the
+        outputs from the training datasets. Each output is another list,
+        which each item being the dictionary from each step.
+        """
+
+        output = self(batch_data)
+        pred_y = output[0].view(-1)
+        true_y = batch_data.y.view(-1)
+        # print(f'y_pred.shape:{y_pred.shape} y_true:{y_true.shape}')
+
+        # Get numpy_prediction and numpy_y and concate those from all batches
+        valid_step_output = {}
+        valid_step_output['pred_y'] = pred_y
+        valid_step_output['true_y'] = true_y
+        return valid_step_output
+
+    def test_epoch_end(self, valid_step_outputs):
+        """
+        Evaluate on both the validation and training datasets. Besides in the
+        training loop, the training dataset is included again because the
+        model is set to evaluation mode (see
+        https://stackoverflow.com/questions/60018578/what-does-model-eval-do
+        -in-pytorch for a introduction of evaluation mode).
+        :param valid_step_outputs: a list of outputs from two dataloader.
+        See the return description from function validation_step() above.
+        set dataloader
+        :return: None. However, set self.valid_epoch_outputs to be a
+        dictionary of metrics from each validation step, with metrics
+        from training dataset with "_no_dropout" suffix, such as
+        "loss_no_dropout". The self.valid_epoch_outputs is used for monitoring.
+        """
+        self.valid_epoch_outputs = {}
+
+        # There are true_y and pred_y from both validation and training
+        # datasets from each validation iteration. Here we get the
+        # concatenate them and calculate the metrics for all of them
+        for i, outputs_each_dataloader in enumerate(valid_step_outputs):
+            results = {}
+            all_pred = [output['pred_y'] for output in
+                        outputs_each_dataloader]
+            all_true = [output['true_y'] for output in outputs_each_dataloader]
+            results = self.get_evaluations(
+                results, torch.cat(all_true),
+                torch.cat(all_pred))
+            if i == 0:
+                self.valid_epoch_outputs = results
+            else:
+                for key in results.keys():
+                    new_key = key + "_no_dropout"
+                    self.valid_epoch_outputs[new_key] = results[key]
+        # Logging
+        # self.log(f"valid performance by epoch", self.valid_epoch_outputs,
+        # on_epoch=True, prog_bar=True, logger=True)
+
     def configure_optimizers(self):
         """
         A required function for pytorch lightning class LightningModule.
