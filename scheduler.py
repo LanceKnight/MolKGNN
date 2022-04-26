@@ -9,6 +9,7 @@ def gitclone(dir_name):
 	cwd = os.getcwd()
 	os.chdir(dir_name)
 	os.system('git clone git@github.com:LanceKnight/kgnn.git')
+	os.chdir('kgnn')
 	os.system('git checkout scheduler')
 	os.chdir(cwd)
 
@@ -18,9 +19,12 @@ def run(batch_size):
 	if not os.path.exists(dir_name):
 		os.mkdir(dir_name)
 		gitclone(dir_name)
-# --task_name batchsize{batch_size}\
-	# kgnn
-	os.system(f'python {dir_name}/kgnn/entry.py \
+
+	os.chdir(dir_name+'/kgnn')
+
+	# Model=kgnn
+	os.system(f'python entry.py \
+		--task_name batchsize{batch_size}\
 		--dataset_name 435034 \
 		--num_workers 16 \
 		--dataset_path ../../../dataset/ \
