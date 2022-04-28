@@ -10,25 +10,17 @@ def gitclone(dir_name):
 	os.chdir(dir_name)
 	os.system('git clone git@github.com:LanceKnight/kgnn.git')
 	os.chdir('kgnn')
-	os.system('git checkout scheduler')
+	os.system('git checkout add-testing-set') # Change this
 	os.chdir(cwd)
 
 def gitupdate(dir_name):
 	cwd = os.getcwd()
 	os.chdir(dir_name+'/kgnn')
+	os.system('git checkout add-testing-set')
 	os.system('git pull')
 	os.chdir(cwd)
 
-def run(batch_size):
-	print(f'running batch_size={batch_size}')
-	dir_name = f'../experiments/exp_batch_size{batch_size}'
-	if not os.path.exists(dir_name):
-		os.mkdir(dir_name)
-		gitclone(dir_name)
-	gitupdate(dir_name)
-
-	os.chdir(dir_name+'/kgnn')
-
+def run_command():
 	# Model=kgnn
 	os.system(f'python entry.py \
 		--task_name batchsize{batch_size}\
@@ -55,6 +47,21 @@ def run(batch_size):
 		--node_feature_dim 27 \
 		--edge_feature_dim 7 \
 		--hidden_dim 64')\
+
+def run(batch_size):
+	print(f'running batch_size={batch_size}')
+
+	# Go to correct folder
+	dir_name = f'../experiments/exp_batch_size{batch_size}' # Change this
+	if not os.path.exists(dir_name):
+		os.mkdir(dir_name)
+		gitclone(dir_name)
+	gitupdate(dir_name)
+	os.chdir(dir_name+'/kgnn')
+
+	# Task
+	# run_command()
+
 
 
 if __name__ == '__main__':
