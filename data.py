@@ -258,58 +258,32 @@ class DataLoaderModule(LightningDataModule):
         return val_loader, train_loader
 
     def test_dataloader(self):
-        # Validation laader
-        print(f'dataset_valid:{self.dataset_val[0]}')
-        num_valid_active = len(torch.nonzero(
-            torch.tensor([data.y for data in self.dataset_val])))
-        num_valid_inactive = len(self.dataset_val) - num_valid_active
+        # Test laader
+        print(f'dataset_test:{self.dataset_test}')
+        num_test_active = len(torch.nonzero(
+            torch.tensor([data.y for data in self.dataset_test])))
+        num_test_inactive = len(self.dataset_test) - num_test_active
 
-        valid_sampler_weight = torch.tensor([(1. / num_valid_inactive)
+        test_sampler_weight = torch.tensor([(1. / num_test_inactive)
                                              if data.y == 0
-                                             else (1. / num_valid_active)
+                                             else (1. / num_test_active)
                                              for data in
-                                             self.dataset_val])
+                                             self.dataset_test])
         generator = torch.Generator()
         generator.manual_seed(self.seed)
-        valid_sampler = WeightedRandomSampler(weights=valid_sampler_weight,
+        test_sampler = WeightedRandomSampler(weights=test_sampler_weight,
                                               num_samples=len(
-                                                  valid_sampler_weight),
+                                                  test_sampler_weight),
                                               generator=generator)
 
-        val_loader = DataLoader(
-            self.dataset_val,
+        test_loader = DataLoader(
+            self.dataset_test,
             batch_size=self.batch_size,
-            # sampler=valid_sampler,
+            # sampler=test_sampler,
             shuffle=False,
             num_workers=self.num_workers,
         )
 
-        # Train loader in evaluation mode
-        print(f'dataset_train:{self.dataset_train[0]}')
-        num_train_active = len(torch.nonzero(
-            torch.tensor([data.y for data in self.dataset_train])))
-        num_train_inactive = len(self.dataset_train) - num_train_active
-
-        train_sampler_weight = torch.tensor([(1. / num_train_inactive)
-                                             if data.y == 0
-                                             else (1. / num_train_active)
-                                             for data in
-                                             self.dataset_train])
-        generator = torch.Generator()
-        generator.manual_seed(self.seed)
-        train_sampler = WeightedRandomSampler(weights=train_sampler_weight,
-                                              num_samples=len(
-                                                  train_sampler_weight),
-                                              generator=generator)
-
-        train_loader = DataLoader(
-            self.dataset_train,
-            batch_size=self.batch_size,
-            # sampler=train_sampler,
-            shuffle=False,
-            num_workers=self.num_workers,
-        )
-        return val_loader, train_loader
         return test_loader
 
     @staticmethod
