@@ -3,6 +3,7 @@ from multiprocessing import Pool
 import os
 from tqdm import tqdm
 import shutil, errno
+import itertools
 
 
 def gitclone(dir_name):
@@ -20,22 +21,22 @@ def gitupdate(dir_name):
 	os.system('git pull')
 	os.chdir(cwd)
 
-def run_command():
+def run_command(warmup, num_epochs, peak_lr, end_lr, num_layers):
 	# Model=kgnn
 	os.system(f'python entry.py \
-		--task_name batchsize{batch_size}\
+		--task_name hyperparam-searching\
 		--dataset_name 435034 \
 		--num_workers 16 \
 		--dataset_path ../../../dataset/ \
 		--enable_oversampling_with_replacement \
-		--warmup_iterations 200 \
-		--max_epochs 20 \
-		--peak_lr 5e-2 \
-		--end_lr 1e-9 \
-		--batch_size {batch_size} \
+		--warmup_iterations {warmup} \
+		--max_epochs {num_epochs} \
+		--peak_lr {peak_lr} \
+		--end_lr {end_lr} \
+		--batch_size 17 \
 		--default_root_dir actual_training_checkpoints \
 		--gpus 1 \
-		--num_layers 3 \
+		--num_layers {num_layers} \
 		--num_kernel1_1hop 10 \
 		--num_kernel2_1hop 20 \
 		--num_kernel3_1hop 30 \
@@ -48,11 +49,12 @@ def run_command():
 		--edge_feature_dim 7 \
 		--hidden_dim 64')\
 
-def run(batch_size):
-	print(f'running batch_size={batch_size}')
+def run(warmup, num_epochs, peak_lr, end_lr, num_layers):
+	print(f'running exp-{id}')
+	id+=1
 
 	# Go to correct folder
-	dir_name = f'../experiments/exp_batch_size{batch_size}' # Change this
+	dir_name = f'../experiments/exp_{id}' # Change this
 	if not os.path.exists(dir_name):
 		os.mkdir(dir_name)
 		gitclone(dir_name)
@@ -60,24 +62,28 @@ def run(batch_size):
 	os.chdir(dir_name+'/kgnn')
 
 	# Task
-	# run_command()
+	run_command(warmup, num_epochs, peak_lr, end_lr, num_layers)
 
 
 
 if __name__ == '__main__':
 	mp.set_start_method('spawn')
+	id=0
 
-	batch_list = [10, 20, 50, 100]
-	data_pair = []
-	id = 0
-	for batch_size in batch_list:
-			data_pair.append([batch_size])
+	warmup = [200, 2000, 20000]
+	num_epochs = [10, 20, 50]
+	peak_lr = [5e-1, 5e-2, 5e-3]
+	end_lr = [1e-7, 1e-8, 1e-9, 1e-10]
+	num_layers = [3, 4, 5]
+
+	data_pair = list(itertools.product(warmup, num_epochs, peak_lr, end_lr, num_layers))
+	print(f'num data_pair:{len(data_pair)}')
 	print(f'data_pair:{data_pair}')
 
 	
-	with Pool(processes = 10) as pool:
-		pool.starmap(run, data_pair)
+	# with Pool(processes = 10) as pool:
+	# 	pool.starmap(run, data_pair)
 
-	pool.join()
-	print(f'finish')
+	# pool.join()
+	# print(f'finish')
 
