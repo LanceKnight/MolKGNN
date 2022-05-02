@@ -173,7 +173,7 @@ class DataLoaderModule(LightningDataModule):
                                                  else (1. / num_train_active)
                                                  for data in
                                                  self.dataset_train])
-            print(f'data.py::train_sampler weight:{train_sampler_weight}')
+            # print(f'data.py::train_sampler weight:{train_sampler_weight}')
 
             generator = torch.Generator()
             generator.manual_seed(self.seed)

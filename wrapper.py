@@ -672,8 +672,8 @@ class QSARDataset(InMemoryDataset):
         num_inactive_train = round(num_inactive * 0.8)
         num_active_valid = round(num_active * 0.2)
         num_inactive_valid = round(num_inactive * 0.2)
-        # num_active_test = round(num_active * 0.1)
-        # num_inactive_test = round(num_inactive * 0.1)
+        num_active_test = round(num_active * 0.2)
+        num_inactive_test = round(num_inactive * 0.2)
         # print(f'wrapper.py::num_active_train:{num_active_train} '
         #       f'num_inactive_train:{num_inactive_train}')
         # print(f'wrapper.py::num_active_valid:{num_active_valid} '
@@ -691,15 +691,11 @@ class QSARDataset(InMemoryDataset):
                                 num_inactive_train:num_inactive_train
                                                    +num_inactive_valid]
         split_dict['test'] = active_idx[
-                              num_active_train + num_active_valid
-                              : num_active_train
-                                + num_active_valid
-                                + num_active_test] \
+                              num_active_train:num_active_train
+                                               +num_active_valid] \
                               + inactive_idx[
-                              num_inactive_train + num_inactive_valid
-                              : num_inactive_train
-                                + num_inactive_valid
-                                + num_inactive_test]
+                                num_inactive_train:num_inactive_train
+                                                   +num_inactive_valid]
         # for i in range(136,146):
         #     print(f'wrapper.py::first 10 of train:{split_dict["train"][i]}')
         # print(f'wrapper.py::train{len(split_dict["train"])}  valid:'
