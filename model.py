@@ -168,6 +168,7 @@ class GNNModel(pl.LightningModule):
                                    gnn_type=gnn_type,
                                    dataset_path=args.dataset_path
                                    )['metrics']
+        self.valid_epoch_outputs = {}
 
     def forward(self, data):
 
@@ -226,9 +227,11 @@ class GNNModel(pl.LightningModule):
             mean_output = sum(output[key] for output in train_step_outputs) \
                 / len(train_step_outputs)
             train_epoch_outputs[key] = mean_output
+            self.log(key, mean_output)
 
         self.train_epoch_outputs = train_epoch_outputs
         # self.log(f"train performance by epoch", train_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
+
 
     def validation_step(self, batch_data, batch_idx, dataloader_idx):
         """
@@ -268,7 +271,7 @@ class GNNModel(pl.LightningModule):
         from training dataset with "_no_dropout" suffix, such as
         "loss_no_dropout". The self.valid_epoch_outputs is used for monitoring.
         """
-        self.valid_epoch_outputs = {}
+
 
         # There are true_y and pred_y from both validation and training
         # datasets from each validation iteration. Here we get the
@@ -283,6 +286,11 @@ class GNNModel(pl.LightningModule):
                 torch.cat(all_pred))
             if i == 0:
                 self.valid_epoch_outputs = results
+                # Only log validation dataloader b/c this log is used for
+                # monitoring metric and saving the best model. The actual logging happends within
+                # clearml. See Monitor.py
+                for key in results.keys():
+                    self.log(key, results[key])
             else:
                 for key in results.keys():
                     new_key = key + "_no_dropout"
@@ -339,7 +347,13 @@ class GNNModel(pl.LightningModule):
             results, torch.cat(all_true),
             torch.cat(all_pred))
 
+        # Logging
+        for key in results.keys():
+            self.log(key, results[key])
+
         self.test_epoch_outputs = results
+        with open('test_result.txt', 'w+') as output_file:
+            output_file.write(str(results))
 
         # Logging
         # self.log(f"valid performance by epoch", self.valid_epoch_outputs,
@@ -376,7 +390,7 @@ class GNNModel(pl.LightningModule):
     def save_atom_encoder(self, dir, file_name):
         if not os.path.exists(dir):
             os.mkdir(dir)
-        torch.save(self.atom_encoder.state_dict(), dir + file_name)
+        torch.save(self.gnn_model.atom_encoder.state_dict(), dir + file_name)
 
     def save_graph_embedding(self, dir):
         if not os.path.exists(dir):
@@ -403,7 +417,7 @@ class GNNModel(pl.LightningModule):
                             "implemented for Kernel GNN")
 
     def print_graph_embedding(self):
-        print(self.graph_embedding)
+        print(f'model.py::graph_embedding:\n{self.graph_embedding}')
 
     @staticmethod
     def add_model_args(gnn_type, parent_parser):
