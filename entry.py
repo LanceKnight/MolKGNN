@@ -291,7 +291,9 @@ if __name__ == '__main__':
     if use_clearml:
         task = Task.init(project_name=f"HyperParams/kgnn",
                          task_name=f"{gnn_type}",
-                         tags=[])
+                         tags=[],
+                         reuse_last_task_id=False
+                         )
 
         logger = task.get_logger()
         # logger = pl.loggers.tensorboard
