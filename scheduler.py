@@ -76,14 +76,14 @@ if __name__ == '__main__':
 	end_lr = [1e-7, 1e-8, 1e-9, 1e-10]
 	num_layers = [3, 4, 5]
 
-	data_pair = list(itertools.product(id, warmup, num_epochs, peak_lr, end_lr, num_layers))
+	data_pair = list(itertools.product(warmup, num_epochs, peak_lr, end_lr, num_layers))
 	print(f'num data_pair:{len(data_pair)}')
 	print(f'data_pair:{data_pair}')
 
 	
-	# with Pool(processes = 10) as pool:
-	# 	pool.starmap(run, data_pair)
+	with Pool(processes = 12) as pool:
+		pool.starmap(run, data_pair)
 
-	# pool.join()
-	# print(f'finish')
+	pool.join()
+	print(f'finish')
 
