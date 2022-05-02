@@ -7,7 +7,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit import RDLogger
 import torch
-from torch_geometric.data import InMemoryDataset, Data, Dataset
+from torch_geometric.data import InMemoryDataset, Data
 from torch_geometric.utils import degree
 from tqdm import tqdm
 import numpy as np
@@ -336,7 +336,7 @@ def convert_to_single_emb(x, offset=512):
     return x
 
 
-class D4DCHPDataset(Dataset):
+class D4DCHPDataset(InMemoryDataset):
     """
     Dataset from Langnajit Pattanaik et al., 2020, Message Passing Networks
     for Molecules with Tetrahedral Chirality
@@ -456,7 +456,7 @@ class D4DCHPDataset(Dataset):
         return split_dict
 
 
-class QSARDataset(Dataset):
+class QSARDataset(InMemoryDataset):
     """
     Dataset from Mariusz Butkiewics et al., 2013, Benchmarking ligand-based
     virtual High_Throughput Screening with the PubChem Database

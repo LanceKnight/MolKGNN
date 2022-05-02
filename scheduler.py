@@ -107,7 +107,7 @@ if __name__ == '__main__':
     # # num_epochs = [10, 20, 50]q
     # peak_lr = [5e-1, 5e-2, 5e-3]
     # end_lr = [1e-8, 1e-9, 1e-10]
-    num_layers = [3, 4, 5]
+    num_layers = [3]
     data_pair = list(itertools.product(dataset_list, num_layers))
     print(f'num data_pair:{len(data_pair)}')
     data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(len(data_pair))))
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 5) as pool:
+    with Pool(processes = 3) as pool:
         pool.starmap(run, data_pair_with_exp_id)
 
     pool.join()
