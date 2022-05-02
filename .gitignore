@@ -12,3 +12,6 @@ utils/atom_encoder/*.pt
 
 # Results
 test_result.txt
+
+# Logs
+scheduler.log
