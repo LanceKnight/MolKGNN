@@ -7,7 +7,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit import RDLogger
 import torch
-from torch_geometric.data import InMemoryDataset, Data
+from torch_geometric.data import InMemoryDataset, Data, Dataset
 from torch_geometric.utils import degree
 from tqdm import tqdm
 import numpy as np
@@ -336,7 +336,7 @@ def convert_to_single_emb(x, offset=512):
     return x
 
 
-class D4DCHPDataset(InMemoryDataset):
+class D4DCHPDataset(Dataset):
     """
     Dataset from Langnajit Pattanaik et al., 2020, Message Passing Networks
     for Molecules with Tetrahedral Chirality
@@ -456,7 +456,7 @@ class D4DCHPDataset(InMemoryDataset):
         return split_dict
 
 
-class QSARDataset(InMemoryDataset):
+class QSARDataset(Dataset):
     """
     Dataset from Mariusz Butkiewics et al., 2013, Benchmarking ligand-based
     virtual High_Throughput Screening with the PubChem Database
@@ -896,7 +896,7 @@ if __name__ == "__main__":
     from argparse import ArgumentParser
 
     gnn_type = 'kgnn'
-    use_clearml = True
+    use_clearml = False
     if use_clearml:
         task = Task.init(project_name=f"DatasetCreation/kgnn",
                          task_name=f"{gnn_type}",
@@ -923,4 +923,7 @@ if __name__ == "__main__":
     data = qsar_dataset[0]
     print(f'data:{data}')
     print('\n')
-    print(f'x:{data.x.dtype}')
+    import sys
+    print(f'mem size:{sys.getsizeof(data) } bytes')
+    print(f'totl mem size = mem_size * 200k /1000 = '
+          f'{sys.getsizeof(data) * 200000/1000} MB')

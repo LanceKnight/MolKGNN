@@ -13,7 +13,7 @@ def gitclone(dir_name):
     os.chdir(dir_name)
     os.system('git clone git@github.com:LanceKnight/kgnn.git')
     os.chdir('kgnn')
-    os.system('git checkout bcl-benchmark') # Change this
+    os.system('git checkout cpu-mem-issue') # Change this
     os.chdir(cwd)
 
 def gitupdate(dir_name):
