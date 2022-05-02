@@ -8,21 +8,7 @@ import time
 
 
 
-def gitclone(dir_name):
-    cwd = os.getcwd()
-    os.chdir(dir_name)
-    os.system('git clone git@github.com:LanceKnight/kgnn.git')
-    os.chdir('kgnn')
-    os.system('git checkout bcl-benchmark') # Change this
-    os.chdir(cwd)
 
-def gitupdate(dir_name):
-    cwd = os.getcwd()
-    os.chdir(dir_name+'/kgnn')
-    os.system('git gc')
-    os.system('git checkout bcl-benchmark') # Change this
-    os.system('git pull')
-    os.chdir(cwd)
 
 def run_command(exp_id, dataset): # Change this
     # Model=kgnn
@@ -64,13 +50,11 @@ def run(exp_id, dataset):
 def attach_exp_id(input_tuple, tuple_id):
     # Add experiment id in front of the input hyperparam tuple
     record = [tuple_id]
-    record.extend(list(input_tuple))
+    record.append(input_tuple)
     return record
 
 
-# Global variable
-# Github repo template
-github_repo_dir = f'../experiments/exp_template_dataset_layers'# Change this
+
 
 if __name__ == '__main__':
     mp.set_start_method('spawn')
@@ -79,14 +63,15 @@ if __name__ == '__main__':
     # Hyperparms
     dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290'] 
 
-    if not os.path.exists(github_repo_dir):
-        os.mkdir(github_repo_dir)
-        gitclone(github_repo_dir)
-    gitupdate(github_repo_dir)
+    input_list = []
+    for id, dataset in enumerate(dataset_list):
+        print(dataset)
+        data_pair = attach_exp_id(dataset, id)
+        print(data_pair)    
+        input_list.append(data_pair)
 
     with Pool(processes = 5) as pool:
-        for dataset in dataset_list:
-            pool.starmap(run, dataset)
+            pool.starmap(run, input_list)
 
     pool.join()
     print(f'finish')
