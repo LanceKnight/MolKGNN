@@ -101,11 +101,16 @@ def prepare_actual_model(args):
 
 def actual_training(model, data_module, use_clearml, gnn_type, args):
     # Add checkpoint
+    monitoring_metric = 'logAUC'
     actual_training_checkpoint_dir = args.default_root_dir
     actual_training_checkpoint_callback = ModelCheckpoint(
+        monitor=monitoring_metric,
         dirpath=actual_training_checkpoint_dir,
-        filename=data_module.dataset_name,
-        save_last=True
+        filename=f'best_model_metric_{monitoring_metric}', #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+        save_top_k=1,
+        mode='max',
+        save_last=True,
+        save_on_train_epoch_end=False
     )
 
     # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
@@ -218,6 +223,12 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     else:
         print(f'In Training Mode:')
         trainer.fit(model=model, datamodule=data_module)
+        print(f'In Testing Mode:')
+        best_path = actual_training_checkpoint_callback.best_model_path
+        print(f'best_path:{best_path}')
+        model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
+                                               args=args)
+        result = trainer.test(model, datamodule=data_module)
 
 
 def main(gnn_type, use_clearml):
@@ -277,11 +288,11 @@ if __name__ == '__main__':
     # gnn_type = 'dimenet_pp'
     # gnn_type = 'spherenet'
 
-    use_clearml = False
+    use_clearml = True
     if use_clearml:
-        task = Task.init(project_name=f"experiments/kgnn",
+        task = Task.init(project_name=f"HyperParams/kgnn",
                          task_name=f"{gnn_type}",
-                         tags=["batch_size"])
+                         tags=[])
 
         logger = task.get_logger()
         # logger = pl.loggers.tensorboard

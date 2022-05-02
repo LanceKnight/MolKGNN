@@ -9,3 +9,6 @@ temp_training_checkpoints/
 utils/atom_encoder/graph_embedding/*.pt
 utils/atom_encoder/graph_embedding/*.txt
 utils/atom_encoder/*.pt
+
+# Results
+test_result.txt
