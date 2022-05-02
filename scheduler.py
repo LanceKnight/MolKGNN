@@ -21,10 +21,10 @@ def gitupdate(dir_name):
 	os.system('git pull')
 	os.chdir(cwd)
 
-def run_command(warmup, num_epochs, peak_lr, end_lr, num_layers):
+def run_command(id, warmup, num_epochs, peak_lr, end_lr, num_layers):
 	# Model=kgnn
 	os.system(f'python entry.py \
-		--task_name hyperparam-searching\
+		--task_name {id}\
 		--dataset_name 435034 \
 		--num_workers 16 \
 		--dataset_path ../../../dataset/ \
@@ -54,7 +54,7 @@ def run(warmup, num_epochs, peak_lr, end_lr, num_layers):
 	id+=1
 
 	# Go to correct folder
-	dir_name = f'../experiments/exp_{id}' # Change this
+	dir_name = f'../experiments/exp_warmup_epochs_lr_layer_{id}' # Change this
 	if not os.path.exists(dir_name):
 		os.mkdir(dir_name)
 		gitclone(dir_name)
@@ -62,7 +62,7 @@ def run(warmup, num_epochs, peak_lr, end_lr, num_layers):
 	os.chdir(dir_name+'/kgnn')
 
 	# Task
-	run_command(warmup, num_epochs, peak_lr, end_lr, num_layers)
+	run_command(id, warmup, num_epochs, peak_lr, end_lr, num_layers)
 
 
 
@@ -76,7 +76,7 @@ if __name__ == '__main__':
 	end_lr = [1e-7, 1e-8, 1e-9, 1e-10]
 	num_layers = [3, 4, 5]
 
-	data_pair = list(itertools.product(warmup, num_epochs, peak_lr, end_lr, num_layers))
+	data_pair = list(itertools.product(id, warmup, num_epochs, peak_lr, end_lr, num_layers))
 	print(f'num data_pair:{len(data_pair)}')
 	print(f'data_pair:{data_pair}')
 
