@@ -900,20 +900,25 @@ if __name__ == "__main__":
     if use_clearml:
         task = Task.init(project_name=f"DatasetCreation/kgnn",
                          task_name=f"{gnn_type}",
-                         tags=[])
+                         tags=[],
+                         reuse_last_task_id=False
+                         )
 
     parser = ArgumentParser()
     parser.add_argument('--dataset', type=str, default='435034')
     parser.add_argument('--gnn_type', type=str, default='kgnn')
     parser.add_argument('--task_name', type=str, default='Unnamed')
     args = parser.parse_args()
+    if use_clearml:
+        print(f'change_task_name...')
+        task.set_name(args.task_name)
+
     qsar_dataset = QSARDataset(root='../dataset/qsar/clean_sdf',
                                dataset=args.dataset,
                                # pre_transform=ToXAndPAndEdgeAttrForDeg(),
                                gnn_type=args.gnn_type
                                )
-    if use_clearml:
-        task.set_name(args.task_name)
+
 
     data = qsar_dataset[0]
     print(f'data:{data}')

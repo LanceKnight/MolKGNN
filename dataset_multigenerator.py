@@ -13,7 +13,7 @@ import time
 def run_command(exp_id, dataset): # Change this
     # Model=kgnn
     os.system(f'python wrapper.py \
-        --task_name {exp_id}\
+        --task_name dataset_task{exp_id}\
         --dataset {dataset}\
         ')
 
@@ -65,14 +65,12 @@ if __name__ == '__main__':
 
     input_list = []
     for id, dataset in enumerate(dataset_list):
-        print(dataset)
         data_pair = attach_exp_id(dataset, id)
-        print(data_pair)    
         input_list.append(data_pair)
 
     with Pool(processes = 5) as pool:
             pool.starmap(run, input_list)
 
     pool.join()
-    print(f'finish')
+    print(f'all tasks finish')
 
