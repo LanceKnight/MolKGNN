@@ -27,7 +27,7 @@ def gitupdate(dir_name):
 def run_command(exp_id, dataset, num_layers): # Change this
     # Model=kgnn
     os.system(f'python entry.py \
-        --task_name {exp_id}\
+        --task_name experiments{exp_id}\
         --dataset_name {dataset} \
         --num_workers 16 \
         --dataset_path ../../../dataset/ \

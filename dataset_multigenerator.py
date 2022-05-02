@@ -68,7 +68,7 @@ if __name__ == '__main__':
         data_pair = attach_exp_id(dataset, id)
         input_list.append(data_pair)
 
-    with Pool(processes = 5) as pool:
+    with Pool(processes = 9) as pool:
             pool.starmap(run, input_list)
 
     pool.join()
