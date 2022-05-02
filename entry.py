@@ -108,7 +108,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         dirpath=actual_training_checkpoint_dir,
         filename=f'best_model_metric_{monitoring_metric}', #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
         save_top_k=1,
-        mode='min',
+        mode='max',
         save_last=True,
         save_on_train_epoch_end=False
     )
@@ -290,9 +290,9 @@ if __name__ == '__main__':
 
     use_clearml = True
     if use_clearml:
-        task = Task.init(project_name=f"Tests/kgnn",
+        task = Task.init(project_name=f"HyperParams/kgnn",
                          task_name=f"{gnn_type}",
-                         tags=["batch_size"])
+                         tags=[])
 
         logger = task.get_logger()
         # logger = pl.loggers.tensorboard
