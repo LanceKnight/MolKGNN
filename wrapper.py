@@ -892,12 +892,29 @@ class ToXAndPAndEdgeAttrForDeg(object):
 
 
 if __name__ == "__main__":
-    pass
+    from clearml import Task
+    from argparse import ArgumentParser
+
+    gnn_type = 'kgnn'
+    use_clearml = True
+    if use_clearml:
+        task = Task.init(project_name=f"HyperParams/kgnn",
+                         task_name=f"{gnn_type}",
+                         tags=[])
+
+    parser = ArgumentParser()
+    parser.add_argument('--dataset', type=str, default='435034')
+    parser.add_argument('--gnn_type', type=str, default='kgnn')
+    parser.add_argument('--task_name', type=str, default='Unnamed')
+    args = parser.parse_args()
     qsar_dataset = QSARDataset(root='../dataset/qsar/clean_sdf',
-                               dataset='435034',
+                               dataset=args.dataset,
                                # pre_transform=ToXAndPAndEdgeAttrForDeg(),
-                               gnn_type='chironet'
+                               gnn_type=args.gnn_type
                                )
+    if use_clearml:
+        task.set_name(args.task_name)
+
     data = qsar_dataset[0]
     print(f'data:{data}')
     print('\n')
