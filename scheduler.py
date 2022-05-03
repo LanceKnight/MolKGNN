@@ -50,7 +50,7 @@ def run_command(exp_id, dataset, num_layers): # Change this
         --num_kernel4_Nhop 50 \
         --node_feature_dim 27 \
         --edge_feature_dim 7 \
-        --hidden_dim 64')\
+        --hidden_dim 32')\
 
 def copyanything(src, dst):
     # If dst exits, remove it first
@@ -95,7 +95,7 @@ def attach_exp_id(input_tuple, tuple_id):
 
 # Global variable
 # Github repo template
-github_repo_dir = f'../experiments/exp_template_dataset_layers'# Change this
+github_repo_dir = f'../experiments/template_dataset_layers'# Change this
 
 if __name__ == '__main__':
     mp.set_start_method('spawn')
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 3) as pool:
+    with Pool(processes = 4) as pool:
         pool.starmap(run, data_pair_with_exp_id)
 
     pool.join()
