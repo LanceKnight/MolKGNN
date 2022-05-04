@@ -201,10 +201,10 @@ class GNNModel(pl.LightningModule):
         # Get prediction and ground truth
         # print(batch_data.edge_index)
 
-        start = time.time()
+        # start = time.time()
         pred_y, _ = self(batch_data)
-        end = time.time()
-        print(f'=model.py::training time:{end-start}')
+        # end = time.time()
+        # print(f'=model.py::training time:{end-start}')
         pred_y = pred_y.view(-1)
         true_y = batch_data.y.view(-1)
 

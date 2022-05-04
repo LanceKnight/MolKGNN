@@ -165,7 +165,7 @@ class MolGCN(MessagePassing):
         h = x
 
         for i in range(self.num_layers):
-            print(f'KernelLayer.py::{i}th layer==============')
+            # print(f'KernelLayer.py::{i}th layer==============')
             data.x = h
 
             kernel_layer = self.layers[i]
