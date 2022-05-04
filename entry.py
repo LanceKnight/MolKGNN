@@ -287,9 +287,9 @@ if __name__ == '__main__':
     # gnn_type = 'dimenet_pp'
     # gnn_type = 'spherenet'
 
-    use_clearml = False
+    use_clearml = True
     if use_clearml:
-        task = Task.init(project_name=f"HyperParams/kgnn",
+        task = Task.init(project_name=f"experiments/kgnn",
                          task_name=f"{gnn_type}",
                          tags=[],
                          reuse_last_task_id=False
