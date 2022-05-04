@@ -1,5 +1,6 @@
 from models.ChIRoNet.embedding_functions import embedConformerWithAllPaths
 
+import copy
 import math
 import os
 import pandas as pd
@@ -7,7 +8,9 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit import RDLogger
 import torch
-from torch_geometric.data import InMemoryDataset, Data
+from torch_geometric.data import InMemoryDataset, Data, Dataset
+from torch_geometric.data.in_memory_dataset import nested_iter
+from torch_geometric.data.separate import separate
 from torch_geometric.utils import degree
 from tqdm import tqdm
 import numpy as np
@@ -16,6 +19,7 @@ import rdkit
 import rdkit.Chem.EState as EState
 import rdkit.Chem.rdMolDescriptors as rdMolDescriptors
 import rdkit.Chem.rdPartialCharges as rdPartialCharges
+
 
 pattern_dict = {'[NH-]': '[N-]', '[OH2+]':'[O]'}
 add_atom_num = 5
@@ -336,7 +340,7 @@ def convert_to_single_emb(x, offset=512):
     return x
 
 
-class D4DCHPDataset(InMemoryDataset):
+class D4DCHPDataset(Dataset):
     """
     Dataset from Langnajit Pattanaik et al., 2020, Message Passing Networks
     for Molecules with Tetrahedral Chirality
@@ -456,7 +460,7 @@ class D4DCHPDataset(InMemoryDataset):
         return split_dict
 
 
-class QSARDataset(InMemoryDataset):
+class QSARDataset(Dataset):
     """
     Dataset from Mariusz Butkiewics et al., 2013, Benchmarking ligand-based
     virtual High_Throughput Screening with the PubChem Database
@@ -530,6 +534,13 @@ class QSARDataset(InMemoryDataset):
 
     # def __getitem__(self, index):
     #     return self.get(index)
+    def len(self):
+        if self.slices is None:
+            return 1
+        for _, value in nested_iter(self.slices):
+            return len(value) - 1
+        return 0
+
 
     def process(self):
         if self.dataset not in ['435008', '1798', '435034', '1843', '2258',
@@ -670,10 +681,10 @@ class QSARDataset(InMemoryDataset):
 
         num_active_train = round(num_active * 0.8)
         num_inactive_train = round(num_inactive * 0.8)
-        num_active_valid = round(num_active * 0.1)
-        num_inactive_valid = round(num_inactive * 0.1)
-        num_active_test = round(num_active * 0.1)
-        num_inactive_test = round(num_inactive * 0.1)
+        num_active_valid = round(num_active * 0.2)
+        num_inactive_valid = round(num_inactive * 0.2)
+        num_active_test = round(num_active * 0.2)
+        num_inactive_test = round(num_inactive * 0.2)
         # print(f'wrapper.py::num_active_train:{num_active_train} '
         #       f'num_inactive_train:{num_inactive_train}')
         # print(f'wrapper.py::num_active_valid:{num_active_valid} '
@@ -728,13 +739,34 @@ class QSARDataset(InMemoryDataset):
 
         return split_dict
 
-    def __getitem__(self, idx):
-        if isinstance(idx, int):
-            item = self.get(self.indices()[idx])
-            item.idx = idx
-            return item
-        else:
-            return self.index_select(idx)
+    def get(self, idx: int) -> Data:
+        if self.len() == 1:
+            return copy.copy(self.data)
+
+        if not hasattr(self, '_data_list') or self._data_list is None:
+            self._data_list = self.len() * [None]
+        elif self._data_list[idx] is not None:
+            return copy.copy(self._data_list[idx])
+
+        data = separate(
+            cls=self.data.__class__,
+            batch=self.data,
+            idx=idx,
+            slice_dict=self.slices,
+            decrement=False,
+        )
+
+        self._data_list[idx] = copy.copy(data)
+
+        return data
+
+    # def __getitem__(self, idx):
+    #     if isinstance(idx, int):
+    #         item = self.get(self.indices()[idx])
+    #         item.idx = idx
+    #         return item
+    #     else:
+    #         return self.index_select(idx)
 
 
 class ToXAndPAndEdgeAttrForDeg(object):
@@ -889,6 +921,7 @@ class ToXAndPAndEdgeAttrForDeg(object):
             deg, deg_index, data)
 
         return data
+
 
 
 if __name__ == "__main__":
