@@ -204,7 +204,7 @@ class GNNModel(pl.LightningModule):
         start = time.time()
         pred_y, _ = self(batch_data)
         end = time.time()
-        print(f'training time:{end-start}')
+        print(f'=model.py::training time:{end-start}')
         pred_y = pred_y.view(-1)
         true_y = batch_data.y.view(-1)
 
