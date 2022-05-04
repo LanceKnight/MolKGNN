@@ -151,7 +151,7 @@ class GNNModel(pl.LightningModule):
         # self.atom_encoder = Embedding(118, hidden_dim)
         self.lin1 = Linear(args.ffn_hidden_dim, args.ffn_hidden_dim)
         self.lin2 = Linear(args.ffn_hidden_dim, args.task_dim)
-        self.ffn = Linear(args.ffn_hidden_dim, args.task_dim)
+        self.ffn = Linear(args.hidden_dim, args.task_dim)
         self.dropout = Dropout(p= args.ffn_dropout_rate)
         self.activate_func = ReLU()
         self.warmup_iterations = args.warmup_iterations
