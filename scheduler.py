@@ -6,21 +6,21 @@ import shutil, errno
 import itertools
 import time
 
-
+branch = 'cpu-mem-issue' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
     os.chdir(dir_name)
     os.system('git clone git@github.com:LanceKnight/kgnn.git')
     os.chdir('kgnn')
-    os.system('git checkout cpu-mem-issue') # Change this
+    os.system(f'git checkout {branch}') 
     os.chdir(cwd)
 
 def gitupdate(dir_name):
     cwd = os.getcwd()
     os.chdir(dir_name+'/kgnn')
     os.system('git gc')
-    os.system('git checkout bcl-benchmark') # Change this
+    os.system(f'git checkout {branch}') 
     os.system('git pull')
     os.chdir(cwd)
 
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 4) as pool:
+    with Pool(processes = 5) as pool:
         pool.starmap(run, data_pair_with_exp_id)
 
     pool.join()
