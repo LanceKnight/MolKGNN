@@ -837,7 +837,7 @@ class BaseKernelSetConv(Module):
                 num += self.num_trainable_kernel_list[i]
             self.num_kernel_list.append(num)
 
-        print(f'self.num_kernel_list:{self.num_kernel_list}')
+        # print(f'self.num_kernel_list:{self.num_kernel_list}')
 
     #         kernel_set = ModuleList(
     #             [KernelConv(D=D, num_supports=1, node_attr_dim =
@@ -861,7 +861,7 @@ class BaseKernelSetConv(Module):
         start = time.time()
         x_focal = torch.index_select(input=x, dim=0, index=selected_index)
         end = time.time()
-        print(f'=====kernels.py::x_focal index_select:{end-start}')
+        # print(f'=====kernels.py::x_focal index_select:{end-start}')
         # p_focal = torch.index_select(input=p, dim=0, index=selected_index)
 
         return x_focal  # , p_focal
@@ -893,7 +893,7 @@ class BaseKernelSetConv(Module):
         start = time.time()
         nei_x = torch.index_select(x, 0, nei_index)
         end = time.time()
-        print(f'=====kernels.py::nei index_select:{end-start}')
+        # print(f'=====kernels.py::nei index_select:{end-start}')
         nei_x = nei_x.reshape(-1, deg, nei_x.shape[-1])
         # print(f'nei_x:{nei_x.shape}')
 
@@ -979,7 +979,7 @@ class BaseKernelSetConv(Module):
         data: graph data containing feature matrix, adjacency matrix,
         edge_attr matrix
         '''
-        start = time.time()
+        # start = time.time()
         if len(argv) != 0:
             raise Exception(
                 'Kernel does not take positional argument, use keyword '
@@ -1053,7 +1053,7 @@ class BaseKernelSetConv(Module):
         start_row_id = 0
         start_col_id = 0
         for deg in range(1, 5):
-            print(f'deg:{deg}')
+            # print(f'deg:{deg}')
             start_deg = time.time()
             # x_focal = x_focal_list[deg-1]
             # p_focal = p_focal_list[deg-1]
@@ -1076,7 +1076,7 @@ class BaseKernelSetConv(Module):
                 selected_index, nei_index
             )
             end_convert = time.time()
-            print(f'=====kernels.py::convert:{end_convert-start_convert}')
+            # print(f'=====kernels.py::convert:{end_convert-start_convert}')
             # #             print('receptive_field')
             # #             print(receptive_field)
             if receptive_field is not None:
@@ -1125,8 +1125,8 @@ class BaseKernelSetConv(Module):
                             f'kernels.py::BaseKernelSet:both fixed and '
                             f'trainable kernelconv_set are '
                             f'None for degree {deg}')
-                end_cal_sc = time.time()
-                print(f'====kernels.py::calc:{end_cal_sc-start_cal_sc}')
+                # end_cal_sc = time.time()
+                # print(f'====kernels.py::calc:{end_cal_sc-start_cal_sc}')
 
                 # Fill a zero tensor will score for each degree in
                 # corresponding positions
@@ -1146,8 +1146,8 @@ class BaseKernelSetConv(Module):
                 #     print(f'kernels.py::shape:{zeros.shape} zeros:{zeros}')
             else:
                 start_row_id += self.num_kernel_list[deg - 1]
-            end_deg = time.time()
-            print(f'===kernels.py::deg_time:{end_deg-start_deg}')
+            # end_deg = time.time()
+            # print(f'===kernels.py::deg_time:{end_deg-start_deg}')
 
         # Reorder the output score tensor so that its rows correspond to the
         # original index in the feature matrix x. Score tensor has shape
@@ -1160,8 +1160,8 @@ class BaseKernelSetConv(Module):
 
         if (save_score == True):
             self.save_score(sc)  # save scores for analysis
-        end = time.time()
-        print(f'==kernels.py::kernelset:{end-start}')
+        # end = time.time()
+        # print(f'==kernels.py::kernelset:{end-start}')
         return sc
 
 
