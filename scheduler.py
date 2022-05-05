@@ -33,7 +33,7 @@ def run_command(exp_id, dataset, num_layers): # Change this
         --dataset_path ../../../dataset/ \
         --enable_oversampling_with_replacement \
         --warmup_iterations 200 \
-        --max_epochs 20 \
+        --max_epochs 1 \
         --peak_lr 5e-2 \
         --end_lr 1e-9 \
         --batch_size 17 \
@@ -50,7 +50,7 @@ def run_command(exp_id, dataset, num_layers): # Change this
         --num_kernel4_Nhop 50 \
         --node_feature_dim 27 \
         --edge_feature_dim 7 \
-        --hidden_dim 32')\
+        --hidden_dim 2')\
 
 def copyanything(src, dst):
     # If dst exits, remove it first
@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
     # Change this
     # Hyperparms
-    dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290'] 
+    dataset_list = ['435034']#['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290'] 
     # warmup = [200, 2000, 20000]
     # # num_epochs = [10, 20, 50]q
     # peak_lr = [5e-1, 5e-2, 5e-3]

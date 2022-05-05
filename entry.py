@@ -1,5 +1,4 @@
 # Written by Yunchao "Lance" Liu (www.LiuYunchao.com)
-# Adapted from Graphormer (https://github.com/microsoft/Graphormer)
 
 from data import DataLoaderModule, get_dataset
 from model import GNNModel
@@ -119,7 +118,11 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         args.resume_from_checkpoint = actual_training_checkpoint_dir + \
             '/last.ckpt'
 
+    from pytorch_lightning.callbacks import TQDMProgressBar
+    prog_bar=TQDMProgressBar(refresh_rate=100)
+
     trainer = pl.Trainer.from_argparse_args(args)
+    trainer.callbacks=[prog_bar]
     trainer.callbacks.append(actual_training_checkpoint_callback)
 
     if use_clearml:
@@ -225,9 +228,9 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         print(f'In Testing Mode:')
         best_path = actual_training_checkpoint_callback.best_model_path
         print(f'best_path:{best_path}')
-        model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
-                                               args=args)
-        result = trainer.test(model, datamodule=data_module)
+        #model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
+                                              # args=args)
+        #result = trainer.test(model, datamodule=data_module)
 
 
 def main(gnn_type, use_clearml):
