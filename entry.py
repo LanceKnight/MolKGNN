@@ -104,7 +104,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     actual_training_checkpoint_callback = ModelCheckpoint(
         monitor=monitoring_metric,
         dirpath=actual_training_checkpoint_dir,
-        filename=f'best_model_metric_{monitoring_metric}', #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+        filename='best_model_metric_{epoch}_{logAUC}', #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
         save_top_k=1,
         mode='max',
         save_last=True,
