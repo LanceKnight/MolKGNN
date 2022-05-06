@@ -228,9 +228,9 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         print(f'In Testing Mode:')
         best_path = actual_training_checkpoint_callback.best_model_path
         print(f'best_path:{best_path}')
-        #model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
-                                              # args=args)
-        #result = trainer.test(model, datamodule=data_module)
+        model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
+                                              args=args)
+        result = trainer.test(model, datamodule=data_module)
 
 
 def main(gnn_type, use_clearml):
@@ -290,7 +290,7 @@ if __name__ == '__main__':
     # gnn_type = 'dimenet_pp'
     # gnn_type = 'spherenet'
 
-    use_clearml = False
+    use_clearml = True
     if use_clearml:
         task = Task.init(project_name=f"experiments/kgnn",
                          task_name=f"{gnn_type}",
