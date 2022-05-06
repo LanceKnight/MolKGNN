@@ -33,7 +33,7 @@ def run_command(exp_id, dataset, num_layers): # Change this
         --dataset_path ../../../dataset/ \
         --enable_oversampling_with_replacement \
         --warmup_iterations 200 \
-        --max_epochs 1 \
+        --max_epochs 30\
         --peak_lr 5e-2 \
         --end_lr 1e-9 \
         --batch_size 17 \
