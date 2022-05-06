@@ -26,7 +26,7 @@ def gitupdate(dir_name):
 
 def run_command(exp_id, dataset, num_layers): # Change this
     # Model=kgnn
-    os.system(f'python entry.py \
+    os.system(f'python -W ignore entry.py \
         --task_name experiments{exp_id}\
         --dataset_name {dataset} \
         --num_workers 16 \
@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
     # Change this
     # Hyperparms
-    dataset_list = ['435034']#['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290'] 
+    dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290'] 
     # warmup = [200, 2000, 20000]
     # # num_epochs = [10, 20, 50]q
     # peak_lr = [5e-1, 5e-2, 5e-3]
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 2) as pool:
+    with Pool(processes = 3) as pool:
         pool.starmap(run, data_pair_with_exp_id)
 
     pool.join()
