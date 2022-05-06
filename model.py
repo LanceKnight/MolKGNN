@@ -237,7 +237,7 @@ class GNNModel(pl.LightningModule):
         # self.log(f"train performance by epoch", train_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
 
-    def validation_step(self, batch_data, batch_idx, dataloader_idx):
+    def validation_step(self, batch_data, batch_idx):
         """
         Process the data in validation dataloader in evaluation mode
         :param batch_data:
@@ -261,44 +261,20 @@ class GNNModel(pl.LightningModule):
         return valid_step_output
 
     def validation_epoch_end(self, valid_step_outputs):
-        """
-        Evaluate on both the validation and training datasets. Besides in the
-        training loop, the training dataset is included again because the
-        model is set to evaluation mode (see
-        https://stackoverflow.com/questions/60018578/what-does-model-eval-do
-        -in-pytorch for a introduction of evaluation mode).
-        :param valid_step_outputs: a list of outputs from two dataloader.
-        See the return description from function validation_step() above.
-        set dataloader
-        :return: None. However, set self.valid_epoch_outputs to be a
-        dictionary of metrics from each validation step, with metrics
-        from training dataset with "_no_dropout" suffix, such as
-        "loss_no_dropout". The self.valid_epoch_outputs is used for monitoring.
-        """
 
+        results = {}
+        all_pred = [output['pred_y'] for output in valid_step_outputs]
+        all_true = [output['true_y'] for output in valid_step_outputs]
+        results = self.get_evaluations(
+            results, torch.cat(all_true),
+            torch.cat(all_pred))
 
-        # There are true_y and pred_y from both validation and training
-        # datasets from each validation iteration. Here we get the
-        # concatenate them and calculate the metrics for all of them
-        for i, outputs_each_dataloader in enumerate(valid_step_outputs):
-            results = {}
-            all_pred = [output['pred_y'] for output in
-                        outputs_each_dataloader]
-            all_true = [output['true_y'] for output in outputs_each_dataloader]
-            results = self.get_evaluations(
-                results, torch.cat(all_true),
-                torch.cat(all_pred))
-            if i == 0:
-                self.valid_epoch_outputs = results
-                # Only log validation dataloader b/c this log is used for
-                # monitoring metric and saving the best model. The actual logging happends within
-                # clearml. See Monitor.py
-                for key in results.keys():
-                    self.log(key, results[key])
-            else:
-                for key in results.keys():
-                    new_key = key + "_no_dropout"
-                    self.valid_epoch_outputs[new_key] = results[key]
+        self.valid_epoch_outputs = results
+        # This log is used for monitoring metric and saving the best model. The actual logging happends within
+        # clearml. See Monitor.py
+        for key in results.keys():
+            self.log(key, results[key])
+            
         # Logging
         # self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 

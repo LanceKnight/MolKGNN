@@ -2,12 +2,12 @@
 
 from data import DataLoaderModule, get_dataset
 from model import GNNModel
-from monitors import LossMonitor, LossNoDropoutMonitor, \
-    LogAUCMonitor, LogAUCNoDropoutMonitor, \
-    PPVMonitor, PPVNoDropoutMonitor,\
-    RMSEMonitor, RMSENoDropoutMonitor,\
-    AccuracyMonitor, AccuracyNoDropoutMonitor,\
-    F1ScoreMonitor, F1ScoreNoDropoutMonitor
+from monitors import LossMonitor, \
+    LogAUCMonitor,  \
+    PPVMonitor,\
+    RMSEMonitor,\
+    AccuracyMonitor,\
+    F1ScoreMonitor
 from argparse import ArgumentParser
 from pprint import pprint
 import pytorch_lightning as pl
@@ -137,9 +137,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         trainer.callbacks.append(
             LossMonitor(stage='valid', logger=logger,
                         logging_interval='epoch'))
-        trainer.callbacks.append(
-            LossNoDropoutMonitor(stage='valid', logger=logger,
-                                 logging_interval='epoch'))
 
         # Learning rate monitors
         # trainer.callbacks.append(LearningRateMonitor(logging_interval='step'))
@@ -159,9 +156,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 trainer.callbacks.append(
                     AccuracyMonitor(stage='valid', logger=logger,
                                     logging_interval='epoch'))
-                trainer.callbacks.append(
-                    AccuracyNoDropoutMonitor(stage='valid', logger=logger,
-                                             logging_interval='epoch'))
                 continue
 
             if metric == 'RMSE':
@@ -172,9 +166,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 trainer.callbacks.append(
                     RMSEMonitor(stage='valid', logger=logger,
                                 logging_interval='epoch'))
-                trainer.callbacks.append(
-                    RMSENoDropoutMonitor(stage='valid', logger=logger,
-                                         logging_interval='epoch'))
                 continue
 
             if metric == 'logAUC':
@@ -185,9 +176,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 trainer.callbacks.append(
                     LogAUCMonitor(stage='valid', logger=logger,
                                   logging_interval='epoch'))
-                trainer.callbacks.append(
-                    LogAUCNoDropoutMonitor(stage='valid', logger=logger,
-                                           logging_interval='epoch'))
                 continue
 
             if metric == 'ppv':
@@ -196,9 +184,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                     PPVMonitor(stage='train', logger=logger, logging_interval='epoch'))
                 trainer.callbacks.append(
                     PPVMonitor(stage='valid', logger=logger, logging_interval='epoch'))
-                trainer.callbacks.append(
-                    PPVNoDropoutMonitor(stage='valid', logger=logger,
-                                        logging_interval='epoch'))
                 continue
 
             if metric == 'f1_score':
@@ -209,9 +194,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 trainer.callbacks.append(
                     F1ScoreMonitor(stage='valid', logger=logger,
                                    logging_interval='epoch'))
-                trainer.callbacks.append(
-                    F1ScoreNoDropoutMonitor(stage='valid', logger=logger,
-                                            logging_interval='epoch'))
                 continue
 
     if args.test:
