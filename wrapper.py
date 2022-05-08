@@ -11,6 +11,7 @@ import torch
 from torch_geometric.data import InMemoryDataset, Data, Dataset
 from torch_geometric.data.in_memory_dataset import nested_iter
 from torch_geometric.data.separate import separate
+from torch_geometric.data.collate import collate
 from torch_geometric.utils import degree
 from tqdm import tqdm
 import numpy as np
@@ -766,6 +767,23 @@ class QSARDataset(Dataset):
         self._data_list[idx] = copy.copy(data)
 
         return data
+
+    @staticmethod
+    def collate(data_list):
+        r"""Collates a Python list of :obj:`torch_geometric.data.Data` objects
+        to the internal storage format of
+        :class:`~torch_geometric.data.InMemoryDataset`."""
+        if len(data_list) == 1:
+            return data_list[0], None
+
+        data, slices, _ = collate(
+            data_list[0].__class__,
+            data_list=data_list,
+            increment=False,
+            add_batch=False,
+        )
+
+        return data, slices
 
     # def __getitem__(self, idx):
     #     if isinstance(idx, int):
