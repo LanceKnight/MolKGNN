@@ -80,7 +80,7 @@ def run(exp_id, dataset, num_layers):
     os.chdir(dir_name+'/kgnn')
 
     # # Task
-    run_command(exp_id, dataset, num_layers) # Change this
+    # run_command(exp_id, dataset, num_layers) # Change this
     # time.sleep(3)
     print(f'----{exp_name} finishes')
     os.chdir(cwd)
@@ -102,7 +102,7 @@ if __name__ == '__main__':
 
     # Change this
     # Hyperparms
-    dataset_list = [ '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290'] #'435008',
+    dataset_list = [ '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290', '435008',]
     # warmup = [200, 2000, 20000]
     # # num_epochs = [10, 20, 50]q
     # peak_lr = [5e-1, 5e-2, 5e-3]
@@ -125,7 +125,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 3) as pool:
+    with Pool(processes = 1) as pool:
         pool.starmap(run, data_pair_with_exp_id)
 
     pool.join()
