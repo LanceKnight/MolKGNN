@@ -973,7 +973,7 @@ if __name__ == "__main__":
 
     qsar_dataset = QSARDataset(root='../dataset/qsar/clean_sdf',
                                dataset=args.dataset,
-                               # pre_transform=ToXAndPAndEdgeAttrForDeg(),
+                               pre_transform=ToXAndPAndEdgeAttrForDeg(),
                                gnn_type=args.gnn_type
                                )
 
