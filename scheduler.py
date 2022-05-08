@@ -32,8 +32,8 @@ def run_command(exp_id, dataset, num_layers): # Change this
         --num_workers 16 \
         --dataset_path ../../../dataset/ \
         --enable_oversampling_with_replacement \
-        --warmup_iterations 200 \
-        --max_epochs 30\
+        --warmup_iterations 300 \
+        --max_epochs 20\
         --peak_lr 5e-2 \
         --end_lr 1e-9 \
         --batch_size 17 \
@@ -50,7 +50,7 @@ def run_command(exp_id, dataset, num_layers): # Change this
         --num_kernel4_Nhop 50 \
         --node_feature_dim 27 \
         --edge_feature_dim 7 \
-        --hidden_dim 2')\
+        --hidden_dim 32')\
 
 def copyanything(src, dst):
     # If dst exits, remove it first
@@ -80,7 +80,7 @@ def run(exp_id, dataset, num_layers):
     os.chdir(dir_name+'/kgnn')
 
     # # Task
-    # run_command(exp_id, dataset, num_layers) # Change this
+    run_command(exp_id, dataset, num_layers) # Change this
     # time.sleep(3)
     print(f'----{exp_name} finishes')
     os.chdir(cwd)
