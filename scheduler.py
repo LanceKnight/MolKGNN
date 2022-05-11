@@ -29,6 +29,7 @@ def run_command(exp_id, dataset, num_layers): # Change this
     os.system(f'python -W ignore entry.py \
         --task_name experiments{exp_id}\
         --dataset_name {dataset} \
+        --seed 26\
         --num_workers 16 \
         --dataset_path ../../../dataset/ \
         --enable_oversampling_with_replacement \
@@ -100,9 +101,39 @@ github_repo_dir = f'../experiments/template_dataset_layers'# Change this
 if __name__ == '__main__':
     mp.set_start_method('spawn')
 
+
+    dataset_list = [ '485290', '1843', '2258', '488997','2689', ]
+    # warmup = [200, 2000, 20000]
+    # # num_epochs = [10, 20, 50]q
+    # peak_lr = [5e-1, 5e-2, 5e-3]
+    # end_lr = [1e-8, 1e-9, 1e-10]
+    num_layers = [3]
+    data_pair = list(itertools.product(dataset_list, num_layers))
+    print(f'num data_pair:{len(data_pair)}')
+    data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(4,9)))
+    print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
+    with open('scheduler.log', "w+") as out_file:
+        out_file.write(f'num data_pair:{len(data_pair)}\n\n')
+        out_file.write(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
+
+
+    # Clone once from github
+    
+    if not os.path.exists(github_repo_dir):
+        os.mkdir(github_repo_dir)
+        gitclone(github_repo_dir)
+    gitupdate(github_repo_dir)
+
+    
+    with Pool(processes = 1) as pool:
+        pool.starmap(run, data_pair_with_exp_id)
+
+    # ================first tier end
+   
+
     # Change this
     # Hyperparms
-    dataset_list = [ '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290', '435008',]
+    dataset_list = [ '435008', '1798', '435034', '463087']
     # warmup = [200, 2000, 20000]
     # # num_epochs = [10, 20, 50]q
     # peak_lr = [5e-1, 5e-2, 5e-3]
@@ -125,9 +156,11 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 1) as pool:
+    with Pool(processes = 2) as pool:
         pool.starmap(run, data_pair_with_exp_id)
 
-    pool.join()
+
+
+    
     print(f'finish')
 
