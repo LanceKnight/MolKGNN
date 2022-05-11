@@ -14,6 +14,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 import os
 from clearml import Task
+import time
 
 
 def add_args(gnn_type):
@@ -119,7 +120,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
             '/last.ckpt'
 
     from pytorch_lightning.callbacks import TQDMProgressBar
-    prog_bar=TQDMProgressBar(refresh_rate=100)
+    prog_bar=TQDMProgressBar(refresh_rate=500)
 
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks=[prog_bar]
@@ -198,6 +199,9 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
 
     if args.test:
         print(f'In Testing Mode:')
+        last_path = args.default_root_dir+'/last.ckpl'
+        model  = GNNModel.load_from_checkpoint(last_path, gnn_type=gnn_type,
+                                              args=args)
         result = trainer.test(model, datamodule=data_module)
         pprint(result)
     elif args.validate:
@@ -213,6 +217,13 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
                                               args=args)
         result = trainer.test(model, datamodule=data_module)
+        if gnn_type=='kgnn':
+            # Save relevant data for analyses
+            model.save_atom_encoder(dir = 'utils/atom_encoder/',
+            file_name='atom_encoder.pt')
+            model.save_kernels(dir='utils/atom_encoder/', file_name='kernels.pt')
+            model.print_graph_embedding()
+            model.save_graph_embedding('utils/atom_encoder/graph_embedding')
 
 
 def main(gnn_type, use_clearml):
@@ -252,16 +263,10 @@ def main(gnn_type, use_clearml):
     actual_training(model, actual_training_data_module, use_clearml,
                     gnn_type, args)
 
-    if gnn_type=='kgnn':
-        # Save relevant data for analyses
-        model.save_atom_encoder(dir = 'utils/atom_encoder/',
-        file_name='atom_encoder.pt')
-        model.save_kernels(dir='utils/atom_encoder/', file_name='kernels.pt')
-        model.print_graph_embedding()
-        model.save_graph_embedding('utils/atom_encoder/graph_embedding')
 
 
 if __name__ == '__main__':
+    start = time.time()
     Task.set_offline(offline_mode=True)
     # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
@@ -282,3 +287,11 @@ if __name__ == '__main__':
         logger = task.get_logger()
         # logger = pl.loggers.tensorboard
     main(gnn_type, use_clearml)
+    end = time.time()
+    run_time = end-start
+    print(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')
+    with open(f'task_info', 'w+') as out_file:
+        if use_clearml:
+            out_file.write(f'task_id:{task.id}')
+            out_file.write('\n')
+        out_file.write(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')
