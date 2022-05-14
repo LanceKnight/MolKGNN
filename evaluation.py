@@ -106,8 +106,8 @@ def calculate_ppv(true_y, predicted_score):
         ppv = (tp / (tp + fp))
     else:
         ppv = np.NAN
-    print(f'\nevaluation.py::tn:{tn}, fp:{fp}, fn:{fn}, tp:{tp}, tp+fp'
-          f':{tp + fp} ppv:{ppv}')
+    # print(f'\nevaluation.py::tn:{tn}, fp:{fp}, fn:{fn}, tp:{tp}, tp+fp'
+    #       f':{tp + fp} ppv:{ppv}')
     return ppv
 
 def calculate_accuracy(true_y, predicted_score):

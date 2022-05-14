@@ -20,7 +20,7 @@ from torch_geometric.data import Data
 from torch_geometric.nn.acts import swish
 import torch
 from torch.optim import Adam
-
+import time
 
 class GNNModel(pl.LightningModule):
     """
@@ -151,7 +151,7 @@ class GNNModel(pl.LightningModule):
         # self.atom_encoder = Embedding(118, hidden_dim)
         self.lin1 = Linear(args.ffn_hidden_dim, args.ffn_hidden_dim)
         self.lin2 = Linear(args.ffn_hidden_dim, args.task_dim)
-        self.ffn = Linear(args.ffn_hidden_dim, args.task_dim)
+        self.ffn = Linear(args.hidden_dim, args.task_dim)
         self.dropout = Dropout(p= args.ffn_dropout_rate)
         self.activate_func = ReLU()
         self.warmup_iterations = args.warmup_iterations
@@ -168,6 +168,7 @@ class GNNModel(pl.LightningModule):
                                    gnn_type=gnn_type,
                                    dataset_path=args.dataset_path
                                    )['metrics']
+        self.valid_epoch_outputs = {}
 
     def forward(self, data):
 
@@ -199,7 +200,11 @@ class GNNModel(pl.LightningModule):
 
         # Get prediction and ground truth
         # print(batch_data.edge_index)
+
+        # start = time.time()
         pred_y, _ = self(batch_data)
+        # end = time.time()
+        # print(f'=model.py::training time:{end-start}')
         pred_y = pred_y.view(-1)
         true_y = batch_data.y.view(-1)
 
@@ -226,11 +231,13 @@ class GNNModel(pl.LightningModule):
             mean_output = sum(output[key] for output in train_step_outputs) \
                 / len(train_step_outputs)
             train_epoch_outputs[key] = mean_output
+            self.log(key, mean_output)
 
         self.train_epoch_outputs = train_epoch_outputs
         # self.log(f"train performance by epoch", train_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
-    def validation_step(self, batch_data, batch_idx, dataloader_idx):
+
+    def validation_step(self, batch_data, batch_idx):
         """
         Process the data in validation dataloader in evaluation mode
         :param batch_data:
@@ -254,41 +261,83 @@ class GNNModel(pl.LightningModule):
         return valid_step_output
 
     def validation_epoch_end(self, valid_step_outputs):
+
+        results = {}
+        all_pred = [output['pred_y'] for output in valid_step_outputs]
+        all_true = [output['true_y'] for output in valid_step_outputs]
+        results = self.get_evaluations(
+            results, torch.cat(all_true),
+            torch.cat(all_pred))
+
+        self.valid_epoch_outputs = results
+        # This log is used for monitoring metric and saving the best model. The actual logging happends within
+        # clearml. See Monitor.py
+        for key in results.keys():
+            self.log(key, results[key])
+            
+        # Logging
+        # self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
+
+    def test_step(self, batch_data, batch_idx):
+        """
+        Process the data in validation dataloader in test mode
+        :param batch_data:
+        :param batch_idx:
+        :return: It returns a list. The list is the outputs (a list) from
+        the testing datasets. The item in the list is a dictionary
+        from each step.
+        """
+
+        output = self(batch_data)
+        pred_y = output[0].view(-1)
+        true_y = batch_data.y.view(-1)
+        # print(f'y_pred.shape:{y_pred.shape} y_true:{y_true.shape}')
+
+        # Get numpy_prediction and numpy_y and concate those from all batches
+        test_step_output = {}
+        test_step_output['pred_y'] = pred_y
+        test_step_output['true_y'] = true_y
+        return test_step_output
+
+    def test_epoch_end(self, test_step_outputs):
         """
         Evaluate on both the validation and training datasets. Besides in the
         training loop, the training dataset is included again because the
         model is set to evaluation mode (see
         https://stackoverflow.com/questions/60018578/what-does-model-eval-do
         -in-pytorch for a introduction of evaluation mode).
-        :param valid_step_outputs: a list of outputs from two dataloader.
+        :param test_step_outputs: a list of outputs from two dataloader.
         See the return description from function validation_step() above.
         set dataloader
-        :return: None. However, set self.valid_epoch_outputs to be a
+        :return: None. However, set self.test_epoch_outputs to be a
         dictionary of metrics from each validation step, with metrics
         from training dataset with "_no_dropout" suffix, such as
         "loss_no_dropout". The self.valid_epoch_outputs is used for monitoring.
         """
-        self.valid_epoch_outputs = {}
+        self.test_epoch_outputs = {}
 
         # There are true_y and pred_y from both validation and training
         # datasets from each validation iteration. Here we get the
         # concatenate them and calculate the metrics for all of them
-        for i, outputs_each_dataloader in enumerate(valid_step_outputs):
-            results = {}
-            all_pred = [output['pred_y'] for output in
-                        outputs_each_dataloader]
-            all_true = [output['true_y'] for output in outputs_each_dataloader]
-            results = self.get_evaluations(
-                results, torch.cat(all_true),
-                torch.cat(all_pred))
-            if i == 0:
-                self.valid_epoch_outputs = results
-            else:
-                for key in results.keys():
-                    new_key = key + "_no_dropout"
-                    self.valid_epoch_outputs[new_key] = results[key]
+        results = {}
+        all_pred = [output['pred_y'] for output in
+                    test_step_outputs]
+        all_true = [output['true_y'] for output in test_step_outputs]
+        results = self.get_evaluations(
+            results, torch.cat(all_true),
+            torch.cat(all_pred))
+
         # Logging
-        # self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
+        for key in results.keys():
+            self.log(key, results[key])
+
+        self.test_epoch_outputs = results
+        with open('test_result.txt', 'w+') as output_file:
+            output_file.write(str(results))
+
+        # Logging
+        # self.log(f"valid performance by epoch", self.valid_epoch_outputs,
+        # on_epoch=True, prog_bar=True, logger=True)
 
     def configure_optimizers(self):
         """
@@ -321,7 +370,7 @@ class GNNModel(pl.LightningModule):
     def save_atom_encoder(self, dir, file_name):
         if not os.path.exists(dir):
             os.mkdir(dir)
-        torch.save(self.atom_encoder.state_dict(), dir + file_name)
+        torch.save(self.gnn_model.atom_encoder.state_dict(), dir + file_name)
 
     def save_graph_embedding(self, dir):
         if not os.path.exists(dir):
@@ -348,7 +397,7 @@ class GNNModel(pl.LightningModule):
                             "implemented for Kernel GNN")
 
     def print_graph_embedding(self):
-        print(self.graph_embedding)
+        print(f'model.py::graph_embedding:\n{self.graph_embedding}')
 
     @staticmethod
     def add_model_args(gnn_type, parent_parser):

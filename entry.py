@@ -1,20 +1,20 @@
 # Written by Yunchao "Lance" Liu (www.LiuYunchao.com)
-# Adapted from Graphormer (https://github.com/microsoft/Graphormer)
 
 from data import DataLoaderModule, get_dataset
 from model import GNNModel
-from monitors import LossMonitor, LossNoDropoutMonitor, \
-    LogAUCMonitor, LogAUCNoDropoutMonitor, \
-    PPVMonitor, PPVNoDropoutMonitor,\
-    RMSEMonitor, RMSENoDropoutMonitor,\
-    AccuracyMonitor, AccuracyNoDropoutMonitor,\
-    F1ScoreMonitor, F1ScoreNoDropoutMonitor
+from monitors import LossMonitor, \
+    LogAUCMonitor,  \
+    PPVMonitor,\
+    RMSEMonitor,\
+    AccuracyMonitor,\
+    F1ScoreMonitor
 from argparse import ArgumentParser
 from pprint import pprint
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 import os
 from clearml import Task
+import time
 
 
 def add_args(gnn_type):
@@ -34,6 +34,7 @@ def add_args(gnn_type):
 
     # Custom arguments
     parser.add_argument("--enable_pretraining", default=False)  # TODO: \
+    parser.add_argument('--task_name', type=str, default='Unnamed')
     # Pretraining
 
     # Experiment labels arguments for tagging the task
@@ -51,6 +52,7 @@ def add_args(gnn_type):
     args.max_steps = args.tot_iterations + 1
 
     if use_clearml:
+        task.set_name(args.task_name)
         task.add_tags(args.dataset_name)
     return args
 
@@ -98,11 +100,16 @@ def prepare_actual_model(args):
 
 def actual_training(model, data_module, use_clearml, gnn_type, args):
     # Add checkpoint
+    monitoring_metric = 'logAUC'
     actual_training_checkpoint_dir = args.default_root_dir
     actual_training_checkpoint_callback = ModelCheckpoint(
+        monitor=monitoring_metric,
         dirpath=actual_training_checkpoint_dir,
-        filename=data_module.dataset_name,
-        save_last=True
+        filename='best_model_metric_{epoch}_{logAUC}', #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+        save_top_k=1,
+        mode='max',
+        save_last=True,
+        save_on_train_epoch_end=False
     )
 
     # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
@@ -112,7 +119,11 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         args.resume_from_checkpoint = actual_training_checkpoint_dir + \
             '/last.ckpt'
 
+    from pytorch_lightning.callbacks import TQDMProgressBar
+    prog_bar=TQDMProgressBar(refresh_rate=500)
+
     trainer = pl.Trainer.from_argparse_args(args)
+    trainer.callbacks=[prog_bar]
     trainer.callbacks.append(actual_training_checkpoint_callback)
 
     if use_clearml:
@@ -127,9 +138,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         trainer.callbacks.append(
             LossMonitor(stage='valid', logger=logger,
                         logging_interval='epoch'))
-        trainer.callbacks.append(
-            LossNoDropoutMonitor(stage='valid', logger=logger,
-                                 logging_interval='epoch'))
 
         # Learning rate monitors
         # trainer.callbacks.append(LearningRateMonitor(logging_interval='step'))
@@ -149,9 +157,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 trainer.callbacks.append(
                     AccuracyMonitor(stage='valid', logger=logger,
                                     logging_interval='epoch'))
-                trainer.callbacks.append(
-                    AccuracyNoDropoutMonitor(stage='valid', logger=logger,
-                                             logging_interval='epoch'))
                 continue
 
             if metric == 'RMSE':
@@ -162,9 +167,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 trainer.callbacks.append(
                     RMSEMonitor(stage='valid', logger=logger,
                                 logging_interval='epoch'))
-                trainer.callbacks.append(
-                    RMSENoDropoutMonitor(stage='valid', logger=logger,
-                                         logging_interval='epoch'))
                 continue
 
             if metric == 'logAUC':
@@ -175,9 +177,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 trainer.callbacks.append(
                     LogAUCMonitor(stage='valid', logger=logger,
                                   logging_interval='epoch'))
-                trainer.callbacks.append(
-                    LogAUCNoDropoutMonitor(stage='valid', logger=logger,
-                                           logging_interval='epoch'))
                 continue
 
             if metric == 'ppv':
@@ -186,9 +185,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                     PPVMonitor(stage='train', logger=logger, logging_interval='epoch'))
                 trainer.callbacks.append(
                     PPVMonitor(stage='valid', logger=logger, logging_interval='epoch'))
-                trainer.callbacks.append(
-                    PPVNoDropoutMonitor(stage='valid', logger=logger,
-                                        logging_interval='epoch'))
                 continue
 
             if metric == 'f1_score':
@@ -199,13 +195,13 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 trainer.callbacks.append(
                     F1ScoreMonitor(stage='valid', logger=logger,
                                    logging_interval='epoch'))
-                trainer.callbacks.append(
-                    F1ScoreNoDropoutMonitor(stage='valid', logger=logger,
-                                            logging_interval='epoch'))
                 continue
 
     if args.test:
         print(f'In Testing Mode:')
+        last_path = args.default_root_dir+'/last.ckpl'
+        model  = GNNModel.load_from_checkpoint(last_path, gnn_type=gnn_type,
+                                              args=args)
         result = trainer.test(model, datamodule=data_module)
         pprint(result)
     elif args.validate:
@@ -215,6 +211,19 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     else:
         print(f'In Training Mode:')
         trainer.fit(model=model, datamodule=data_module)
+        print(f'In Testing Mode:')
+        best_path = actual_training_checkpoint_callback.best_model_path
+        print(f'best_path:{best_path}')
+        model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
+                                              args=args)
+        result = trainer.test(model, datamodule=data_module)
+        if gnn_type=='kgnn':
+            # Save relevant data for analyses
+            model.save_atom_encoder(dir = 'utils/atom_encoder/',
+            file_name='atom_encoder.pt')
+            model.save_kernels(dir='utils/atom_encoder/', file_name='kernels.pt')
+            model.print_graph_embedding()
+            model.save_graph_embedding('utils/atom_encoder/graph_embedding')
 
 
 def main(gnn_type, use_clearml):
@@ -254,32 +263,33 @@ def main(gnn_type, use_clearml):
     actual_training(model, actual_training_data_module, use_clearml,
                     gnn_type, args)
 
-    if gnn_type=='kgnn':
-        # Save relevant data for analyses
-        model.save_atom_encoder(dir = 'utils/atom_encoder/',
-        file_name='atom_encoder.pt')
-        model.save_kernels(dir='utils/atom_encoder/', file_name='kernels.pt')
-        model.print_graph_embedding()
-        model.save_graph_embedding('utils/atom_encoder/graph_embedding')
 
 
 if __name__ == '__main__':
-
+    start = time.time()
+    Task.set_offline(offline_mode=True)
     # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
-
-    # gnn_type = 'kgnn'
+    gnn_type = 'kgnn'
     # gnn_type = 'dimenet' # Not implemented
     # gnn_type = 'chironet'
-    gnn_type = 'dimenet_pp'
+    # gnn_type = 'dimenet_pp'
     # gnn_type = 'spherenet'
+    with open(f'task_info', 'w+') as out_file:
+        use_clearml = True
+        if use_clearml:
+            task = Task.init(project_name=f"experiments/kgnn",
+                             task_name=f"{gnn_type}",
+                             tags=[],
+                             reuse_last_task_id=False
+                             )
+            out_file.write(f'task_id:{task.id}')
+            out_file.write('\n')
 
-    use_clearml = False
-    if use_clearml:
-        task = Task.init(project_name=f"Tests/kgnn",
-                         task_name=f"{gnn_type}",
-                         tags=["debug", "more_features"])
-
-        logger = task.get_logger()
-        # logger = pl.loggers.tensorboard
-    main(gnn_type, use_clearml)
+            logger = task.get_logger()
+            # logger = pl.loggers.tensorboard
+        main(gnn_type, use_clearml)
+        end = time.time()
+        run_time = end-start
+        print(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')    
+        out_file.write(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')
