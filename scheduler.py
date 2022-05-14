@@ -110,7 +110,7 @@ if __name__ == '__main__':
     num_layers = [3]
     data_pair = list(itertools.product(dataset_list, num_layers))
     print(f'num data_pair:{len(data_pair)}')
-    data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(4,9)))
+    data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(0,5)))
     print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
     with open('scheduler.log', "w+") as out_file:
         out_file.write(f'num data_pair:{len(data_pair)}\n\n')
@@ -141,7 +141,7 @@ if __name__ == '__main__':
     num_layers = [3]
     data_pair = list(itertools.product(dataset_list, num_layers))
     print(f'num data_pair:{len(data_pair)}')
-    data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(len(data_pair))))
+    data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(5,9)))
     print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
     with open('scheduler.log', "w+") as out_file:
         out_file.write(f'num data_pair:{len(data_pair)}\n\n')
