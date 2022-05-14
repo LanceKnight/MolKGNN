@@ -275,23 +275,21 @@ if __name__ == '__main__':
     # gnn_type = 'chironet'
     # gnn_type = 'dimenet_pp'
     # gnn_type = 'spherenet'
-
-    use_clearml = True
-    if use_clearml:
-        task = Task.init(project_name=f"experiments/kgnn",
-                         task_name=f"{gnn_type}",
-                         tags=[],
-                         reuse_last_task_id=False
-                         )
-
-        logger = task.get_logger()
-        # logger = pl.loggers.tensorboard
-    main(gnn_type, use_clearml)
-    end = time.time()
-    run_time = end-start
-    print(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')
     with open(f'task_info', 'w+') as out_file:
+        use_clearml = True
         if use_clearml:
+            task = Task.init(project_name=f"experiments/kgnn",
+                             task_name=f"{gnn_type}",
+                             tags=[],
+                             reuse_last_task_id=False
+                             )
             out_file.write(f'task_id:{task.id}')
             out_file.write('\n')
+
+            logger = task.get_logger()
+            # logger = pl.loggers.tensorboard
+        main(gnn_type, use_clearml)
+        end = time.time()
+        run_time = end-start
+        print(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')    
         out_file.write(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')
