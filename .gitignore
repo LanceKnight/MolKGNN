@@ -15,5 +15,6 @@ analyses/atom_encoder/graph_embedding/*.txt
 analyses/atom_encoder/*.pt
 
 # Logs
+logs/
 scheduler.log
 task_info

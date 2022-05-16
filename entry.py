@@ -275,7 +275,7 @@ if __name__ == '__main__':
     # gnn_type = 'chironet'
     # gnn_type = 'dimenet_pp'
     # gnn_type = 'spherenet'
-    with open(f'task_info', 'w+') as out_file:
+    with open(f'logs/task_info', 'w+') as out_file:
         use_clearml = True
         if use_clearml:
             task = Task.init(project_name=f"experiments/kgnn",
