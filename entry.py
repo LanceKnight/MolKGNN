@@ -219,11 +219,11 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         result = trainer.test(model, datamodule=data_module)
         if gnn_type=='kgnn':
             # Save relevant data for analyses
-            model.save_atom_encoder(dir = 'utils/atom_encoder/',
+            model.save_atom_encoder(dir = 'analyses/atom_encoder/',
             file_name='atom_encoder.pt')
-            model.save_kernels(dir='utils/atom_encoder/', file_name='kernels.pt')
+            model.save_kernels(dir='analyses/atom_encoder/', file_name='kernels.pt')
             model.print_graph_embedding()
-            model.save_graph_embedding('utils/atom_encoder/graph_embedding')
+            model.save_graph_embedding('analyses/atom_encoder/graph_embedding')
 
 
 def main(gnn_type, use_clearml):
