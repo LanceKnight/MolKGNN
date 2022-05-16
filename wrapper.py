@@ -414,30 +414,23 @@ class D4DCHPDataset(Dataset):
             # data.dummy_graph_embedding = torch.ones(1, 32)
             data.smiles = smi
 
-            data_list.append(data)
+            if self.pre_filter is not None:
+                data = self.pre_filter(data)
+
+            if self.pre_transform is not None:
+                data = self.pre_transform(data)
+
+            torch.save(data, self.processed_paths[0])
+
             data_smiles_list.append(smiles_list[i])
 
-        if self.pre_filter is not None:
-            data_list = [data for data in data_list if self.pre_filter(data)]
-
-        if self.pre_transform is not None:
-            new_data_list = []
-            print('doing pre_transforming...')
-            for data in tqdm(data_list):
-                new_data_list.append(self.pre_transform(data))
-            data_list = new_data_list
-
-        # write data_smiles_list in processed paths
+        # Write data_smiles_list in processed paths
         data_smiles_series = pd.Series(data_smiles_list)
         data_smiles_series.to_csv(os.path.join(
             self.processed_dir, f'{self.subset_name}-smiles.csv'), index=False,
             header=False)
 
-        # print(f'data length:{len(data_list)}')
-        # for data in data_list:
-        #     print(data)
-        data, slices = self.collate(data_list)
-        torch.save((data, slices), self.processed_paths[0])
+
 
     def get_idx_split(self, seed):
         indices = np.load(self.idx_file, allow_pickle=True)
