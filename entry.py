@@ -204,6 +204,8 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                                               args=args)
         result = trainer.test(model, datamodule=data_module)
         pprint(result)
+        with open('logs/test_result.txt', 'w+') as out_file:
+            out_file.write(result)
     elif args.validate:
         print(f'In Validation Mode:')
         result = trainer.validate(model, datamodule=data_module)
