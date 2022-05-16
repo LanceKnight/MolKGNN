@@ -3,6 +3,7 @@ from models.ChIRoNet.embedding_functions import embedConformerWithAllPaths
 import copy
 import math
 import os
+import os.path as osp
 import pandas as pd
 from rdkit import Chem
 from rdkit.Chem import AllChem
@@ -238,25 +239,6 @@ def mol2graph(mol, D=3):
     # data = preprocess_item(data)
     return data
 
-def process_sdf(dataset, root):
-    # RDLogger.DisableLog('rdApp.*')
-    data_smiles_list = []
-    data_list = []
-    for file_name, label in [(f'{dataset}_actives_new.sdf', 1),
-                        (f'{dataset}_inactives_new.sdf', 0)]:
-        sdf_path = os.path.join(root, 'raw', file_name)
-        sdf_supplier = Chem.SDMolSupplier(sdf_path)
-        for i, mol in tqdm(enumerate(sdf_supplier)):
-            data = mol2graph(mol)
-            data.idx = i
-            data.y = torch.tensor([label], dtype=torch.int)
-            smiles = AllChem.MolToSmiles(mol)
-            data.smiles = smiles
-
-            data_list.append(data)
-            data_smiles_list.append(smiles)
-    return data_list, data_smiles_list
-
 def smiles2graph(D, smiles):
     if D == None:
         raise Exception(
@@ -489,7 +471,7 @@ class QSARDataset(Dataset):
                                                               pre_filter
 
         if not empty:
-            self.data, self.slices = torch.load(self.processed_paths[0])
+            self.data = torch.load(self.processed_paths[0])
 
     # def get(self, idx):
     #     data = Data()
@@ -509,32 +491,41 @@ class QSARDataset(Dataset):
         return file_name_list
 
     @property
-    def processed_file_names(self):
+    def processed_dir(self):
+        folder_name = ''
         if self.gnn_type in ['kgnn']:
-            name = f'kgnn-based-{self.dataset}-{self.D}D.pt'
+            folder_name = f'kgnn-based-{self.dataset}-{self.D}D'
         elif self.gnn_type in ['chironet']:
-            name = f'chironet-based-{self.dataset}-{self.D}D.pt'
+            folder_name = f'chironet-based-{self.dataset}-{self.D}D'
         elif self.gnn_type in ['dimenet_pp', 'schnet',
                                'spherenet']:
-            name = f'dimenetpp-based-{self.dataset}-{self.D}D.pt'
+            folder_name = f'dimenetpp-based-{self.dataset}-{self.D}D'
         else:
             NotImplementedError('wrapper.py gnn_type is not defined for '
                                 'processed dataset')
-        return name
+        return osp.join(self.root, f'processed/{folder_name}')
+
+
+    @property
+    def processed_file_names(self):
+        data_list = []
+        counter=-1
+        for file_name, label in [(f'{self.dataset}_actives_new.sdf', 1),
+                                 (f'{self.dataset}_inactives_new.sdf', 0)]:
+            sdf_path = os.path.join(self.root, 'raw', file_name)
+            sdf_supplier = Chem.SDMolSupplier(sdf_path)
+            for i in range(len(sdf_supplier)):
+                counter+=1
+                data_list.append(f'data_{counter}.pt')
+            if label == 1:
+                self.num_actives = len(sdf_supplier)
+            else:
+                self.num_inactives = len(sdf_supplier)
+        return data_list
 
     def download(self):
         raise NotImplementedError('Must indicate valid location of raw data. '
                                   'No download allowed')
-
-    # def __getitem__(self, index):
-    #     return self.get(index)
-    def len(self):
-        if self.slices is None:
-            return 1
-        for _, value in nested_iter(self.slices):
-            return len(value) - 1
-        return 0
-
 
     def process(self):
         if self.dataset not in ['435008', '1798', '435034', '1843', '2258',
@@ -543,23 +534,39 @@ class QSARDataset(Dataset):
             raise ValueError('Invalid dataset name')
 
         RDLogger.DisableLog('rdApp.*')
-        if self.gnn_type == 'chironet':
-            data_list, data_smiles_list = self.chiro_process()
-        elif self.gnn_type in ['dimenet_pp', 'schnet', 'spherenet']:
-            data_list, data_smiles_list = self.dimenetpp_process()
-        else:
-            data_list, data_smiles_list = self.regular_process()
 
-        # Apply pre_filter and pre_transform
-        if self.pre_filter is not None:
-            data_list = [data for data in data_list if self.pre_filter(data)]
+        data_smiles_list = []
+        counter = -1
+        for file_name, label in [(f'{self.dataset}_actives_new.sdf', 1),
+                                 (f'{self.dataset}_inactives_new.sdf', 0)]:
+            sdf_path = os.path.join(self.root, 'raw', file_name)
+            sdf_supplier = Chem.SDMolSupplier(sdf_path)
+            for i, mol in tqdm(enumerate(sdf_supplier)):
+                counter+=1
+                if self.gnn_type == 'chironet':
+                    data = self.chiro_process(mol)
+                elif self.gnn_type in ['dimenet_pp', 'schnet', 'spherenet']:
+                    data = self.dimenetpp_process(mol)
+                else:
+                    data = self.regular_process(mol)
 
-        if self.pre_transform is not None:
-            print('doing pre_transforming...')
-            new_data_list = []
-            for data in tqdm(data_list):
-                new_data_list.append(self.pre_transform(data))
-            data_list = new_data_list
+                data.idx = counter
+                data.y = torch.tensor([label], dtype=torch.int)
+
+                if self.pre_filter is not None:
+                    data = self.pre_filter(data)
+
+                if self.pre_transform is not None:
+                    data = self.pre_transform(data)
+
+                smiles = AllChem.MolToSmiles(mol)
+                data.smiles = smiles
+
+                # Write to processed file
+                torch.save(data, osp.join(self.processed_dir, f'data_'
+                                                              f'{counter}.pt'))
+
+                data_smiles_list.append(smiles)
 
         # Write data_smiles_list in processed paths
         data_smiles_series = pd.Series(data_smiles_list)
@@ -567,102 +574,70 @@ class QSARDataset(Dataset):
             self.processed_dir, f'{self.dataset}-smiles.csv'), index=False,
             header=False)
 
-        # Write to processed file
-        data, slices = self.collate(data_list)
-        torch.save((data, slices), self.processed_paths[0])
 
-    def dimenetpp_process(self):
-        dataset = self.dataset
-        root = self.root
-        data_smiles_list = []
-        data_list = []
-        for file_name, label in [(f'{dataset}_actives_new.sdf', 1),
-                                 (f'{dataset}_inactives_new.sdf', 0)]:
-            sdf_path = os.path.join(root, 'raw', file_name)
-            sdf_supplier = Chem.SDMolSupplier(sdf_path)
-            for i, mol in tqdm(enumerate(sdf_supplier)):
-                conformer = mol.GetConformer()
-                adj = rdkit.Chem.GetAdjacencyMatrix(mol)
-                adj = np.triu(np.array(adj,
-                                       dtype=int))  # keeping just upper
-                # triangular entries from sym matrix
-                array_adj = np.array(np.nonzero(adj),
-                                     dtype=int)  # indices of non-zero values in adj matrix
-                edge_index = np.zeros((2, 2 * array_adj.shape[1]),
-                                      dtype=int)  # placeholder for undirected edge list
-                edge_index[:, ::2] = array_adj
-                edge_index[:, 1::2] = np.flipud(array_adj)
 
-                atoms = rdkit.Chem.rdchem.Mol.GetAtoms(mol)
-                node_features = np.array(
-                    [atom.GetAtomicNum() for atom in atoms])  # Z
-                positions = np.array(
-                    [conformer.GetAtomPosition(atom.GetIdx()) for atom in
-                     atoms])  # xyz positions
-                edge_index, Z, pos = edge_index, node_features, positions
-                data = Data(
-                    x=torch.as_tensor(Z).unsqueeze(1),
-                    edge_index=torch.as_tensor(edge_index, dtype=torch.long))
-                data.pos = torch.as_tensor(pos, dtype=torch.float)
+    def dimenetpp_process(self, mol):
+        conformer = mol.GetConformer()
+        adj = rdkit.Chem.GetAdjacencyMatrix(mol)
+        adj = np.triu(np.array(adj,
+                               dtype=int))  # keeping just upper
+        # triangular entries from sym matrix
+        array_adj = np.array(np.nonzero(adj),
+                             dtype=int)  # indices of non-zero values in adj matrix
+        edge_index = np.zeros((2, 2 * array_adj.shape[1]),
+                              dtype=int)  # placeholder for undirected edge list
+        edge_index[:, ::2] = array_adj
+        edge_index[:, 1::2] = np.flipud(array_adj)
 
-                data.smiles = AllChem.MolToSmiles(mol)
+        atoms = rdkit.Chem.rdchem.Mol.GetAtoms(mol)
+        node_features = np.array(
+            [atom.GetAtomicNum() for atom in atoms])  # Z
+        positions = np.array(
+            [conformer.GetAtomPosition(atom.GetIdx()) for atom in
+             atoms])  # xyz positions
+        edge_index, Z, pos = edge_index, node_features, positions
+        data = Data(
+            x=torch.as_tensor(Z).unsqueeze(1),
+            edge_index=torch.as_tensor(edge_index, dtype=torch.long))
+        data.pos = torch.as_tensor(pos, dtype=torch.float)
+        return data
 
-                data_list.append(data)
+    def chiro_process(self, mol):
+        atom_symbols, edge_index, edge_features, node_features, \
+        bond_distances, bond_distance_index, bond_angles, \
+        bond_angle_index, dihedral_angles, dihedral_angle_index = \
+            embedConformerWithAllPaths(
+            mol, repeats=False)
 
-                data_smiles_list.append(data.smiles)
-                data.y = torch.tensor([label], dtype=torch.int)
-        return data_list, data_smiles_list
+        bond_angles = bond_angles % (2 * np.pi)
+        dihedral_angles = dihedral_angles % (2 * np.pi)
 
-    def chiro_process(self):
-        dataset = self.dataset
-        root = self.root
-        data_smiles_list = []
-        data_list = []
-        for file_name, label in [(f'{dataset}_actives_new.sdf', 1),
-                                 (f'{dataset}_inactives_new.sdf', 0)]:
-            sdf_path = os.path.join(root, 'raw', file_name)
-            sdf_supplier = Chem.SDMolSupplier(sdf_path)
-            for i, mol in tqdm(enumerate(sdf_supplier)):
-                atom_symbols, edge_index, edge_features, node_features, \
-                bond_distances, bond_distance_index, bond_angles, \
-                bond_angle_index, dihedral_angles, dihedral_angle_index = \
-                    embedConformerWithAllPaths(
-                    mol, repeats=False)
+        data = Data(
+            x=torch.as_tensor(node_features),
+            edge_index=torch.as_tensor(edge_index, dtype=torch.long),
+            edge_attr=torch.as_tensor(edge_features))
+        data.bond_distances = torch.as_tensor(bond_distances)
+        data.bond_distance_index = torch.as_tensor(bond_distance_index,
+                                                   dtype=torch.long).T
+        data.bond_angles = torch.as_tensor(bond_angles)
+        data.bond_angle_index = torch.as_tensor(bond_angle_index,
+                                                dtype=torch.long).T
+        data.dihedral_angles = torch.as_tensor(dihedral_angles)
+        data.dihedral_angle_index = torch.as_tensor(
+            dihedral_angle_index, dtype=torch.long).T
 
-                bond_angles = bond_angles % (2 * np.pi)
-                dihedral_angles = dihedral_angles % (2 * np.pi)
+        return data
 
-                data = Data(
-                    x=torch.as_tensor(node_features),
-                    edge_index=torch.as_tensor(edge_index, dtype=torch.long),
-                    edge_attr=torch.as_tensor(edge_features))
-                data.bond_distances = torch.as_tensor(bond_distances)
-                data.bond_distance_index = torch.as_tensor(bond_distance_index,
-                                                           dtype=torch.long).T
-                data.bond_angles = torch.as_tensor(bond_angles)
-                data.bond_angle_index = torch.as_tensor(bond_angle_index,
-                                                        dtype=torch.long).T
-                data.dihedral_angles = torch.as_tensor(dihedral_angles)
-                data.dihedral_angle_index = torch.as_tensor(
-                    dihedral_angle_index, dtype=torch.long).T
-                data.smiles = AllChem.MolToSmiles(mol)
-
-                data_list.append(data)
-
-                data_smiles_list.append(data.smiles)
-                data.y = torch.tensor([label], dtype=torch.int)
-        return data_list, data_smiles_list
-
-    def regular_process(self):
-        data_list, data_smiles_list = process_sdf(self.dataset, self.root)
-        return data_list, data_smiles_list
+    def regular_process(self, mol):
+        data = mol2graph(mol)
+        return data
 
 
     def get_idx_split(self, seed):
-        num_active = len(torch.nonzero(self.data.y))
+        num_active = self.num_actives#len(torch.nonzero(self.data.y))
         # num_active = len(torch.nonzero(torch.tensor([data.y for data in
         #                                              self.data])))
-        num_inactive = len(self.data.y) - num_active
+        num_inactive = self.num_inactives#len(self.data.y) - num_active
 
         active_idx = list(range(num_active))
         inactive_idx = list(range(num_active, num_active+num_inactive))
@@ -698,68 +673,14 @@ class QSARDataset(Dataset):
 
         split_dict['test'] = split_dict['valid']
 
-        # split_dict['test'] = active_idx[
-        #                       num_active_train + num_active_valid
-        #                       : num_active_train
-        #                         + num_active_valid
-        #                         + num_active_test] \
-        #                       + inactive_idx[
-        #                       num_inactive_train + num_inactive_valid
-        #                       : num_inactive_train
-        #                         + num_inactive_valid
-        #                         + num_inactive_test]
-        # for i in range(136,146):
-        #     print(f'wrapper.py::first 10 of train:{split_dict["train"][i]}')
-        # print(f'wrapper.py::train{len(split_dict["train"])}  valid:'
-        #       f'{len(split_dict["valid"])}  test:{len(split_dict["test"])}')
-
-        # split_dict['train'] = [torch.tensor(x) for x in
-        #                        active_idx[:num_active_train]] + [
-        #     torch.tensor(x) for x in inactive_idx[num_inactive_train]]  # 10K Training
-        # split_dict['valid'] = [torch.tensor(x) for x in active_idx[num_]] + [
-        #     torch.tensor(x) for x in range(20000, 29964)]  # 10K val
-        # split_dict['test'] = [torch.tensor(x) for x in range(326, 362)] + [
-        #     torch.tensor(x) for x in range(3000, 9066)]
-
-        # Total 362 actives. Split: train-290, 36, 36
-        # split_dict['train'] = [torch.tensor(x) for x in range(0, 326)] + [
-        #     torch.tensor(x) for x in range(1000, 10674)]  # 10K Training
-        # split_dict['valid'] = [torch.tensor(x) for x in range(326, 362)] + [
-        #     torch.tensor(x) for x in range(20000, 29964)]  # 10K val
-        # split_dict['test'] = [torch.tensor(x) for x in range(326, 362)] + [
-        #     torch.tensor(x) for x in range(3000, 9066)]
-
-        # Super small dataset for processing debugging.
-        # Total 362 actives. Split: 290, 36, 36
-        # split_dict['train'] = [torch.tensor(x) for x in range(0, 326)] + [
-        #     torch.tensor(x) for x in range(400, 1074)]  # 1K Training
-        # split_dict['valid'] = [torch.tensor(x) for x in range(326, 362)] + [
-        #     torch.tensor(x) for x in range(1100, 2064)]  # 1K val
-        # split_dict['test'] = [torch.tensor(x) for x in range(326, 362)] + [
-        #     torch.tensor(x) for x in range(3000, 4000)]
-
         return split_dict
 
-    def get(self, idx: int) -> Data:
-        if self.len() == 1:
-            return copy.copy(self.data)
-
-        if not hasattr(self, '_data_list') or self._data_list is None:
-            self._data_list = self.len() * [None]
-        elif self._data_list[idx] is not None:
-            return copy.copy(self._data_list[idx])
-
-        data = separate(
-            cls=self.data.__class__,
-            batch=self.data,
-            idx=idx,
-            slice_dict=self.slices,
-            decrement=False,
-        )
-
-        self._data_list[idx] = copy.copy(data)
-
+    def get(self, idx):
+        data = torch.load(osp.join(self.processed_dir, f'data_{idx}.pt'))
         return data
+
+    def len(self):
+        return len(self.processed_file_names)
 
     @staticmethod
     def collate(data_list):
@@ -956,7 +877,7 @@ if __name__ == "__main__":
                          )
 
     parser = ArgumentParser()
-    parser.add_argument('--dataset', type=str, default='435034')
+    parser.add_argument('--dataset', type=str, default='9999')
     parser.add_argument('--gnn_type', type=str, default='kgnn')
     parser.add_argument('--task_name', type=str, default='Unnamed')
     args = parser.parse_args()
