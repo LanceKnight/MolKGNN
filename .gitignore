@@ -7,6 +7,8 @@ __pycache__/
 actual_training_checkpoints/
 temp_training_checkpoints/
 
+# temporary scripts
+temp/
 
 # Results
 test_result.txt
@@ -15,5 +17,6 @@ analyses/atom_encoder/graph_embedding/*.txt
 analyses/atom_encoder/*.pt
 
 # Logs
+logs/
 scheduler.log
 task_info

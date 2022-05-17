@@ -6,7 +6,7 @@ import shutil, errno
 import itertools
 import time
 
-branch = 'cpu-mem-issue' # Change this
+branch = 'main' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -112,7 +112,7 @@ if __name__ == '__main__':
     print(f'num data_pair:{len(data_pair)}')
     data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(0,5)))
     print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
-    with open('scheduler.log', "w+") as out_file:
+    with open('logs/scheduler.log', "w+") as out_file:
         out_file.write(f'num data_pair:{len(data_pair)}\n\n')
         out_file.write(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
 
@@ -143,7 +143,10 @@ if __name__ == '__main__':
     print(f'num data_pair:{len(data_pair)}')
     data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(5,9)))
     print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
-    with open('scheduler.log', "w+") as out_file:
+
+    file_name='scheduler.log'
+    os.makedirs(os.path.dirname(file_name), exist_ok=True)
+    with open(file_name, "w") as out_file:
         out_file.write(f'num data_pair:{len(data_pair)}\n\n')
         out_file.write(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
 
