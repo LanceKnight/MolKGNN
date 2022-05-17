@@ -1,6 +1,7 @@
 # Written by Yunchao "Lance" Liu (www.LiuYunchao.com)
 
 from data import DataLoaderModule, get_dataset
+import glob
 from model import GNNModel
 from monitors import LossMonitor, \
     LogAUCMonitor,  \
@@ -13,6 +14,7 @@ from pprint import pprint
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 import os
+import os.path as osp
 from clearml import Task
 import time
 
@@ -199,13 +201,31 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
 
     if args.test:
         print(f'In Testing Mode:')
-        last_path = args.default_root_dir+'/last.ckpl'
+        print(f'default_root_dir:{args.default_root_dir}')
+        last_path = osp.join(args.default_root_dir, 'last.ckpt')
         model  = GNNModel.load_from_checkpoint(last_path, gnn_type=gnn_type,
                                               args=args)
-        result = trainer.test(model, datamodule=data_module)
-        pprint(result)
-        with open('logs/test_result.txt', 'w+') as out_file:
-            out_file.write(result)
+        last_result = trainer.test(model, datamodule=data_module)
+        print('last_result:\n')
+        pprint(last_result)
+
+        best_path = glob.glob(osp.join(args.default_root_dir, 'best*'))[0]
+        print(f"glob result:{best_path}")
+        model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
+                                              args=args)
+        best_result = trainer.test(model, datamodule=data_module)
+        print('best_result:\n')
+        pprint(best_result)
+
+        # Save the result to a file
+        filename = 'logs/test_result.log'
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        with open(filename, 'w') as out_file:
+            out_file.write('last:\n')
+            out_file.write(str(last_result))
+            out_file.write('\n')
+            out_file.write('best:\n')
+            out_file.write(str(best_result))
     elif args.validate:
         print(f'In Validation Mode:')
         result = trainer.validate(model, datamodule=data_module)
@@ -277,7 +297,10 @@ if __name__ == '__main__':
     # gnn_type = 'chironet'
     # gnn_type = 'dimenet_pp'
     # gnn_type = 'spherenet'
-    with open(f'logs/task_info', 'w+') as out_file:
+
+    filename = 'logs/task_info.log'
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    with open(filename, 'w') as out_file:
         use_clearml = True
         if use_clearml:
             task = Task.init(project_name=f"experiments/kgnn",
