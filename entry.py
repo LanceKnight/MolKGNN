@@ -221,11 +221,11 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         filename = 'logs/test_result.log'
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         with open(filename, 'w') as out_file:
+            out_file.write(f'{args.dataset_name}\n')
             out_file.write('last:\n')
-            out_file.write(str(last_result))
-            out_file.write('\n')
+            out_file.write(f'{str(last_result)}\n')
             out_file.write('best:\n')
-            out_file.write(str(best_result))
+            out_file.write(f'{str(best_result)}')
     elif args.validate:
         print(f'In Validation Mode:')
         result = trainer.validate(model, datamodule=data_module)
