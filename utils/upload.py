@@ -24,7 +24,7 @@ if __name__ == '__main__':
     file_list = []
     for filename in os.listdir(exp_directory):
         if "exp" in filename:
-            task_info_file = os.path.join(exp_directory, filename+'/kgnn/task_info')
+            task_info_file = os.path.join(exp_directory, filename+'/kgnn/logs/task_info.log')
             try:
                 with open(task_info_file) as in_file:
                     task_id = in_file.readline().split(':')[1][:-1]
