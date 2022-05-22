@@ -12,7 +12,7 @@ from monitors import LossMonitor, \
 from argparse import ArgumentParser
 from pprint import pprint
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
+from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, TQDMProgressBar
 import os
 import os.path as osp
 from clearml import Task
@@ -121,7 +121,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         args.resume_from_checkpoint = actual_training_checkpoint_dir + \
             '/last.ckpt'
 
-    from pytorch_lightning.callbacks import TQDMProgressBar
+
     prog_bar=TQDMProgressBar(refresh_rate=500)
 
     trainer = pl.Trainer.from_argparse_args(args)
