@@ -320,12 +320,20 @@ class GNNModel(pl.LightningModule):
         # datasets from each validation iteration. Here we get the
         # concatenate them and calculate the metrics for all of them
         results = {}
-        all_pred = [output['pred_y'] for output in
-                    test_step_outputs]
-        all_true = [output['true_y'] for output in test_step_outputs]
+        all_pred = torch.cat([output['pred_y'] for output in test_step_outputs])
+        all_true = torch.cat([output['true_y'] for output in test_step_outputs])
+
+        # Save pred and true in a file
+        filename = 'logs/test_sample_scores.log'
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        with open(filename, 'w') as out_file:
+            for i, pred in enumerate(all_pred):
+                true = all_true[i]
+                out_file.write(f'{pred},{true}\n')
+
+
         results = self.get_evaluations(
-            results, torch.cat(all_true),
-            torch.cat(all_pred))
+            results, all_true, all_pred)
 
         # Logging
         for key in results.keys():
