@@ -5,6 +5,7 @@ from tqdm import tqdm
 import shutil, errno
 import itertools
 import time
+import torch
 
 branch = 'lr-optimization' # Change this
 
@@ -24,23 +25,24 @@ def gitupdate(dir_name):
     os.system('git pull')
     os.chdir(cwd)
 
-def run_command(exp_id, dataset, num_layers): # Change this
+def run_command(exp_id, args): # Change this
+    print(f'args:{args}')
     # Model=kgnn
     os.system(f'python -W ignore entry.py \
         --task_name experiments{exp_id}\
-        --dataset_name {dataset} \
-        --seed 26\
-        --num_workers 8 \
+        --dataset_name {args[0]} \
+        --seed 42\
+        --num_workers 11 \
         --dataset_path ../../../dataset/ \
         --enable_oversampling_with_replacement \
-        --warmup_iterations 300 \
+        --warmup_iterations {args[1]} \
         --max_epochs 20\
-        --peak_lr 5e-2 \
-        --end_lr 1e-9 \
+        --peak_lr {args[2]} \
+        --end_lr {args[3]} \
         --batch_size 17 \
         --default_root_dir actual_training_checkpoints \
         --gpus 1 \
-        --num_layers {num_layers} \
+        --num_layers 3 \
         --num_kernel1_1hop 10 \
         --num_kernel2_1hop 20 \
         --num_kernel3_1hop 30 \
@@ -64,8 +66,9 @@ def copyanything(src, dst):
             shutil.copy(src, dst)
         else: raise
 
-def run(exp_id, dataset, num_layers):
-    exp_name = f'exp{exp_id}_dataset{dataset}_layers_{num_layers}' # Change this
+def run(exp_id, *args):
+    print(f'args1:{args}')
+    exp_name = f'exp{exp_id}_dataset{args[0]}_warmup{args[1]}_peak{args[2]}_end{args[3]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -80,8 +83,8 @@ def run(exp_id, dataset, num_layers):
     cwd = os.getcwd()
     os.chdir(dir_name+'/kgnn')
 
-    # # Task
-    run_command(exp_id, dataset, num_layers) # Change this
+    # Task
+    run_command(exp_id, args) # Change this
     # time.sleep(3)
     print(f'----{exp_name} finishes')
     os.chdir(cwd)
@@ -96,19 +99,20 @@ def attach_exp_id(input_tuple, tuple_id):
 
 # Global variable
 # Github repo template
-github_repo_dir = f'../experiments/template_dataset_layers'# Change this
+github_repo_dir = f'../experiments/template_dataset_layers'
 
 if __name__ == '__main__':
     mp.set_start_method('spawn')
+    torch.multiprocessing.set_sharing_strategy('file_system')
 
 
-    dataset_list = [ '1798' ]
+    dataset_list = [ '1798' ] # Change this
     warmup = [200, 2000, 20000]
     # # num_epochs = [20, 25, 30]
     peak_lr = [5e-1, 5e-2, 5e-3]
     end_lr = [1e-8, 1e-9, 1e-10]
     # num_layers = [3]
-    data_pair = list(itertools.product(dataset_list, warmup, peak_lr, end_lr ))
+    data_pair = list(itertools.product(dataset_list, warmup, peak_lr, end_lr )) # Change this
     print(f'num data_pair:{len(data_pair)}')
     data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(len(data_pair))))
     print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
@@ -125,8 +129,8 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    # with Pool(processes = 1) as pool:
-    #     pool.starmap(run, data_pair_with_exp_id)
+    with Pool(processes = 9) as pool: # Change this
+        pool.starmap(run, data_pair_with_exp_id)
 
    
     
