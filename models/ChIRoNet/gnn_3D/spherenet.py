@@ -278,7 +278,8 @@ class dist_emb(torch.nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        torch.arange(1, self.freq.numel() + 1, out=self.freq).mul_(PI)
+        with torch.no_grad():
+            torch.arange(1, self.freq.numel() + 1, out=self.freq).mul_(PI)
 
     def forward(self, dist):
         dist = dist.unsqueeze(-1) / self.cutoff
@@ -639,11 +640,13 @@ class SphereNet(torch.nn.Module):
         for update_v in self.update_vs:
             update_v.reset_parameters()
 
-
     def forward(self, z, pos, batch):
 
         if self.energy_and_force:
             pos.requires_grad_()
+        print(f'spherenet.py::pos:{pos.shape}')
+        print(f'cutoff:{self.cutoff}')
+        print(f'spherenet.py::batch:{batch.size}')
         edge_index = radius_graph(pos, r=self.cutoff, batch=batch)
         num_nodes=z.size(0)
         dist, angle, torsion, i, j, idx_kj, idx_ji = xyz_to_dat(pos, edge_index, num_nodes, use_torsion=True)

@@ -41,7 +41,6 @@ def get_dataset(dataset_name='435034', gnn_type='kgnn',
     else:
         pre_transform=None
 
-    print(f'data.py::gnn_type:{gnn_type}')
     if dataset_name in ['435008', '1798', '435034', '1843', '2258',
                                 '463087', '488997','2689', '485290', '9999']:
         qsar_dataset = QSARDataset(
@@ -90,7 +89,7 @@ def get_dataset(dataset_name='435034', gnn_type='kgnn',
             D=3,
             pre_transform=ToXAndPAndEdgeAttrForDeg(),
         )
-        print(f'd4_dchp_dataset:{d4_dchp_dataset}')
+
         dataset = {
             'num_class': 1,
             'dataset': d4_dchp_dataset,
@@ -146,7 +145,6 @@ class DataLoaderModule(LightningDataModule):
 
     def setup(self, stage: str = None):
         split_idx = self.dataset['dataset'].get_idx_split(seed=self.seed)
-        # print(f'split_idx:{split_idx}')
 
         self.dataset_train = self.dataset['dataset'][split_idx["train"]]
         print(f'training len:{len(self.dataset_train)})')
@@ -174,7 +172,7 @@ class DataLoaderModule(LightningDataModule):
                                                  else (1. / num_train_active)
                                                  for data in
                                                  self.dataset_train])
-            print(f'data.py::train_sampler weight:{train_sampler_weight}')
+            # print(f'data.py::train_sampler weight:{train_sampler_weight}')
 
             generator = torch.Generator()
             generator.manual_seed(self.seed)
@@ -256,35 +254,43 @@ class DataLoaderModule(LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
         )
-        return val_loader, train_loader
+        return val_loader#, train_loader
 
     def test_dataloader(self):
+        # Test laader
+        print(f'dataset_test:{self.dataset_test}')
+        num_test_active = len(torch.nonzero(
+            torch.tensor([data.y for data in self.dataset_test])))
+        num_test_inactive = len(self.dataset_test) - num_test_active
+
+        test_sampler_weight = torch.tensor([(1. / num_test_inactive)
+                                             if data.y == 0
+                                             else (1. / num_test_active)
+                                             for data in
+                                             self.dataset_test])
+        generator = torch.Generator()
+        generator.manual_seed(self.seed)
+        test_sampler = WeightedRandomSampler(weights=test_sampler_weight,
+                                              num_samples=len(
+                                                  test_sampler_weight),
+                                              generator=generator)
+
         test_loader = DataLoader(
             self.dataset_test,
             batch_size=self.batch_size,
+            # sampler=test_sampler,
             shuffle=False,
             num_workers=self.num_workers,
-            pin_memory=False,
-            collate_fn=partial(collator,
-                               max_node=get_dataset(
-                                   self.dataset_name,
-                                   gnn_type=self.gnn_type,
-                                   dataset_path=self.dataset_path
-                               )['max_node'],
-                               multi_hop_max_dist=self.multi_hop_max_dist,
-                               spatial_pos_max=self.spatial_pos_max),
         )
-        print('len(test_dataloader)', len(test_loader))
-        for batch in test_loader:
-            print(batch.y)
+
         return test_loader
 
     @staticmethod
     def add_argparse_args(parent_parser):
         parser = parent_parser.add_argument_group("DataLoader")
         parser.add_argument('--dataset_name', type=str, default="435034")
-        parser.add_argument('--num_workers', type=int, default=1)
-        parser.add_argument('--batch_size', type=int, default=32)
+        parser.add_argument('--num_workers', type=int, default=2)
+        parser.add_argument('--batch_size', type=int, default=17)
         parser.add_argument('--enable_oversampling_with_replacement', action='store_true', default=False)
         parser.add_argument('--dataset_path', type=str, default="../dataset/")
         return parent_parser

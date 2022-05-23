@@ -1,10 +1,11 @@
 from data import get_dataset
 from models.GCNNet.GCNNet import GCNNet
 from models.KGNN.KGNNNet import KGNNNet
-# from models.DimeNet.DimeNet import DimeNet
+from models.DimeNetPP.DimeNetPP import DimeNetPP
 from models.ChebNet.ChebNet import ChebNet
 from models.ChIRoNet.ChIRoNet import ChIRoNet
 from models.ChIRoNet.params_interpreter import string_to_object
+from models.SphereNet.SphereNet import SphereNet
 from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy, \
     calculate_f1_score
 from lr import PolynomialDecayLR
@@ -16,9 +17,10 @@ import pytorch_lightning as pl
 from sklearn.metrics import mean_squared_error
 from torch.nn import Linear, Sigmoid, ReLU, Embedding, Dropout
 from torch_geometric.data import Data
+from torch_geometric.nn.acts import swish
 import torch
 from torch.optim import Adam
-
+import time
 
 class GNNModel(pl.LightningModule):
     """
@@ -32,32 +34,21 @@ class GNNModel(pl.LightningModule):
 
     def __init__(self,
                  gnn_type,
-                 dataset_name,
-                 num_layers,
-                 node_feature_dim,
-                 edge_feature_dim,
-                 hidden_dim,
-                 output_dim,
-                 warmup_iterations,
-                 tot_iterations,
-                 peak_lr,
-                 end_lr,
-                 dropout_rate,
                  args=None
                  ):
         super(GNNModel, self).__init__()
-        print(f'kwargs:{args}')
         if gnn_type == 'gcn':
-            self.gnn_model = GCNNet(node_feature_dim, hidden_dim, num_layers)
+            self.gnn_model = GCNNet(args.node_feature_dim, args.hidden_dim,
+                                    args.num_layers)
         elif gnn_type == 'chebnet':
-            self.gnn_model = ChebNet(node_feature_dim, hidden_dim, num_layers, args.K)
-        elif gnn_type == 'dimenet':
-            self.gnn_model = DimeNet(emb_size=hidden_dim,
-                                     num_blocks=num_layers,
-                                     num_bilinear=1, num_spherical=7,
-            num_radial=6, cutoff=5.0, envelope_exponent=5, num_before_skip=1,
-            num_after_skip=2, num_dense_output=3, num_targets=12,
-            output_init='zeros', name='dimenet')
+            self.gnn_model = ChebNet(args.node_feature_dim, args.hidden_dim, args.num_layers, args.K)
+        # elif gnn_type == 'dimenet':
+        #     self.gnn_model = DimeNet(emb_size=args.hidden_dim,
+        #                              num_blocks=args.num_layers,
+        #                              num_bilinear=1, num_spherical=7,
+        #     num_radial=6, cutoff=5.0, envelope_exponent=5, num_before_skip=1,
+        #     num_after_skip=2, num_dense_output=3, num_targets=12,
+        #     output_init='zeros', name='dimenet')
         elif gnn_type == 'chironet':
 
             layers_dict = deepcopy(args.layers_dict)
@@ -73,13 +64,13 @@ class GNNModel(pl.LightningModule):
                 f'{type(args.activation_dict["EConv_mlp_hidden_activation"])}')
             self.gnn_model = ChIRoNet(
                 F_z_list=args.F_z_list,  # dimension of latent space
-                F_H=hidden_dim,
+                F_H=args.F_H,
                 # dimension of final node embeddings, after EConv and GAT layers
-                F_H_embed=node_feature_dim,
+                F_H_embed=args.F_H_embed,
                 # dimension of initial node feature vector, currently 41
-                F_E_embed=edge_feature_dim,
+                F_E_embed=args.F_E_embed,
                 # dimension of initial edge feature vector, currently 12
-                F_H_EConv=hidden_dim,
+                F_H_EConv=args.F_H_EConv,
                 # dimension of node embedding after EConv layer
                 layers_dict=args.layers_dict,
                 activation_dict= activation_dict,
@@ -96,8 +87,51 @@ class GNNModel(pl.LightningModule):
                 encoder_biases=args.encoder_biases,
                 dropout=args.dropout,
             )
+        elif gnn_type == 'dimenet_pp':
+            self.gnn_model = DimeNetPP(
+                hidden_channels=args.hidden_channels,
+                out_channels=args.out_channels,
+                num_blocks=args.num_blocks,
+                int_emb_size=args.int_emb_size,
+                basis_emb_size=args.basis_emb_size,
+                out_emb_channels=args.out_emb_channels,
+                num_spherical=args.num_spherical,
+                num_radial=args.num_radial,
+                cutoff=args.cutoff,
+                envelope_exponent=args.envelope_exponent,
+                num_before_skip=args.num_before_skip,
+                num_after_skip=args.num_after_skip,
+                num_output_layers=args.num_output_layers,
+                act=swish,
+                MLP_hidden_sizes=[],  # [] for contrastive)
+            )
+        elif gnn_type == 'spherenet':
+            self.gnn_model = SphereNet(
+                energy_and_force=False,  # False
+                cutoff=args.cutoff,  # 5.0
+                num_layers=args.num_layers,  # 4
+                hidden_channels=args.hidden_channels,  # 128
+                out_channels=args.out_channels,  # 1
+                int_emb_size=args.int_emb_size,  # 64
+                basis_emb_size_dist=args.basis_emb_size_dist,  # 8
+                basis_emb_size_angle=args.basis_emb_size_angle,  # 8
+                basis_emb_size_torsion=args.basis_emb_size_torsion,  # 8
+                out_emb_channels=args.out_emb_channels,  # 256
+                num_spherical=args.num_spherical,  # 7
+                num_radial=args.num_radial,  # 6
+                envelope_exponent=args.envelope_exponent,  # 5
+                num_before_skip=args.num_before_skip,  # 1
+                num_after_skip=args.num_after_skip,  # 2
+                num_output_layers=args.num_output_layers,  # 3
+                act=swish,
+                output_init='GlorotOrthogonal',
+                use_node_features=True,
+                MLP_hidden_sizes=args.MLP_hidden_sizes,
+                # [] for contrastive
+
+            )
         elif gnn_type == 'kgnn':
-            self.gnn_model = KGNNNet(num_layers=num_layers,
+            self.gnn_model = KGNNNet(num_layers=args.num_layers,
                                      num_kernel1_1hop = args.num_kernel1_1hop,
                                      num_kernel2_1hop = args.num_kernel2_1hop,
                                      num_kernel3_1hop = args.num_kernel3_1hop,
@@ -106,44 +140,37 @@ class GNNModel(pl.LightningModule):
                                      num_kernel2_Nhop = args.num_kernel2_Nhop,
                                      num_kernel3_Nhop = args.num_kernel3_Nhop,
                                      num_kernel4_Nhop = args.num_kernel4_Nhop,
-                                     x_dim = hidden_dim,
-                                     graph_embedding_dim = hidden_dim,
+                                     x_dim = args.node_feature_dim,
+                                     edge_attr_dim=args.edge_feature_dim,
+                                     graph_embedding_dim = args.hidden_dim,
                                      predefined_kernelsets=False
-                                     )
+            )
         else:
             raise ValueError(f"model.py::GNNModel: GNN model type is not "
                              f"defined. gnn_type={gnn_type}")
         # self.atom_encoder = Embedding(118, hidden_dim)
-        self.atom_encoder = Linear(node_feature_dim, hidden_dim)
-        self.bond_encoder = Linear(edge_feature_dim, hidden_dim)
-        self.lin1 = Linear(hidden_dim, hidden_dim)
-        self.lin2 = Linear(hidden_dim, output_dim)
-        self.ffn = Linear(hidden_dim, output_dim)
-        self.dropout = Dropout(p= dropout_rate)
+        self.lin1 = Linear(args.ffn_hidden_dim, args.ffn_hidden_dim)
+        self.lin2 = Linear(args.ffn_hidden_dim, args.task_dim)
+        self.ffn = Linear(args.hidden_dim, args.task_dim)
+        self.dropout = Dropout(p= args.ffn_dropout_rate)
         self.activate_func = ReLU()
-        self.warmup_iterations = warmup_iterations
-        self.tot_iterations = tot_iterations
-        self.peak_lr = peak_lr
-        self.end_lr = end_lr
-        self.loss_func = get_dataset(dataset_name=dataset_name,
+        self.warmup_iterations = args.warmup_iterations
+        self.tot_iterations = args.tot_iterations
+        self.peak_lr = args.peak_lr
+        self.end_lr = args.end_lr
+        self.loss_func = get_dataset(dataset_name=args.dataset_name,
                                      gnn_type=gnn_type, 
                                      dataset_path=args.dataset_path
                                     )['loss_func']
         self.graph_embedding = None
         self.smiles_list = None
-        self.metrics = get_dataset(dataset_name=dataset_name, 
+        self.metrics = get_dataset(dataset_name=args.dataset_name,
                                    gnn_type=gnn_type,
                                    dataset_path=args.dataset_path
                                    )['metrics']
+        self.valid_epoch_outputs = {}
 
     def forward(self, data):
-        # data.x = self.atom_encoder(data.x)
-        # print(f'model.py::data.x:{data.x.shape}')
-        # print(f'model.py::atom_encoder:{self.atom_encoder}')
-        # data.x = self.atom_encoder(data.x)
-        # # print(f'model.py::data.x:{data.x.shape}')
-        # data.edge_attr = self.bond_encoder(data.edge_attr)
-
 
         graph_embedding = self.gnn_model(data)
         graph_embedding = self.dropout(graph_embedding)
@@ -173,11 +200,14 @@ class GNNModel(pl.LightningModule):
 
         # Get prediction and ground truth
         # print(batch_data.edge_index)
+
+        # start = time.time()
         pred_y, _ = self(batch_data)
+        # end = time.time()
+        # print(f'=model.py::training time:{end-start}')
         pred_y = pred_y.view(-1)
         true_y = batch_data.y.view(-1)
-        print(f"models.py::true_y:{true_y}")
-        print(f"models.py::pred_y:{pred_y}")
+
         # Get metrics
         results = {}
         results = self.get_evaluations(results, true_y, pred_y)
@@ -201,11 +231,13 @@ class GNNModel(pl.LightningModule):
             mean_output = sum(output[key] for output in train_step_outputs) \
                 / len(train_step_outputs)
             train_epoch_outputs[key] = mean_output
+            self.log(key, mean_output)
 
         self.train_epoch_outputs = train_epoch_outputs
         # self.log(f"train performance by epoch", train_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
-    def validation_step(self, batch_data, batch_idx, dataloader_idx):
+
+    def validation_step(self, batch_data, batch_idx):
         """
         Process the data in validation dataloader in evaluation mode
         :param batch_data:
@@ -229,41 +261,91 @@ class GNNModel(pl.LightningModule):
         return valid_step_output
 
     def validation_epoch_end(self, valid_step_outputs):
+
+        results = {}
+        all_pred = [output['pred_y'] for output in valid_step_outputs]
+        all_true = [output['true_y'] for output in valid_step_outputs]
+        results = self.get_evaluations(
+            results, torch.cat(all_true),
+            torch.cat(all_pred))
+
+        self.valid_epoch_outputs = results
+        # This log is used for monitoring metric and saving the best model. The actual logging happends within
+        # clearml. See Monitor.py
+        for key in results.keys():
+            self.log(key, results[key])
+            
+        # Logging
+        # self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
+
+    def test_step(self, batch_data, batch_idx):
+        """
+        Process the data in validation dataloader in test mode
+        :param batch_data:
+        :param batch_idx:
+        :return: It returns a list. The list is the outputs (a list) from
+        the testing datasets. The item in the list is a dictionary
+        from each step.
+        """
+
+        output = self(batch_data)
+        pred_y = output[0].view(-1)
+        true_y = batch_data.y.view(-1)
+        # print(f'y_pred.shape:{y_pred.shape} y_true:{y_true.shape}')
+
+        # Get numpy_prediction and numpy_y and concate those from all batches
+        test_step_output = {}
+        test_step_output['pred_y'] = pred_y
+        test_step_output['true_y'] = true_y
+        return test_step_output
+
+    def test_epoch_end(self, test_step_outputs):
         """
         Evaluate on both the validation and training datasets. Besides in the
         training loop, the training dataset is included again because the
         model is set to evaluation mode (see
         https://stackoverflow.com/questions/60018578/what-does-model-eval-do
         -in-pytorch for a introduction of evaluation mode).
-        :param valid_step_outputs: a list of outputs from two dataloader.
+        :param test_step_outputs: a list of outputs from two dataloader.
         See the return description from function validation_step() above.
         set dataloader
-        :return: None. However, set self.valid_epoch_outputs to be a
+        :return: None. However, set self.test_epoch_outputs to be a
         dictionary of metrics from each validation step, with metrics
         from training dataset with "_no_dropout" suffix, such as
         "loss_no_dropout". The self.valid_epoch_outputs is used for monitoring.
         """
-        self.valid_epoch_outputs = {}
+        self.test_epoch_outputs = {}
 
         # There are true_y and pred_y from both validation and training
         # datasets from each validation iteration. Here we get the
         # concatenate them and calculate the metrics for all of them
-        for i, outputs_each_dataloader in enumerate(valid_step_outputs):
-            results = {}
-            all_pred = [output['pred_y'] for output in
-                        outputs_each_dataloader]
-            all_true = [output['true_y'] for output in outputs_each_dataloader]
-            results = self.get_evaluations(
-                results, torch.cat(all_true),
-                torch.cat(all_pred))
-            if i == 0:
-                self.valid_epoch_outputs = results
-            else:
-                for key in results.keys():
-                    new_key = key + "_no_dropout"
-                    self.valid_epoch_outputs[new_key] = results[key]
+        results = {}
+        all_pred = torch.cat([output['pred_y'] for output in test_step_outputs])
+        all_true = torch.cat([output['true_y'] for output in test_step_outputs])
+
+        # Save pred and true in a file
+        filename = 'logs/test_sample_scores.log'
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        with open(filename, 'w') as out_file:
+            for i, pred in enumerate(all_pred):
+                true = all_true[i]
+                out_file.write(f'{pred},{true}\n')
+
+
+        results = self.get_evaluations(
+            results, all_true, all_pred)
+
         # Logging
-        # self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
+        for key in results.keys():
+            self.log(key, results[key])
+
+        self.test_epoch_outputs = results
+        with open('test_result.txt', 'w+') as output_file:
+            output_file.write(str(results))
+
+        # Logging
+        # self.log(f"valid performance by epoch", self.valid_epoch_outputs,
+        # on_epoch=True, prog_bar=True, logger=True)
 
     def configure_optimizers(self):
         """
@@ -296,7 +378,7 @@ class GNNModel(pl.LightningModule):
     def save_atom_encoder(self, dir, file_name):
         if not os.path.exists(dir):
             os.mkdir(dir)
-        torch.save(self.atom_encoder.state_dict(), dir + file_name)
+        torch.save(self.gnn_model.atom_encoder.state_dict(), dir + file_name)
 
     def save_graph_embedding(self, dir):
         if not os.path.exists(dir):
@@ -323,7 +405,7 @@ class GNNModel(pl.LightningModule):
                             "implemented for Kernel GNN")
 
     def print_graph_embedding(self):
-        print(self.graph_embedding)
+        print(f'model.py::graph_embedding:\n{self.graph_embedding}')
 
     @staticmethod
     def add_model_args(gnn_type, parent_parser):
@@ -339,18 +421,16 @@ class GNNModel(pl.LightningModule):
         # E.g., parser.add_argument('--general_model_args', type=int,
         # default=12)
         parser.add_argument('--seed', type=int, default=42)
-        parser.add_argument('--node_feature_dim', type=int, default=27)
-        parser.add_argument('--edge_feature_dim', type=int, default=7)
-        parser.add_argument('--hidden_dim', type=int, default=32)
-        parser.add_argument('--output_dim', type=int, default=32)
-        parser.add_argument('--dropout_rate', type=float, default=0.25)
         parser.add_argument('--validate', action='store_true', default=False)
         parser.add_argument('--test', action='store_true', default=False)
         parser.add_argument('--warmup_iterations', type=int, default=60000)
-        parser.add_argument('--tot_iterations', type=int, default=1000000)
-        parser.add_argument('--peak_lr', type=float, default=2e-4)
+        parser.add_argument('--peak_lr', type=float, default=5e-2)
         parser.add_argument('--end_lr', type=float, default=1e-9)
-        # parser.add_argument('--num_layers', type=int, default=3)
+
+        # For linear layer
+        parser.add_argument('--ffn_dropout_rate', type=float, default=0.25)
+        parser.add_argument('--ffn_hidden_dim', type=int, default=64)
+        parser.add_argument('--task_dim', type=int, default=1)
 
         if gnn_type == 'gcn':
             GCNNet.add_model_specific_args(parent_parser)
@@ -358,10 +438,12 @@ class GNNModel(pl.LightningModule):
             ChebNet.add_model_specific_args(parent_parser)
         elif gnn_type == 'kgnn':
             KGNNNet.add_model_specific_args(parent_parser)
-        elif gnn_type == 'dimenet':
-            DimeNet.add_model_specific_args(parent_parser)
+        elif gnn_type == 'dimenet_pp':
+            DimeNetPP.add_model_specific_args(parent_parser)
         elif gnn_type == 'chironet':
             ChIRoNet.add_model_specific_args(parent_parser)
+        elif gnn_type == 'spherenet':
+            SphereNet.add_model_specific_args(parent_parser)
         else:
             NotImplementedError('model.py::GNNModel::add_model_args(): '
                                 'gnn_type is not defined for args groups')
