@@ -879,7 +879,7 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('--dataset', type=str, default='9999')
-    parser.add_argument('--gnn_type', type=str, default='kgnn')
+    parser.add_argument('--gnn_type', type=str, default=gnn_type)
     parser.add_argument('--task_name', type=str, default='Unnamed')
     args = parser.parse_args()
     if use_clearml:
