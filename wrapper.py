@@ -867,7 +867,8 @@ if __name__ == "__main__":
     from clearml import Task
     from argparse import ArgumentParser
 
-    gnn_type = 'kgnn'
+    # gnn_type = 'kgnn'
+    gnn_type = 'chironet'
     use_clearml = False
     if use_clearml:
         task = Task.init(project_name=f"DatasetCreation/kgnn",
