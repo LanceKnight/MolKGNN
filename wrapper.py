@@ -867,7 +867,8 @@ if __name__ == "__main__":
     from clearml import Task
     from argparse import ArgumentParser
 
-    gnn_type = 'kgnn'
+    # gnn_type = 'kgnn'
+    gnn_type = 'chironet'
     use_clearml = False
     if use_clearml:
         task = Task.init(project_name=f"DatasetCreation/kgnn",
@@ -878,7 +879,7 @@ if __name__ == "__main__":
 
     parser = ArgumentParser()
     parser.add_argument('--dataset', type=str, default='9999')
-    parser.add_argument('--gnn_type', type=str, default='kgnn')
+    parser.add_argument('--gnn_type', type=str, default=gnn_type)
     parser.add_argument('--task_name', type=str, default='Unnamed')
     args = parser.parse_args()
     if use_clearml:
@@ -887,7 +888,7 @@ if __name__ == "__main__":
 
     qsar_dataset = QSARDataset(root='../dataset/qsar/clean_sdf',
                                dataset=args.dataset,
-                               pre_transform=ToXAndPAndEdgeAttrForDeg(),
+                               # pre_transform=ToXAndPAndEdgeAttrForDeg(),
                                gnn_type=args.gnn_type
                                )
 
