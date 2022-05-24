@@ -43,14 +43,6 @@ def run_command(exp_id, args): # Change this
         --default_root_dir actual_training_checkpoints \
         --gpus 1 \
         --num_layers {args[6]} \
-        --num_kernel1_1hop {args[7]} \
-        --num_kernel2_1hop {args[8]} \
-        --num_kernel3_1hop {args[9]} \
-        --num_kernel4_1hop {args[10]} \
-        --num_kernel1_Nhop {args[7]} \
-        --num_kernel2_Nhop {args[8]} \
-        --num_kernel3_Nhop {args[9]} \
-        --num_kernel4_Nhop {args[10]} \
         --node_feature_dim 27 \
         --edge_feature_dim 7 \
         --hidden_dim {args[11]}')\
@@ -110,8 +102,8 @@ if __name__ == '__main__':
     seed_list = [42] # arg1
     warmup_list = [2000] # arg2
     epochs_list = [20] # arg3
-    peak_lr_list = [5e-2] # arg4
-    end_lr_list = [1e-10] # arg5
+    peak_lr_list = [6.04e-4] # arg4
+    end_lr_list = [1e-9] # arg5
     num_layer_list = [3] # arg6
     kernel1_list = [10] # arg7
     kernel2_list = [20] # arg8
