@@ -91,10 +91,10 @@ def prepare_actual_model(args):
         if not os.path.exists(args.pretrain_model_dir + '/last.ckpt'):
             raise Exception()
 
-        print('Creating a model from pretrained model...')
+        print('Using pretrained model...')
         # TODO: Load the model from the pretrained model
     else:  # if not using pretrained model
-        print(f'Creating a model from scratch...')
+        print(f'Not using pretrained model.')
 
         model = GNNModel(gnn_type, args=args)
     return model
@@ -292,10 +292,10 @@ if __name__ == '__main__':
     Task.set_offline(offline_mode=True)
     # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
-    gnn_type = 'kgnn'
+    # gnn_type = 'kgnn'
     # gnn_type = 'dimenet' # Not implemented
     # gnn_type = 'chironet'
-    # gnn_type = 'dimenet_pp'
+    gnn_type = 'dimenet_pp'
     # gnn_type = 'spherenet'
 
     filename = 'logs/task_info.log'
