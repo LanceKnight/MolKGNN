@@ -7,7 +7,7 @@ import shutil, errno
 import itertools
 import time
 
-branch = 'Dataset-mem-issue' # Change this
+branch = 'main' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -26,7 +26,7 @@ def run_command(dataset): # Change this
     cwd = os.getcwd()
     print(f'dataset:{dataset}')
     # Model=kgnn
-    if not osp.exists('logs/test_result.log'):
+    if not osp.exists('logs/test_sample_score.log'):
         os.system(f'python -W ignore entry.py \
             --task_name {dataset}_test\
             --dataset_name {dataset} \
