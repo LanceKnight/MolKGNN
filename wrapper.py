@@ -528,6 +528,7 @@ class QSARDataset(Dataset):
                                   'No download allowed')
 
     def process(self):
+        print(f'processing dataset {self.dataset}')
         if self.dataset not in ['435008', '1798', '435034', '1843', '2258',
                                 '463087', '488997','2689', '485290','9999']:
             # print(f'dataset:{self.dataset}')

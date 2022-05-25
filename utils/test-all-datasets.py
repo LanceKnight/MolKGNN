@@ -30,7 +30,7 @@ def run_command(dataset): # Change this
         os.system(f'python -W ignore entry.py \
             --task_name {dataset}_test\
             --dataset_name {dataset} \
-            --seed 30\
+            --seed 26\
             --num_workers 16 \
             --dataset_path ../../../dataset/ \
             --enable_oversampling_with_replacement \
