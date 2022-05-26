@@ -88,7 +88,7 @@ def calculate_logAUC(true_y, predicted_score, FPR_range=(0.001, 0.1)):
     return area
 
 
-def calculate_ppv(true_y, predicted_score):
+def calculate_ppv(true_y, predicted_score, cutoff = 0.5):
     '''
     Calculate positve predictive value (PPV)
     :param true_y: numpy array of the ground truth
@@ -97,7 +97,7 @@ def calculate_ppv(true_y, predicted_score):
     :return: a numpy array of PPV of size [1,1]
     '''
     predicted_prob = sigmoid(predicted_score) # Convert to range [0,1]
-    predicted_y = np.where(predicted_prob > 0.5, 1, 0) # Convert to binary
+    predicted_y = np.where(predicted_prob > cutoff, 1, 0) # Convert to binary
 
     tn, fp, fn, tp = confusion_matrix(
         true_y, predicted_y, labels=[0, 1]).ravel()

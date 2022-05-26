@@ -88,6 +88,7 @@ class GNNModel(pl.LightningModule):
                 dropout=args.dropout,
             )
         elif gnn_type == 'dimenet_pp':
+            print(f'model.py::running dimenet_pp')
             self.gnn_model = DimeNetPP(
                 hidden_channels=args.hidden_channels,
                 out_channels=args.out_channels,
@@ -105,6 +106,7 @@ class GNNModel(pl.LightningModule):
                 act=swish,
                 MLP_hidden_sizes=[],  # [] for contrastive)
             )
+            out_dim = args.out_channels
         elif gnn_type == 'spherenet':
             self.gnn_model = SphereNet(
                 energy_and_force=False,  # False
@@ -145,13 +147,14 @@ class GNNModel(pl.LightningModule):
                                      graph_embedding_dim = args.hidden_dim,
                                      predefined_kernelsets=False
             )
+            out_dim = args.hidden_dim
         else:
             raise ValueError(f"model.py::GNNModel: GNN model type is not "
                              f"defined. gnn_type={gnn_type}")
         # self.atom_encoder = Embedding(118, hidden_dim)
         self.lin1 = Linear(args.ffn_hidden_dim, args.ffn_hidden_dim)
         self.lin2 = Linear(args.ffn_hidden_dim, args.task_dim)
-        self.ffn = Linear(args.hidden_dim, args.task_dim)
+        self.ffn = Linear(out_dim, args.task_dim)
         self.dropout = Dropout(p= args.ffn_dropout_rate)
         self.activate_func = ReLU()
         self.warmup_iterations = args.warmup_iterations
