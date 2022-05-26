@@ -5,6 +5,7 @@ import torch_geometric
 import numpy as np
 import torch_scatter
 import math
+import copy
 
 class MLP(nn.Module):
     def __init__(self, input_size, output_size, hidden_sizes, activation_hidden, activation_out, biases, dropout):
@@ -278,6 +279,7 @@ class Encoder(nn.Module):
             dropout = dropout)
 
         GAT_out_channels = layers_dict['GAT_hidden_node_sizes']
+        GAT_out_channels = copy.deepcopy(GAT_out_channels)
         GAT_out_channels.append(self.F_H) # the final GAT layer must output node embeddings with the target dimesion, F_H
 
         self.Graph_Embedder = GraphNodeEmbedder(

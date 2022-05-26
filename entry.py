@@ -95,9 +95,42 @@ def prepare_actual_model(args):
         # TODO: Load the model from the pretrained model
     else:  # if not using pretrained model
         print(f'Not using pretrained model.')
-
         model = GNNModel(gnn_type, args=args)
     return model
+
+def testing_procedure(trainer, data_module, args):
+    print(f'In Testing Mode:')
+    print(f'default_root_dir:{args.default_root_dir}')
+
+    # Load best model
+    best_path = glob.glob(osp.join(args.default_root_dir, 'best*'))[0]
+    print(f"glob result:{best_path}")
+
+    model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
+                                          args=args)
+    best_result = trainer.test(model, datamodule=data_module)
+    print('best_result:\n')
+    pprint(best_result)
+
+
+    # Load last model
+    last_path = osp.join(args.default_root_dir, 'last.ckpt')
+    model  = GNNModel.load_from_checkpoint(last_path, gnn_type=gnn_type,
+                                          args=args)
+    last_result = trainer.test(model, datamodule=data_module)
+    print('last_result:\n')
+    pprint(last_result)
+
+
+    # Save the result to a file
+    filename = 'logs/test_result.log'
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    with open(filename, 'w') as out_file:
+        out_file.write(f'{args.dataset_name}\n')
+        out_file.write('last:\n')
+        out_file.write(f'{str(last_result)}\n')
+        out_file.write('best:\n')
+        out_file.write(f'{str(best_result)}')
 
 
 def actual_training(model, data_module, use_clearml, gnn_type, args):
@@ -200,34 +233,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 continue
 
     if args.test:
-        best_path = glob.glob(osp.join(args.default_root_dir, 'best*'))[0]
-        print(f"glob result:{best_path}")
-        model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
-                                              args=args)
-        best_result = trainer.test(model, datamodule=data_module)
-        print('best_result:\n')
-        pprint(best_result)
-
-
-        print(f'In Testing Mode:')
-        print(f'default_root_dir:{args.default_root_dir}')
-        last_path = osp.join(args.default_root_dir, 'last.ckpt')
-        model  = GNNModel.load_from_checkpoint(last_path, gnn_type=gnn_type,
-                                              args=args)
-        last_result = trainer.test(model, datamodule=data_module)
-        print('last_result:\n')
-        pprint(last_result)
-
-
-        # Save the result to a file
-        filename = 'logs/test_result.log'
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
-        with open(filename, 'w') as out_file:
-            out_file.write(f'{args.dataset_name}\n')
-            out_file.write('last:\n')
-            out_file.write(f'{str(last_result)}\n')
-            out_file.write('best:\n')
-            out_file.write(f'{str(best_result)}')
+        testing_procedure(trainer, data_module, args)
     elif args.validate:
         print(f'In Validation Mode:')
         result = trainer.validate(model, datamodule=data_module)
@@ -235,12 +241,9 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     else:
         print(f'In Training Mode:')
         trainer.fit(model=model, datamodule=data_module)
-        print(f'In Testing Mode:')
-        best_path = actual_training_checkpoint_callback.best_model_path
-        print(f'best_path:{best_path}')
-        model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
-                                              args=args)
-        result = trainer.test(model, datamodule=data_module)
+        
+        # In testing Mode
+        testing_procedure(trainer, data_module, args)
         if gnn_type=='kgnn':
             # Save relevant data for analyses
             model.save_atom_encoder(dir = 'analyses/atom_encoder/',
@@ -299,6 +302,10 @@ if __name__ == '__main__':
     gnn_type = 'chironet'
     # gnn_type = 'dimenet_pp'
     # gnn_type = 'spherenet'
+    print(f'========================')
+    print(f'Runing model: {gnn_type}')
+    print(f'========================')
+
 
     filename = 'logs/task_info.log'
     os.makedirs(os.path.dirname(filename), exist_ok=True)
@@ -320,3 +327,7 @@ if __name__ == '__main__':
         run_time = end-start
         print(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')    
         out_file.write(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')
+
+    print(f'========================')
+    print(f'Runing model: {gnn_type}')
+    print(f'========================')
