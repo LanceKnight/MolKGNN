@@ -7,7 +7,7 @@ import itertools
 import time
 import torch
 
-branch = 'main' # Change this
+branch = 'chiro' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -42,10 +42,7 @@ def run_command(exp_id, args): # Change this
         --batch_size 17 \
         --default_root_dir actual_training_checkpoints \
         --gpus 1 \
-        --num_layers {args[6]} \
-        --node_feature_dim 27 \
-        --edge_feature_dim 7 \
-        --hidden_dim {args[11]}')\
+        ')\
 
 def copyanything(src, dst):
     # If dst exits, remove it first
@@ -60,7 +57,7 @@ def copyanything(src, dst):
 
 def run(exp_id, *args):
     print(f'args1:{args}')
-    exp_name = f'exp{exp_id}_dataset{args[0]}_seed{args[1]}_warmup{args[2]}_epoch{args[3]}_peak{args[4]}_end{args[5]}_layer{args[6]}_k1-{args[7]}_k2-{args[8]}_k3-{args[9]}_k4-{args[10]}_hidden{args[11]}' # Change this
+    exp_name = f'exp{exp_id}_dataset{args[0]}_chiro' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -98,7 +95,7 @@ if __name__ == '__main__':
     torch.multiprocessing.set_sharing_strategy('file_system')
 
 
-    dataset_list = [ '485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087'] # arg0
+    dataset_list = ['9999']#[ '485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087'] # arg0
     seed_list = [42] # arg1
     warmup_list = [2000] # arg2
     epochs_list = [20] # arg3
