@@ -87,6 +87,7 @@ class GNNModel(pl.LightningModule):
                 encoder_biases=args.encoder_biases,
                 dropout=args.dropout,
             )
+            out_dim = args.F_H
         elif gnn_type == 'dimenet_pp':
             print(f'model.py::running dimenet_pp')
             self.gnn_model = DimeNetPP(
