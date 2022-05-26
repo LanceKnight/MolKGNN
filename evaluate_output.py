@@ -6,7 +6,7 @@ from sklearn.metrics import confusion_matrix
 import glob
 
 
-cutoff = 0.67
+cutoff = 0.5
 
 def evaluate(dataset, model='kgnn', cutoff=0.5):
 	if model == 'bcl':
@@ -15,7 +15,7 @@ def evaluate(dataset, model='kgnn', cutoff=0.5):
 		default_input_file = osp.join(bcl_dir, file_name) 
 	elif model == 'kgnn':
 		kgnn_dir = '../experiments/'
-		file_name = f'exp*_dataset{dataset}_layers_3/kgnn/logs/test_sample_scores.log'
+		file_name = f'exp*_dataset{dataset}*/kgnn/logs/test_sample_scores.log'
 		default_input_file = glob.glob(osp.join(kgnn_dir, file_name))[0]
 
 	parser = argparse.ArgumentParser()
@@ -62,7 +62,7 @@ def evaluate(dataset, model='kgnn', cutoff=0.5):
 	print(f'ppv:{ppv:0.5f}')
 
 if __name__ == '__main__':
-	datasets = ['1798']#['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
+	datasets = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
 	models = ['bcl', 'kgnn']
 	for dataset in datasets:
 		for model in models:

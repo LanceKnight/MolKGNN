@@ -200,6 +200,15 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 continue
 
     if args.test:
+        best_path = glob.glob(osp.join(args.default_root_dir, 'best*'))[0]
+        print(f"glob result:{best_path}")
+        model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
+                                              args=args)
+        best_result = trainer.test(model, datamodule=data_module)
+        print('best_result:\n')
+        pprint(best_result)
+
+
         print(f'In Testing Mode:')
         print(f'default_root_dir:{args.default_root_dir}')
         last_path = osp.join(args.default_root_dir, 'last.ckpt')
@@ -209,13 +218,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         print('last_result:\n')
         pprint(last_result)
 
-        best_path = glob.glob(osp.join(args.default_root_dir, 'best*'))[0]
-        print(f"glob result:{best_path}")
-        model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
-                                              args=args)
-        best_result = trainer.test(model, datamodule=data_module)
-        print('best_result:\n')
-        pprint(best_result)
 
         # Save the result to a file
         filename = 'logs/test_result.log'
