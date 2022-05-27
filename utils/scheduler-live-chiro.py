@@ -95,7 +95,7 @@ if __name__ == '__main__':
     torch.multiprocessing.set_sharing_strategy('file_system')
 
 
-    dataset_list = ['9999']#[ '485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087'] # arg0
+    dataset_list = [ '485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087'] # arg0
     seed_list = [42] # arg1
     warmup_list = [2000] # arg2
     epochs_list = [20] # arg3
