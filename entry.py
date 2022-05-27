@@ -109,6 +109,8 @@ def testing_procedure(trainer, data_module, args):
     model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
                                           args=args)
     best_result = trainer.test(model, datamodule=data_module)
+    os.rename('logs/test_sample_scores.log',
+              'logs/best_test_sample_scores.log')
     print('best_result:\n')
     pprint(best_result)
 
@@ -118,6 +120,8 @@ def testing_procedure(trainer, data_module, args):
     model  = GNNModel.load_from_checkpoint(last_path, gnn_type=gnn_type,
                                           args=args)
     last_result = trainer.test(model, datamodule=data_module)
+    os.rename('logs/test_sample_scores.log',
+              'logs/last_test_sample_scores.log')
     print('last_result:\n')
     pprint(last_result)
 

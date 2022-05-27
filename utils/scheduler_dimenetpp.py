@@ -91,7 +91,7 @@ if __name__ == '__main__':
     mp.set_start_method('spawn')
 
 
-    dataset_list = ['9999']#['485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087']
+    dataset_list = ['485290', '488997', '2689', '1798', '435034', '463087']#['485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087']
     # warmup = [200, 2000, 20000]
     # # num_epochs = [10, 20, 50]q
     # peak_lr = [5e-1, 5e-2, 5e-3]
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 9) as pool:
+    with Pool(processes = 3) as pool:
         pool.starmap(run, data_pair_with_exp_id)
     
     print(f'finish')
