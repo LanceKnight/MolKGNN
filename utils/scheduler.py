@@ -105,7 +105,7 @@ if __name__ == '__main__':
 
     start_time = time.time()
     now = datetime.now()
-    print(f'start time:{now}')
+    print(f'scheduler start time:{now}')
 
     # Change this
     # Hyperparms
@@ -147,7 +147,7 @@ if __name__ == '__main__':
 
     end_time=time.time()
     run_time = end_time-start_time
-    print(f'finish getting all test result: {run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}')
+    print(f'scheduler running time: {run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}')
     now = datetime.now()
-    print(f'finsh time:{now}')
+    print(f'scheduler finsh time:{now}')
 
