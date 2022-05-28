@@ -37,7 +37,7 @@ def run_command(exp_id, dataset, num_layers): # Change this
         --max_epochs 20\
         --peak_lr 1e-4 \
         --end_lr 1e-9 \
-        --batch_size 17 \
+        --batch_size 32 \
         --default_root_dir actual_training_checkpoints \
         --gpus 1 \
         ')
@@ -91,7 +91,7 @@ if __name__ == '__main__':
     mp.set_start_method('spawn')
 
 
-    dataset_list = ['485290', '488997', '2689', '1798', '435034', '463087']#['485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087']
+    dataset_list = ['485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087']
     # warmup = [200, 2000, 20000]
     # # num_epochs = [10, 20, 50]q
     # peak_lr = [5e-1, 5e-2, 5e-3]
