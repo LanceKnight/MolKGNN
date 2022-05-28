@@ -126,6 +126,11 @@ class KGNNNet(torch.nn.Module):
                                        nei_index_deg3=nei_index_deg3,
                                        nei_index_deg4=nei_index_deg4,
                                        save_score=save_score)
+        print(node_representation)
+        # if torch.any(node_representation.isnan()):
+        #     torch.set_printoptions(threshold=10_000)
+        #     print('node nan')
+        #     print(node_representation)
 
         graph_representation = self.graph_embedding_linear(
             self.pool(node_representation, batch))

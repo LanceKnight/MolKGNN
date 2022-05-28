@@ -181,9 +181,14 @@ class GNNModel(pl.LightningModule):
         prediction = self.ffn(graph_embedding)
 
         # # Debug
-        # print(f'model.py::smiles:{data.smiles}\n ')
-        # print(f'prediction:\n{prediction}\n ')
-        # print(f'graph_embedding:\n:{graph_embedding}')
+
+        print(f'prediction:\n{prediction}\n ')
+        print(f'graph_embedding:\n:{graph_embedding}')
+        if torch.any(graph_embedding.isnan()):
+            torch.set_printoptions(threshold=10_000)
+            print(f'model.py::smiles:{data.idx}\n ')
+            torch.save(data, 'debug/debug.data')
+
 
         self.graph_embedding = graph_embedding
         self.smiles_list = data.smiles
