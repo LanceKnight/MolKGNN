@@ -31,29 +31,29 @@ def run_command(exp_id, args): # Change this
     os.system(f'python -W ignore entry.py \
         --task_name experiments{exp_id}\
         --dataset_name {args[0]} \
-        --seed 42\
+        --seed {args[1]}\
         --num_workers 11 \
         --dataset_path ../../../dataset/ \
         --enable_oversampling_with_replacement \
-        --warmup_iterations {args[1]} \
-        --max_epochs 20\
-        --peak_lr {args[2]} \
-        --end_lr {args[3]} \
+        --warmup_iterations {args[2]} \
+        --max_epochs {args[3]}\
+        --peak_lr {args[4]} \
+        --end_lr {args[5]} \
         --batch_size 17 \
         --default_root_dir actual_training_checkpoints \
         --gpus 1 \
-        --num_layers 3 \
-        --num_kernel1_1hop 10 \
-        --num_kernel2_1hop 20 \
-        --num_kernel3_1hop 30 \
-        --num_kernel4_1hop 50 \
-        --num_kernel1_Nhop 10 \
-        --num_kernel2_Nhop 20 \
-        --num_kernel3_Nhop 30 \
-        --num_kernel4_Nhop 50 \
+        --num_layers {args[6]} \
+        --num_kernel1_1hop {args[7]} \
+        --num_kernel2_1hop {args[8]} \
+        --num_kernel3_1hop {args[9]} \
+        --num_kernel4_1hop {args[10]} \
+        --num_kernel1_Nhop {args[7]} \
+        --num_kernel2_Nhop {args[8]} \
+        --num_kernel3_Nhop {args[9]} \
+        --num_kernel4_Nhop {args[10]} \
         --node_feature_dim 27 \
         --edge_feature_dim 7 \
-        --hidden_dim 32')\
+        --hidden_dim {args[11]}')\
 
 def copyanything(src, dst):
     # If dst exits, remove it first
