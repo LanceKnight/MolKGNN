@@ -39,7 +39,7 @@ def run_command(exp_id, args): # Change this
         --max_epochs {args[3]}\
         --peak_lr {args[4]} \
         --end_lr {args[5]} \
-        --batch_size 17 \
+        --batch_size 32 \
         --default_root_dir actual_training_checkpoints \
         --gpus 1 \
         ')\
