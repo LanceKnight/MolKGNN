@@ -344,8 +344,6 @@ class GNNModel(pl.LightningModule):
             self.log(key, results[key])
 
         self.test_epoch_outputs = results
-        with open('test_result.txt', 'w+') as output_file:
-            output_file.write(str(results))
 
         # Logging
         # self.log(f"valid performance by epoch", self.valid_epoch_outputs,

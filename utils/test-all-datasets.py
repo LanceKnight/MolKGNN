@@ -7,7 +7,7 @@ import shutil, errno
 import itertools
 import time
 
-branch = 'main' # Change this
+branch = 'dimenet_pp' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -28,31 +28,19 @@ def run_command(dataset): # Change this
     # Model=kgnn
     if not osp.exists('logs/test_sample_scores.log'):
         os.system(f'python -W ignore entry.py \
-            --task_name {dataset}_test\
+            --task_name test_dimenetpp\
             --dataset_name {dataset} \
-            --seed 26\
+            --seed 42\
             --num_workers 16 \
             --dataset_path ../../../dataset/ \
             --enable_oversampling_with_replacement \
             --warmup_iterations 300 \
             --max_epochs 20\
-            --peak_lr 5e-2 \
+            --peak_lr 1e-4 \
             --end_lr 1e-9 \
             --batch_size 17 \
             --default_root_dir actual_training_checkpoints \
             --gpus 1 \
-            --num_layers 3 \
-            --num_kernel1_1hop 10 \
-            --num_kernel2_1hop 20 \
-            --num_kernel3_1hop 30 \
-            --num_kernel4_1hop 50 \
-            --num_kernel1_Nhop 10 \
-            --num_kernel2_Nhop 20 \
-            --num_kernel3_Nhop 30 \
-            --num_kernel4_Nhop 50 \
-            --node_feature_dim 27 \
-            --edge_feature_dim 7 \
-            --hidden_dim 32\
             --test\
             ')
 
