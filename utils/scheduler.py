@@ -5,8 +5,9 @@ from tqdm import tqdm
 import shutil, errno
 import itertools
 import time
+from datetime import datetime
 
-branch = 'dimenet_pp' # Change this
+branch = 'main' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -24,34 +25,35 @@ def gitupdate(dir_name):
     os.system('git pull')
     os.chdir(cwd)
 
-def run_command(exp_id, dataset, num_layers): # Change this
+def run_command(exp_id, args): 
     # Model=kgnn
     os.system(f'python -W ignore entry.py \
         --task_name experiments{exp_id}\
-        --dataset_name {dataset} \
-        --seed 26\
-        --num_workers 16 \
+        --dataset_name {args[0]} \
+        --seed {args[1]}\
+        --num_workers 11 \
         --dataset_path ../../../dataset/ \
         --enable_oversampling_with_replacement \
-        --warmup_iterations 300 \
-        --max_epochs 20\
-        --peak_lr 5e-2 \
-        --end_lr 1e-9 \
-        --batch_size 17 \
+        --warmup_iterations {args[2]} \
+        --max_epochs {args[3]}\
+        --peak_lr {args[4]} \
+        --end_lr {args[5]} \
         --default_root_dir actual_training_checkpoints \
         --gpus 1 \
-        --num_layers {num_layers} \
-        --num_kernel1_1hop 10 \
-        --num_kernel2_1hop 20 \
-        --num_kernel3_1hop 30 \
-        --num_kernel4_1hop 50 \
-        --num_kernel1_Nhop 10 \
-        --num_kernel2_Nhop 20 \
-        --num_kernel3_Nhop 30 \
-        --num_kernel4_Nhop 50 \
+        --num_layers {args[6]} \
+        --num_kernel1_1hop {args[7]} \
+        --num_kernel2_1hop {args[8]} \
+        --num_kernel3_1hop {args[9]} \
+        --num_kernel4_1hop {args[10]} \
+        --num_kernel1_Nhop {args[7]} \
+        --num_kernel2_Nhop {args[8]} \
+        --num_kernel3_Nhop {args[9]} \
+        --num_kernel4_Nhop {args[10]} \
         --node_feature_dim 27 \
         --edge_feature_dim 7 \
-        --hidden_dim 32')\
+        --hidden_dim {args[11]}\
+        --batch_size {args[12]}\
+        ')\
 
 def copyanything(src, dst):
     # If dst exits, remove it first
@@ -64,8 +66,8 @@ def copyanything(src, dst):
             shutil.copy(src, dst)
         else: raise
 
-def run(exp_id, dataset, num_layers):
-    exp_name = f'exp{exp_id}_dataset{dataset}_dimenetpp' # Change this
+def run(exp_id, *args):
+    exp_name = f'exp{exp_id}_full_param1' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -81,7 +83,7 @@ def run(exp_id, dataset, num_layers):
     os.chdir(dir_name+'/kgnn')
 
     # # Task
-    run_command(exp_id, dataset, num_layers) # Change this
+    run_command(exp_id, args)
     # time.sleep(3)
     print(f'----{exp_name} finishes')
     os.chdir(cwd)
@@ -101,50 +103,32 @@ github_repo_dir = f'../experiments/template_dataset_layers'# Change this
 if __name__ == '__main__':
     mp.set_start_method('spawn')
 
-
-    dataset_list = [ '485290', '1843', '2258', '488997','2689', ]
-    # warmup = [200, 2000, 20000]
-    # # num_epochs = [10, 20, 50]q
-    # peak_lr = [5e-1, 5e-2, 5e-3]
-    # end_lr = [1e-8, 1e-9, 1e-10]
-    num_layers = [3]
-    data_pair = list(itertools.product(dataset_list, num_layers))
-    print(f'num data_pair:{len(data_pair)}')
-    data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(0,5)))
-    print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
-    with open('logs/scheduler.log', "w+") as out_file:
-        out_file.write(f'num data_pair:{len(data_pair)}\n\n')
-        out_file.write(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
-
-
-    # Clone once from github
-    
-    if not os.path.exists(github_repo_dir):
-        os.mkdir(github_repo_dir)
-        gitclone(github_repo_dir)
-    gitupdate(github_repo_dir)
-
-    
-    with Pool(processes = 1) as pool:
-        pool.starmap(run, data_pair_with_exp_id)
-
-    # ================first tier end
-   
+    start_time = time.time()
+    now = datetime.now()
+    print(f'scheduler start time:{now}')
 
     # Change this
     # Hyperparms
-    dataset_list = [ '435008', '1798', '435034', '463087']
-    # warmup = [200, 2000, 20000]
-    # # num_epochs = [10, 20, 50]q
-    # peak_lr = [5e-1, 5e-2, 5e-3]
-    # end_lr = [1e-8, 1e-9, 1e-10]
-    num_layers = [3]
-    data_pair = list(itertools.product(dataset_list, num_layers))
+    #dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
+    dataset_list = [ '9999' ] # arg0
+    seed_list = [42, 26, 30] # arg1
+    warmup_list = [200] # arg2
+    epochs_list = [20] # arg3
+    peak_lr_list = [5e-1] # arg4
+    end_lr_list = [1e-10] # arg5
+    num_layer_list = [1] # arg6
+    kernel1_list = [10] # arg7
+    kernel2_list = [20] # arg8
+    kernel3_list = [30] # arg9
+    kernel4_list = [50] # arg10
+    hidden_dim = [32] # arg11
+    batch_size = [17] # arg12
+    data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim, batch_size )) 
     print(f'num data_pair:{len(data_pair)}')
-    data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(5,9)))
+    data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(len(data_pair))))
     print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
 
-    file_name='scheduler.log'
+    file_name='utils/scheduler.log'
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
     with open(file_name, "w") as out_file:
         out_file.write(f'num data_pair:{len(data_pair)}\n\n')
@@ -152,18 +136,18 @@ if __name__ == '__main__':
 
 
     # Clone once from github
-    
     if not os.path.exists(github_repo_dir):
         os.mkdir(github_repo_dir)
         gitclone(github_repo_dir)
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 2) as pool:
+    with Pool(processes = 3) as pool:
         pool.starmap(run, data_pair_with_exp_id)
 
-
-
-    
-    print(f'finish')
+    end_time=time.time()
+    run_time = end_time-start_time
+    print(f'scheduler running time: {run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}')
+    now = datetime.now()
+    print(f'scheduler finsh time:{now}')
 
