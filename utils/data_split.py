@@ -1,5 +1,7 @@
 import torch
 import random
+import hashlib
+import json
 
 def get_split(num_active, num_inactive, seed, dataset_name):
     active_idx = list(range(num_active))
@@ -38,6 +40,9 @@ def get_split(num_active, num_inactive, seed, dataset_name):
                              + num_inactive_test]
     filename = f'data_split/{dataset_name}_seed{seed}.pt'
     torch.save(split_dict, filename)
+
+    data_md5 = hashlib.md5(json.dumps(split_dict, sort_keys=True).encode('utf-8')).hexdigest()
+    print(f'data_md5_checksum:{data_md5}')
     print(f'file saved at {filename}')
 
 if __name__ == '__main__':
@@ -54,7 +59,7 @@ if __name__ == '__main__':
     }
     seed = 42
     # dataset_name_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
-    dastaset_name_list = ['1798']
+    dataset_name_list = ['1798']
     for dataset_name in dataset_name_list:
         num_actives = dataset_info[dataset_name]['num_active']
         num_inactives = dataset_info[dataset_name]['num_inactive']
