@@ -95,17 +95,14 @@ if __name__ == '__main__':
     torch.multiprocessing.set_sharing_strategy('file_system')
 
 
-    dataset_list = [ '485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087'] # arg0
+    # dataset_list = [ '485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087'] # arg0
+    dataset_list = [ '1798']
     seed_list = [42] # arg1
-    warmup_list = [2000] # arg2
+    warmup_list = [200] # arg2
     epochs_list = [20] # arg3
-    peak_lr_list = [6.04e-4] # arg4
+    peak_lr_list = [6.04e-3, 6.04e-4, 6.04e-5] # arg4
     end_lr_list = [1e-9] # arg5
-    num_layer_list = [3] # arg6
-    kernel1_list = [10] # arg7
-    kernel2_list = [20] # arg8
-    kernel3_list = [30] # arg9
-    kernel4_list = [50] # arg10
+    num_layer_list = [2,3,4] # arg6
     hidden_dim = [32] # arg11
 
     data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim )) # Change this
