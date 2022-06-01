@@ -1,0 +1,23 @@
+{
+  "dataset_name": "9999",
+  "dataset_path": "~/projects/unified_framework/dataset/",
+  "edge_feature_dim": 7,
+  "end_lr": 1e-09,
+  "ffn_dropout_rate": 0.25,
+  "ffn_hidden_dim": 64,
+  "hidden_dim": 64,
+  "node_feature_dim": 27,
+  "num_kernel1_1hop": 10,
+  "num_kernel1_Nhop": 10,
+  "num_kernel2_1hop": 20,
+  "num_kernel2_Nhop": 20,
+  "num_kernel3_1hop": 30,
+  "num_kernel3_Nhop": 30,
+  "num_kernel4_1hop": 50,
+  "num_kernel4_Nhop": 50,
+  "num_layers": 2,
+  "peak_lr": 0.0005426448695738529,
+  "task_dim": 1,
+  "tot_iterations": 281,
+  "warmup_iterations": 200
+}

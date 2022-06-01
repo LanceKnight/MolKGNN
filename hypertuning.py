@@ -4,18 +4,22 @@ from data import DataLoaderModule, get_dataset
 import glob
 from model import GNNModel
 from monitors import LossMonitor, \
-    LogAUCMonitor,  \
-    PPVMonitor,\
-    RMSEMonitor,\
-    AccuracyMonitor,\
+    LogAUCMonitor, \
+    PPVMonitor, \
+    RMSEMonitor, \
+    AccuracyMonitor, \
     F1ScoreMonitor
+
 from argparse import ArgumentParser
+from clearml import Task
 from pprint import pprint
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, TQDMProgressBar
 import os
 import os.path as osp
-from clearml import Task
+from ray.tune.integration.pytorch_lightning import TuneReportCallback
+from ray.tune.suggest.hyperopt import HyperOptSearch
+from ray import tune
 import time
 
 
@@ -37,38 +41,31 @@ def add_args(gnn_type):
     # Custom arguments
     parser.add_argument("--enable_pretraining", default=False)  # TODO: \
     parser.add_argument('--task_name', type=str, default='Unnamed')
+    parser.add_argument('--hypertune', action='store_true', default=False)
     # Pretraining
 
     # Experiment labels arguments for tagging the task
     parser.add_argument("--machine", default='barium')
 
-
     args = parser.parse_args()
-    args.tot_iterations = round(len(get_dataset(
-                                                dataset_name=args.dataset_name,
-                                                gnn_type=gnn_type,
-                                                dataset_path=args.dataset_path
-                                                )['dataset'],
-                                    ) * 0.8 /args.batch_size) \
-                          * args.max_epochs + 1
-    args.max_steps = args.tot_iterations + 1
+
 
     if use_clearml:
         task.set_name(args.task_name)
         task.add_tags(f'model_{gnn_type}')
-        task.add_tags(args.dataset_name) # args0 in scheduler
-        task.add_tags(f'seed_{args.seed}') # args1
-        task.add_tags(f'warm_{args.warmup_iterations}') # args2
-        task.add_tags(f'epoch_{args.max_epochs}') # args3
-        task.add_tags(f'peak_{args.peak_lr}') # args4
-        task.add_tags(f'end_{args.end_lr}') # args5
-        task.add_tags(f'layers_{args.num_layers}') # args6
-        task.add_tags(f'k1_{args.num_kernel1_1hop}') # args7
-        task.add_tags(f'k2_{args.num_kernel2_1hop}') # args8
-        task.add_tags(f'k3_{args.num_kernel3_1hop}') # args9
-        task.add_tags(f'k4_{args.num_kernel4_1hop}') # args10
-        task.add_tags(f'hidden_{args.hidden_dim}') # args11
-        task.add_tags(f'batch_{args.batch_size}') # args12
+        task.add_tags(args.dataset_name)  # args0 in scheduler
+        task.add_tags(f'seed_{args.seed}')  # args1
+        task.add_tags(f'warm_{args.warmup_iterations}')  # args2
+        task.add_tags(f'epoch_{args.max_epochs}')  # args3
+        task.add_tags(f'peak_{args.peak_lr}')  # args4
+        task.add_tags(f'end_{args.end_lr}')  # args5
+        task.add_tags(f'layers_{args.num_layers}')  # args6
+        task.add_tags(f'k1_{args.num_kernel1_1hop}')  # args7
+        task.add_tags(f'k2_{args.num_kernel2_1hop}')  # args8
+        task.add_tags(f'k3_{args.num_kernel3_1hop}')  # args9
+        task.add_tags(f'k4_{args.num_kernel4_1hop}')  # args10
+        task.add_tags(f'hidden_{args.hidden_dim}')  # args11
+        task.add_tags(f'batch_{args.batch_size}')  # args12
 
     return args
 
@@ -87,6 +84,9 @@ def prepare_data(args, enable_pretraining=False, gnn_type='kgnn'):
     actual_data_module = DataLoaderModule.from_argparse_args(args)
     data_modules.append(actual_data_module)
 
+    args.tot_iterations = round(len(actual_data_module.dataset['dataset']) * 0.9/args.batch_size)* args.max_epochs + 1
+    args.max_steps = args.tot_iterations + 1
+
     # Pretraining data module
     if enable_pretraining:
         pass  # TODO: add pretraining data module
@@ -94,7 +94,7 @@ def prepare_data(args, enable_pretraining=False, gnn_type='kgnn'):
     return data_modules
 
 
-def prepare_actual_model(param_config, args):
+def prepare_actual_model(args):
     # Create actual training model using a pretrained model, if that exists
     enable_pretraining = args.enable_pretraining
     if enable_pretraining:
@@ -109,8 +109,9 @@ def prepare_actual_model(param_config, args):
         # TODO: Load the model from the pretrained model
     else:  # if not using pretrained model
         print(f'Not using pretrained model.')
-        model = GNNModel(gnn_type, param_config=param_config)
+        model = GNNModel(gnn_type, args=args)
     return model
+
 
 def testing_procedure(trainer, data_module, args):
     print(f'In Testing Mode:')
@@ -120,7 +121,7 @@ def testing_procedure(trainer, data_module, args):
     best_path = glob.glob(osp.join(args.default_root_dir, 'best*'))[0]
     print(f"glob result:{best_path}")
 
-    model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
+    model = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
                                           args=args)
     best_result = trainer.test(model, datamodule=data_module)
     os.rename('logs/test_sample_scores.log',
@@ -128,17 +129,15 @@ def testing_procedure(trainer, data_module, args):
     print('best_result:\n')
     pprint(best_result)
 
-
     # Load last model
     last_path = osp.join(args.default_root_dir, 'last.ckpt')
-    model  = GNNModel.load_from_checkpoint(last_path, gnn_type=gnn_type,
+    model = GNNModel.load_from_checkpoint(last_path, gnn_type=gnn_type,
                                           args=args)
     last_result = trainer.test(model, datamodule=data_module)
     os.rename('logs/test_sample_scores.log',
               'logs/last_test_sample_scores.log')
     print('last_result:\n')
     pprint(last_result)
-
 
     # Save the result to a file
     filename = 'logs/test_result.log'
@@ -151,14 +150,17 @@ def testing_procedure(trainer, data_module, args):
         out_file.write(f'{str(best_result)}')
 
 
-def actual_training(model, data_module, use_clearml, gnn_type, args):
+def actual_training(config, data_module, use_clearml, gnn_type, args):
+    # Create model
+    model = GNNModel(gnn_type, config)
+
     # Add checkpoint
     monitoring_metric = 'logAUC'
     actual_training_checkpoint_dir = args.default_root_dir
     actual_training_checkpoint_callback = ModelCheckpoint(
         monitor=monitoring_metric,
         dirpath=actual_training_checkpoint_dir,
-        filename='best_model_metric_{epoch}_{logAUC}', #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+        filename='best_model_metric_{epoch}_{logAUC}',  # f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
         save_top_k=1,
         mode='max',
         save_last=True,
@@ -170,14 +172,17 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
             f'{actual_training_checkpoint_dir}/last.ckpt'):
         print('Resuming from actual training checkpoint')
         args.resume_from_checkpoint = actual_training_checkpoint_dir + \
-            '/last.ckpt'
+                                      '/last.ckpt'
 
-
-    prog_bar=TQDMProgressBar(refresh_rate=500)
+    prog_bar = TQDMProgressBar(refresh_rate=500)
 
     trainer = pl.Trainer.from_argparse_args(args)
-    trainer.callbacks=[prog_bar]
+    trainer.callbacks = [prog_bar]
     trainer.callbacks.append(actual_training_checkpoint_callback)
+    if args.hypertune:
+        metrics = data_module.dataset['metrics']
+        print(f'hypertuning.py::{metrics}')
+        trainer.callbacks.append(TuneReportCallback(metrics, on="validation_end"))
 
     if use_clearml:
         # Loss monitors
@@ -197,10 +202,11 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 
         # Other metrics monitors
-        metrics = get_dataset(dataset_name=args.dataset_name,
-                              gnn_type=gnn_type,
-                              dataset_path=args.dataset_path
-                              )['metrics']
+        metrics = data_module.dataset.metrics
+        # metrics = get_dataset(dataset_name=args.dataset_name,
+        #                       gnn_type=gnn_type,
+        #                       dataset_path=args.dataset_path
+        #                       )['metrics']
         for metric in metrics:
             if metric == 'accuracy':
                 # Accuracy monitors
@@ -259,13 +265,13 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     else:
         print(f'In Training Mode:')
         trainer.fit(model=model, datamodule=data_module)
-        
+
         # In testing Mode
         testing_procedure(trainer, data_module, args)
-        if gnn_type=='kgnn':
+        if gnn_type == 'kgnn':
             # Save relevant data for analyses
-            model.save_atom_encoder(dir = 'analyses/atom_encoder/',
-            file_name='atom_encoder.pt')
+            model.save_atom_encoder(dir='analyses/atom_encoder/',
+                                    file_name='atom_encoder.pt')
             model.save_kernels(dir='analyses/atom_encoder/', file_name='kernels.pt')
             model.print_graph_embedding()
             model.save_graph_embedding('analyses/atom_encoder/graph_embedding')
@@ -290,7 +296,7 @@ def main(gnn_type, use_clearml):
     enable_pretraining = args.enable_pretraining
     print(f'enable_pretraining:{enable_pretraining}')
     args.gnn_type = gnn_type
-    data_modules = prepare_data( args, enable_pretraining) # A list of
+    data_modules = prepare_data(args, enable_pretraining)  # A list of
 
     # data_module to accommodate different pretraining data
     actual_training_data_module = data_modules[0]
@@ -302,19 +308,24 @@ def main(gnn_type, use_clearml):
         # TODO: pretrain the model
 
     # Prepare model for actural training
-    param_config = {
-            'num_layers':args.num_layers,
-            'num_kernel1_1hop':args.num_kernel1_1hop,
-            'num_kernel2_1hop':args.num_kernel2_1hop,
-            'num_kernel3_1hop':args.num_kernel3_1hop,
-            'num_kernel4_1hop':args.num_kernel4_1hop,
-            'num_kernel1_Nhop':args.num_kernel1_Nhop,
-            'num_kernel2_Nhop':args.num_kernel2_Nhop,
-            'num_kernel3_Nhop':args.num_kernel3_Nhop,
-            'num_kernel4_Nhop':args.num_kernel4_Nhop,
-            'hidden_dim': args.hidden_dim,
-            'warmup_iterations': args.warmup_iterations,
-            'peak_lr': args.peak_lr,
+    # model = prepare_actual_model(args)
+
+    # Start hyperparamers searching
+
+    if gnn_type=='kgnn':
+        param_config = {
+            'num_layers':tune.choice([1, 2, 3, 4, 5]),
+            'num_kernel1_1hop':tune.choice([10]),
+            'num_kernel2_1hop':tune.choice([20]),
+            'num_kernel3_1hop':tune.choice([30]),
+            'num_kernel4_1hop':tune.choice([50]),
+            'num_kernel1_Nhop':tune.choice([10]),
+            'num_kernel2_Nhop':tune.choice([20]),
+            'num_kernel3_Nhop':tune.choice([30]),
+            'num_kernel4_Nhop':tune.choice([50]),
+            'hidden_dim': tune.choice([32, 64]),
+            'warmup_iterations': tune.choice([200]),
+            'peak_lr': tune.loguniform(1e-4, 1e-1),
 
             'tot_iterations': args.tot_iterations,
             'node_feature_dim': args.node_feature_dim,
@@ -327,12 +338,34 @@ def main(gnn_type, use_clearml):
             'end_lr': args.end_lr
         }
 
-    model = prepare_actual_model(param_config,args)
+    trainable = tune.with_parameters(
+        actual_training,
+        data_module=actual_training_data_module,
+        use_clearml=use_clearml,
+        gnn_type=gnn_type,
+        args=args)
 
-    # Start actual training
-    actual_training(model, actual_training_data_module, use_clearml,
-                    gnn_type, args)
+    hyperopt_search = HyperOptSearch(
+        metric='logAUC',
+        mode='max'
+    )
 
+    analysis = tune.run(
+        trainable,
+        resources_per_trial={
+            "cpu": 2,
+            "gpu": 0.166
+        },
+        metric="logAUC",
+        mode="max",
+        config=param_config,
+        num_samples=10,
+        name="tune_kgnn",
+        search_alg=hyperopt_search,
+        local_dir='.'
+    )
+
+    print(f'analysis.best_config:\{analysis.best_config}')
 
 
 if __name__ == '__main__':
@@ -345,17 +378,17 @@ if __name__ == '__main__':
     # gnn_type = 'chironet'
     # gnn_type = 'dimenet_pp'
 
-
     # gnn_type = 'spherenet'
     print(f'========================')
     print(f'Runing model: {gnn_type}')
     print(f'========================')
 
 
+
     filename = 'logs/task_info.log'
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w') as out_file:
-        use_clearml = True
+        use_clearml = False
         if use_clearml:
             task = Task.init(project_name=f"HyperParams/kgnn",
                              task_name=f"{gnn_type}",
@@ -367,11 +400,12 @@ if __name__ == '__main__':
 
             logger = task.get_logger()
             # logger = pl.loggers.tensorboard
+
         main(gnn_type, use_clearml)
         end = time.time()
-        run_time = end-start
-        print(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')    
-        out_file.write(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')
+        run_time = end - start
+        print(f'run_time:{run_time / 3600:0.0f}h{(run_time) % 3600 / 60:0.0f}m{run_time % 60:0.0f}s')
+        out_file.write(f'run_time:{run_time / 3600:0.0f}h{(run_time) % 3600 / 60:0.0f}m{run_time % 60:0.0f}s')
 
     print(f'========================')
     print(f'Runing model: {gnn_type}')

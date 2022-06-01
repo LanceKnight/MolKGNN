@@ -34,7 +34,7 @@ class GNNModel(pl.LightningModule):
 
     def __init__(self,
                  gnn_type,
-                 args=None
+                 param_config,
                  ):
         super(GNNModel, self).__init__()
         if gnn_type == 'gcn':
@@ -134,44 +134,42 @@ class GNNModel(pl.LightningModule):
 
             )
         elif gnn_type == 'kgnn':
-            self.gnn_model = KGNNNet(num_layers=args.num_layers,
-                                     num_kernel1_1hop = args.num_kernel1_1hop,
-                                     num_kernel2_1hop = args.num_kernel2_1hop,
-                                     num_kernel3_1hop = args.num_kernel3_1hop,
-                                     num_kernel4_1hop = args.num_kernel4_1hop,
-                                     num_kernel1_Nhop = args.num_kernel1_Nhop,
-                                     num_kernel2_Nhop = args.num_kernel2_Nhop,
-                                     num_kernel3_Nhop = args.num_kernel3_Nhop,
-                                     num_kernel4_Nhop = args.num_kernel4_Nhop,
-                                     x_dim = args.node_feature_dim,
-                                     edge_attr_dim=args.edge_feature_dim,
-                                     graph_embedding_dim = args.hidden_dim,
+            self.gnn_model = KGNNNet(num_layers           = param_config['num_layers'],
+                                     num_kernel1_1hop     = param_config['num_kernel1_1hop'],
+                                     num_kernel2_1hop     = param_config['num_kernel2_1hop'],
+                                     num_kernel3_1hop     = param_config['num_kernel3_1hop'],
+                                     num_kernel4_1hop     = param_config['num_kernel4_1hop'],
+                                     num_kernel1_Nhop     = param_config['num_kernel1_Nhop'],
+                                     num_kernel2_Nhop     = param_config['num_kernel2_Nhop'],
+                                     num_kernel3_Nhop     = param_config['num_kernel3_Nhop'],
+                                     num_kernel4_Nhop     = param_config['num_kernel4_Nhop'],
+                                     x_dim                = param_config['node_feature_dim'],
+                                     edge_attr_dim        = param_config['edge_feature_dim'],
+                                     graph_embedding_dim  = param_config['hidden_dim'],
                                      predefined_kernelsets=False
             )
-            out_dim = args.hidden_dim
+            out_dim = param_config['hidden_dim']
         else:
             raise ValueError(f"model.py::GNNModel: GNN model type is not "
                              f"defined. gnn_type={gnn_type}")
         # self.atom_encoder = Embedding(118, hidden_dim)
-        self.lin1 = Linear(args.ffn_hidden_dim, args.ffn_hidden_dim)
-        self.lin2 = Linear(args.ffn_hidden_dim, args.task_dim)
-        self.ffn = Linear(out_dim, args.task_dim)
-        self.dropout = Dropout(p= args.ffn_dropout_rate)
+        self.lin1 = Linear(param_config['ffn_hidden_dim'], param_config['ffn_hidden_dim'])
+        self.lin2 = Linear(param_config['ffn_hidden_dim'], param_config['task_dim'])
+        self.ffn = Linear(out_dim, param_config['task_dim'])
+        self.dropout = Dropout(p= param_config['ffn_dropout_rate'])
         self.activate_func = ReLU()
-        self.warmup_iterations = args.warmup_iterations
-        self.tot_iterations = args.tot_iterations
-        self.peak_lr = args.peak_lr
-        self.end_lr = args.end_lr
-        self.loss_func = get_dataset(dataset_name=args.dataset_name,
-                                     gnn_type=gnn_type, 
-                                     dataset_path=args.dataset_path
-                                    )['loss_func']
+        self.warmup_iterations = param_config['warmup_iterations']
+        self.tot_iterations = param_config['tot_iterations']
+        self.peak_lr = param_config['peak_lr']
+        self.end_lr = param_config['end_lr']
+        dataset = get_dataset(dataset_name=param_config['dataset_name'],
+                                     gnn_type=gnn_type,
+                                     dataset_path=param_config['dataset_path']
+                                    )
+        self.loss_func = dataset['loss_func']
         self.graph_embedding = None
         self.smiles_list = None
-        self.metrics = get_dataset(dataset_name=args.dataset_name,
-                                   gnn_type=gnn_type,
-                                   dataset_path=args.dataset_path
-                                   )['metrics']
+        self.metrics = dataset['metrics']
         self.valid_epoch_outputs = {}
 
     def forward(self, data):

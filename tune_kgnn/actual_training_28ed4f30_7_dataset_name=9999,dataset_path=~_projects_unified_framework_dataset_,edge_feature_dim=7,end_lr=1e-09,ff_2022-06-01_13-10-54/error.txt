@@ -1,0 +1,63 @@
+Failure # 1 (occurred at 2022-06-01_13-11-05)
+Traceback (most recent call last):
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/ray_trial_executor.py", line 901, in get_next_executor_event
+    future_result = ray.get(ready_future)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/_private/client_mode_hook.py", line 105, in wrapper
+    return func(*args, **kwargs)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/worker.py", line 1809, in get
+    raise value.as_instanceof_cause()
+ray.exceptions.RayTaskError(TuneError): [36mray::ImplicitFunc.train()[39m (pid=2410922, ip=10.20.140.78, repr=actual_training)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/trainable.py", line 349, in train
+    result = self.step()
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/function_runner.py", line 403, in step
+    self._report_thread_runner_error(block=True)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/function_runner.py", line 567, in _report_thread_runner_error
+    raise TuneError(
+ray.tune.error.TuneError: Trial raised an exception. Traceback:
+[36mray::ImplicitFunc.train()[39m (pid=2410922, ip=10.20.140.78, repr=actual_training)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/function_runner.py", line 272, in run
+    self._entrypoint()
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/function_runner.py", line 348, in entrypoint
+    return self._trainable_func(
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/function_runner.py", line 640, in _trainable_func
+    output = fn()
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/utils/trainable.py", line 390, in _inner
+    inner(config, checkpoint_dir=None)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/utils/trainable.py", line 381, in inner
+    trainable(config, **fn_kwargs)
+  File "/home/live-lab/projects/unified_framework/kgnn/hypertuning.py", line 267, in actual_training
+    trainer.fit(model=model, datamodule=data_module)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/trainer/trainer.py", line 740, in fit
+    self._call_and_handle_interrupt(
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/trainer/trainer.py", line 685, in _call_and_handle_interrupt
+    return trainer_fn(*args, **kwargs)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/trainer/trainer.py", line 777, in _fit_impl
+    self._run(model, ckpt_path=ckpt_path)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/trainer/trainer.py", line 1199, in _run
+    self._dispatch()
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/trainer/trainer.py", line 1279, in _dispatch
+    self.training_type_plugin.start_training(self)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/plugins/training_type/training_type_plugin.py", line 202, in start_training
+    self._results = trainer.run_stage()
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/trainer/trainer.py", line 1289, in run_stage
+    return self._run_train()
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/trainer/trainer.py", line 1319, in _run_train
+    self.fit_loop.run()
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/loops/base.py", line 145, in run
+    self.advance(*args, **kwargs)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/loops/fit_loop.py", line 234, in advance
+    self.epoch_loop.run(data_fetcher)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/loops/base.py", line 140, in run
+    self.on_run_start(*args, **kwargs)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/loops/epoch/training_epoch_loop.py", line 137, in on_run_start
+    self.trainer.call_hook("on_train_epoch_start")
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/trainer/trainer.py", line 1495, in call_hook
+    callback_fx(*args, **kwargs)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/trainer/callback_hook.py", line 88, in on_train_epoch_start
+    callback.on_train_epoch_start(self, self.lightning_module)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/callbacks/progress/tqdm_progress.py", line 223, in on_train_epoch_start
+    total_train_batches = self.total_train_batches
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/callbacks/progress/base.py", line 100, in total_train_batches
+    return self.trainer.num_training_batches
+AttributeError: 'NoneType' object has no attribute 'num_training_batches'
+

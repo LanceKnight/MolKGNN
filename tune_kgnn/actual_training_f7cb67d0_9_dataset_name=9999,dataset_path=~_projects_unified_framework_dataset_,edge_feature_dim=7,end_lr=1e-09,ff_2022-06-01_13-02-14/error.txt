@@ -1,0 +1,53 @@
+Failure # 1 (occurred at 2022-06-01_13-02-18)
+Traceback (most recent call last):
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/ray_trial_executor.py", line 901, in get_next_executor_event
+    future_result = ray.get(ready_future)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/_private/client_mode_hook.py", line 105, in wrapper
+    return func(*args, **kwargs)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/worker.py", line 1809, in get
+    raise value.as_instanceof_cause()
+ray.exceptions.RayTaskError(TuneError): [36mray::ImplicitFunc.train()[39m (pid=2407779, ip=10.20.140.78, repr=actual_training)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/trainable.py", line 349, in train
+    result = self.step()
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/function_runner.py", line 403, in step
+    self._report_thread_runner_error(block=True)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/function_runner.py", line 567, in _report_thread_runner_error
+    raise TuneError(
+ray.tune.error.TuneError: Trial raised an exception. Traceback:
+[36mray::ImplicitFunc.train()[39m (pid=2407779, ip=10.20.140.78, repr=actual_training)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/function_runner.py", line 272, in run
+    self._entrypoint()
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/function_runner.py", line 348, in entrypoint
+    return self._trainable_func(
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/function_runner.py", line 640, in _trainable_func
+    output = fn()
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/utils/trainable.py", line 390, in _inner
+    inner(config, checkpoint_dir=None)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/ray/tune/utils/trainable.py", line 381, in inner
+    trainable(config, **fn_kwargs)
+  File "/home/live-lab/projects/unified_framework/kgnn/hypertuning.py", line 267, in actual_training
+    trainer.fit(model=model, datamodule=data_module)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/trainer/trainer.py", line 740, in fit
+    self._call_and_handle_interrupt(
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/trainer/trainer.py", line 685, in _call_and_handle_interrupt
+    return trainer_fn(*args, **kwargs)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/trainer/trainer.py", line 777, in _fit_impl
+    self._run(model, ckpt_path=ckpt_path)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/trainer/trainer.py", line 1138, in _run
+    self._call_setup_hook()  # allow user to setup lightning_module in accelerator environment
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/trainer/trainer.py", line 1438, in _call_setup_hook
+    self.datamodule.setup(stage=fn)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/pytorch_lightning/core/datamodule.py", line 474, in wrapped_fn
+    fn(*args, **kwargs)
+  File "/home/live-lab/projects/unified_framework/kgnn/data.py", line 147, in setup
+    split_idx = self.dataset['dataset'].get_idx_split(seed=self.seed)
+  File "/home/live-lab/projects/unified_framework/kgnn/wrapper.py", line 640, in get_idx_split
+    split_dict = torch.load(f'data_split/{self.dataset}_seed{seed}.pt')
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/torch/serialization.py", line 699, in load
+    with _open_file_like(f, 'rb') as opened_file:
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/torch/serialization.py", line 231, in _open_file_like
+    return _open_file(name_or_buffer, mode)
+  File "/home/live-lab/environments/venv/ray-env/lib/python3.9/site-packages/torch/serialization.py", line 212, in __init__
+    super(_open_file, self).__init__(open(name, mode))
+FileNotFoundError: [Errno 2] No such file or directory: 'data_split/9999_seed42.pt'
+
