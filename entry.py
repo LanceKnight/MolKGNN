@@ -175,8 +175,8 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
 
 
     prog_bar=TQDMProgressBar(refresh_rate=500)
-    # args.gpus = f'{args.gpus}'
-    # print(f'entry::cpus:{args.gpus}, type:{type(args.gpus)}')
+    args.gpus = str(args.gpus)
+    print(f'entry::cpus:{args.gpus}, type:{type(args.gpus)}')
     # print(f'entry::accelerator:{args.accelerator}, type:{type(args.accelerator)}')
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks=[prog_bar]
@@ -318,9 +318,9 @@ if __name__ == '__main__':
     Task.set_offline(offline_mode=True)
     # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
-    # gnn_type = 'kgnn'
+    gnn_type = 'kgnn'
     # gnn_type = 'dimenet' # Not implemented
-    gnn_type = 'chironet'
+    # gnn_type = 'chironet'
     # gnn_type = 'dimenet_pp'
 
 
