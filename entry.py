@@ -57,18 +57,19 @@ def add_args(gnn_type):
         task.set_name(args.task_name)
         task.add_tags(f'model_{gnn_type}')
         task.add_tags(args.dataset_name) # args0 in scheduler
-        task.add_tags(f'seed_{args.seed}') # args1
-        task.add_tags(f'warm_{args.warmup_iterations}') # args2
-        task.add_tags(f'epoch_{args.max_epochs}') # args3
-        task.add_tags(f'peak_{args.peak_lr}') # args4
-        task.add_tags(f'end_{args.end_lr}') # args5
-        task.add_tags(f'layers_{args.num_layers}') # args6
-        task.add_tags(f'k1_{args.num_kernel1_1hop}') # args7
-        task.add_tags(f'k2_{args.num_kernel2_1hop}') # args8
-        task.add_tags(f'k3_{args.num_kernel3_1hop}') # args9
-        task.add_tags(f'k4_{args.num_kernel4_1hop}') # args10
-        task.add_tags(f'hidden_{args.hidden_dim}') # args11
-        task.add_tags(f'batch_{args.batch_size}') # args12
+        if gnn_type == 'kgnn':
+            task.add_tags(f'seed_{args.seed}') # args1
+            task.add_tags(f'warm_{args.warmup_iterations}') # args2
+            task.add_tags(f'epoch_{args.max_epochs}') # args3
+            task.add_tags(f'peak_{args.peak_lr}') # args4
+            task.add_tags(f'end_{args.end_lr}') # args5
+            task.add_tags(f'layers_{args.num_layers}') # args6
+            task.add_tags(f'k1_{args.num_kernel1_1hop}') # args7
+            task.add_tags(f'k2_{args.num_kernel2_1hop}') # args8
+            task.add_tags(f'k3_{args.num_kernel3_1hop}') # args9
+            task.add_tags(f'k4_{args.num_kernel4_1hop}') # args10
+            task.add_tags(f'hidden_{args.hidden_dim}') # args11
+            task.add_tags(f'batch_{args.batch_size}') # args12
 
     return args
 
@@ -174,7 +175,9 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
 
 
     prog_bar=TQDMProgressBar(refresh_rate=500)
-
+    # args.gpus = f'{args.gpus}'
+    # print(f'entry::cpus:{args.gpus}, type:{type(args.gpus)}')
+    # print(f'entry::accelerator:{args.accelerator}, type:{type(args.accelerator)}')
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks=[prog_bar]
     trainer.callbacks.append(actual_training_checkpoint_callback)

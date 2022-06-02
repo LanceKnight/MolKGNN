@@ -102,8 +102,7 @@ if __name__ == '__main__':
     epochs_list = [20] # arg3
     peak_lr_list = [6.04e-3, 6.04e-4, 6.04e-5] # arg4
     end_lr_list = [1e-9] # arg5
-    num_layer_list = [2,3,4] # arg6
-    hidden_dim = [32] # arg11
+    
 
     data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim )) # Change this
     print(f'num data_pair:{len(data_pair)}')
