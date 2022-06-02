@@ -153,7 +153,7 @@ class GNNModel(pl.LightningModule):
             raise ValueError(f"model.py::GNNModel: GNN model type is not "
                              f"defined. gnn_type={gnn_type}")
         # self.atom_encoder = Embedding(118, hidden_dim)
-        self.lin1 = Linear(param_config['ffn_hidden_dim'], param_config['ffn_hidden_dim'])
+        self.lin1 = Linear(param_config['out_dim'], param_config['ffn_hidden_dim'])
         self.lin2 = Linear(param_config['ffn_hidden_dim'], param_config['task_dim'])
         self.ffn = Linear(out_dim, param_config['task_dim'])
         self.dropout = Dropout(p= param_config['ffn_dropout_rate'])
