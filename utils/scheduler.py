@@ -109,9 +109,9 @@ if __name__ == '__main__':
 
     # Change this
     # Hyperparms
-    #dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
-    dataset_list = [ '9999' ] # arg0
-    seed_list = [42, 26, 30] # arg1
+    # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
+    dataset_list = [ '1798' ] # arg0
+    seed_list = [42] # arg1
     warmup_list = [200] # arg2
     epochs_list = [20] # arg3
     peak_lr_list = [5e-1] # arg4
