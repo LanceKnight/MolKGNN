@@ -25,7 +25,7 @@ def gitupdate(dir_name):
     os.system('git pull')
     os.chdir(cwd)
 
-def run_command(exp_id, args): # Change this
+def run_command(exp_id, args): 
     print(f'args:{args}')
     # Model=kgnn
     os.system(f'python -W ignore entry.py \
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     kernel4_list = [50, 100] # arg10
     hidden_dim = [32, 64] # arg11
 
-    data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim )) # Change this
+    data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim ))
     print(f'num data_pair:{len(data_pair)}')
     data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(len(data_pair))))
     print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')

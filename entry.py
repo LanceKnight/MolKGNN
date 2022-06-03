@@ -55,7 +55,21 @@ def add_args(gnn_type):
 
     if use_clearml:
         task.set_name(args.task_name)
-        task.add_tags(args.dataset_name)
+        task.add_tags(f'model_{gnn_type}')
+        task.add_tags(args.dataset_name) # args0 in scheduler
+        task.add_tags(f'seed_{args.seed}') # args1
+        task.add_tags(f'warm_{args.warmup_iterations}') # args2
+        task.add_tags(f'epoch_{args.max_epochs}') # args3
+        task.add_tags(f'peak_{args.peak_lr}') # args4
+        task.add_tags(f'end_{args.end_lr}') # args5
+        task.add_tags(f'layers_{args.num_layers}') # args6
+        task.add_tags(f'k1_{args.num_kernel1_1hop}') # args7
+        task.add_tags(f'k2_{args.num_kernel2_1hop}') # args8
+        task.add_tags(f'k3_{args.num_kernel3_1hop}') # args9
+        task.add_tags(f'k4_{args.num_kernel4_1hop}') # args10
+        task.add_tags(f'hidden_{args.hidden_dim}') # args11
+        task.add_tags(f'batch_{args.batch_size}') # args12
+
     return args
 
 
@@ -301,10 +315,11 @@ if __name__ == '__main__':
     Task.set_offline(offline_mode=True)
     # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
-    # gnn_type = 'kgnn'
+    gnn_type = 'kgnn'
     # gnn_type = 'dimenet' # Not implemented
     # gnn_type = 'chironet'
-    gnn_type = 'dimenet_pp'
+    # gnn_type = 'dimenet_pp'
+
 
     # gnn_type = 'spherenet'
     print(f'========================')
@@ -317,9 +332,9 @@ if __name__ == '__main__':
     with open(filename, 'w') as out_file:
         use_clearml = True
         if use_clearml:
-            task = Task.init(project_name=f"experiments/kgnn",
+            task = Task.init(project_name=f"HyperParams/kgnn",
                              task_name=f"{gnn_type}",
-                             tags=[],
+                             tags=['full_hyper1'],
                              reuse_last_task_id=False
                              )
             out_file.write(f'task_id:{task.id}')
