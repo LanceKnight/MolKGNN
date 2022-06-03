@@ -114,7 +114,7 @@ if __name__ == '__main__':
     seed_list = [42] # arg1
     warmup_list = [200] # arg2
     epochs_list = [20] # arg3
-    peak_lr_list = [5e-1] # arg4
+    peak_lr_list = [5e-2] # arg4
     end_lr_list = [1e-10] # arg5
     num_layer_list = [1] # arg6
     kernel1_list = [10] # arg7
