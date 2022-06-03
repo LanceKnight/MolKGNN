@@ -62,14 +62,14 @@ def add_args(gnn_type):
         task.add_tags(f'epoch_{args.max_epochs}') # args3
         task.add_tags(f'peak_{args.peak_lr}') # args4
         task.add_tags(f'end_{args.end_lr}') # args5
-        task.add_tags(f'layers_{args.num_layers}') # args6
-        task.add_tags(f'k1_{args.num_kernel1_1hop}') # args7
-        task.add_tags(f'k2_{args.num_kernel2_1hop}') # args8
-        task.add_tags(f'k3_{args.num_kernel3_1hop}') # args9
-        task.add_tags(f'k4_{args.num_kernel4_1hop}') # args10
-        task.add_tags(f'hidden_{args.hidden_dim}') # args11
-        task.add_tags(f'batch_{args.batch_size}') # args12
-
+        if gnn_type == 'kgnn':
+            task.add_tags(f'layers_{args.num_layers}') # args6
+            task.add_tags(f'k1_{args.num_kernel1_1hop}') # args7
+            task.add_tags(f'k2_{args.num_kernel2_1hop}') # args8
+            task.add_tags(f'k3_{args.num_kernel3_1hop}') # args9
+            task.add_tags(f'k4_{args.num_kernel4_1hop}') # args10
+            task.add_tags(f'hidden_{args.hidden_dim}') # args11
+            task.add_tags(f'batch_{args.batch_size}') # args12
     return args
 
 
@@ -149,6 +149,8 @@ def testing_procedure(trainer, data_module, args):
         out_file.write(f'{str(last_result)}\n')
         out_file.write('best:\n')
         out_file.write(f'{str(best_result)}')
+        out_file.write(f'args:\n')
+        out_file.write(f'{args}')
 
 
 def actual_training(model, data_module, use_clearml, gnn_type, args):
@@ -174,7 +176,9 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
 
 
     prog_bar=TQDMProgressBar(refresh_rate=500)
-
+    args.gpus = str(args.gpus)
+    print(f'entry::cpus:{args.gpus}, type:{type(args.gpus)}')
+    # print(f'entry::accelerator:{args.accelerator}, type:{type(args.accelerator)}')
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks=[prog_bar]
     trainer.callbacks.append(actual_training_checkpoint_callback)
@@ -315,9 +319,9 @@ if __name__ == '__main__':
     Task.set_offline(offline_mode=True)
     # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
-    gnn_type = 'kgnn'
+    # gnn_type = 'kgnn'
     # gnn_type = 'dimenet' # Not implemented
-    # gnn_type = 'chironet'
+    gnn_type = 'chironet'
     # gnn_type = 'dimenet_pp'
 
 
@@ -334,7 +338,7 @@ if __name__ == '__main__':
         if use_clearml:
             task = Task.init(project_name=f"HyperParams/kgnn",
                              task_name=f"{gnn_type}",
-                             tags=['full_hyper1'],
+                             tags=['chiro'],
                              reuse_last_task_id=False
                              )
             out_file.write(f'task_id:{task.id}')

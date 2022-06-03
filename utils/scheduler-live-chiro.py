@@ -7,7 +7,7 @@ import itertools
 import time
 import torch
 
-branch = 'main' # Change this
+branch = 'chiro' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -39,13 +39,10 @@ def run_command(exp_id, args): # Change this
         --max_epochs {args[3]}\
         --peak_lr {args[4]} \
         --end_lr {args[5]} \
-        --batch_size 17 \
+        --batch_size 32 \
         --default_root_dir actual_training_checkpoints \
         --gpus 1 \
-        --num_layers {args[6]} \
-        --node_feature_dim 27 \
-        --edge_feature_dim 7 \
-        --hidden_dim {args[11]}')\
+        ')\
 
 def copyanything(src, dst):
     # If dst exits, remove it first
@@ -60,7 +57,7 @@ def copyanything(src, dst):
 
 def run(exp_id, *args):
     print(f'args1:{args}')
-    exp_name = f'exp{exp_id}_dataset{args[0]}_seed{args[1]}_warmup{args[2]}_epoch{args[3]}_peak{args[4]}_end{args[5]}_layer{args[6]}_k1-{args[7]}_k2-{args[8]}_k3-{args[9]}_k4-{args[10]}_hidden{args[11]}' # Change this
+    exp_name = f'exp{exp_id}_dataset{args[0]}_chiro' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -98,20 +95,16 @@ if __name__ == '__main__':
     torch.multiprocessing.set_sharing_strategy('file_system')
 
 
-    dataset_list = [ '485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087'] # arg0
+    # dataset_list = [ '485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087'] # arg0
+    dataset_list = [ '1798']
     seed_list = [42] # arg1
-    warmup_list = [2000] # arg2
+    warmup_list = [200] # arg2
     epochs_list = [20] # arg3
-    peak_lr_list = [6.04e-4] # arg4
+    peak_lr_list = [6.04e-3, 6.04e-4, 6.04e-5] # arg4
     end_lr_list = [1e-9] # arg5
-    num_layer_list = [3] # arg6
-    kernel1_list = [10] # arg7
-    kernel2_list = [20] # arg8
-    kernel3_list = [30] # arg9
-    kernel4_list = [50] # arg10
-    hidden_dim = [32] # arg11
+    
 
-    data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim )) # Change this
+    data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list)) # Change this
     print(f'num data_pair:{len(data_pair)}')
     data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(len(data_pair))))
     print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
