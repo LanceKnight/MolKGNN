@@ -48,7 +48,7 @@ def get_split(num_active, num_inactive, seed, dataset_name):
 if __name__ == '__main__':
     dataset_info = {
         '435008':{'num_active':233, 'num_inactive':217925},
-        '1798':{'num_active':187, 'num_inactive':61646},
+        '1798':{'num_active':187, 'num_inactive':61645},
         '435034': {'num_active':362, 'num_inactive':61394},
         '1843': {'num_active':172, 'num_inactive':301321},
         '2258': {'num_active':213, 'num_inactive':302192},

@@ -54,7 +54,7 @@ def copyanything(src, dst):
         else: raise
 
 def run(exp_id, *args):
-    exp_name = f'exp{exp_id}_dataset{dataset}_dimenetpp_peak{args[3]}' # Change this
+    exp_name = f'exp{exp_id}_dataset{args[0]}_dimenetpp_peak{args[3]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -115,7 +115,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 3) as pool:
+    with Pool(processes = 6) as pool:
         pool.starmap(run, data_pair_with_exp_id)
     
     print(f'finish')
