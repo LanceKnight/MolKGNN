@@ -26,7 +26,7 @@ def run_command(dataset): # Change this
     cwd = os.getcwd()
     print(f'dataset:{dataset}')
     # Model=kgnn
-    if not osp.exists('logs/test_sample_scores.log'):
+    if not osp.exists('logs/best_test_sample_scores.log'):
         os.system(f'python -W ignore entry.py \
             --task_name test_dimenetpp\
             --dataset_name {dataset} \
@@ -54,8 +54,7 @@ def run(folder):
     dataset = folder_name_components[2][7:]
     run_command(dataset)
 
-    
-    
+
 
 if __name__ == '__main__':
     start_time = time.time()
@@ -77,10 +76,20 @@ if __name__ == '__main__':
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
     with open(file_name, 'w') as output_file:
         for folder in folder_list:
+            print('\n=======\n')
             with open(osp.join(exp_dir,f'{folder}/kgnn/logs/test_result.log'), 'r') as in_file:
                 for line in in_file:
-                    output_file.write(line)
-                    print(line)
+                    if 'Namespace' in line: # for arguments
+                        components = line.split(', ')
+                        for component in components:
+                            if ('peak' in component) or ('layer') in component: # specifiy which arguments to print
+                                out_content = component
+                                print(out_content)
+                                output_file.write(out_content)
+                    else:
+                        out_content = line
+                        print(out_content)
+                        output_file.write(out_content)
                 output_file.write('\n=======\n')
     end_time=time.time()
     run_time = end_time-start_time
