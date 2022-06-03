@@ -149,6 +149,8 @@ def testing_procedure(trainer, data_module, args):
         out_file.write(f'{str(last_result)}\n')
         out_file.write('best:\n')
         out_file.write(f'{str(best_result)}')
+        out_file.write(f'args:\n')
+        out_file.write(f'{args}')
 
 
 def actual_training(model, data_module, use_clearml, gnn_type, args):
