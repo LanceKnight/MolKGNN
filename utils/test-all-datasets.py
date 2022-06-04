@@ -7,7 +7,7 @@ import shutil, errno
 import itertools
 import time
 
-branch = 'dimenet_pp' # Change this
+branch = 'main' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()

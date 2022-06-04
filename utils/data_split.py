@@ -58,7 +58,7 @@ if __name__ == '__main__':
         '485290': {'num_active':281, 'num_inactive':341084},
         '9999':{'num_active':37, 'num_inactive':226},
     }
-    seed = 26
+    seed = 30
     dataset_name_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290', '9999']
     # dataset_name_list = ['1798']
     for dataset_name in dataset_name_list:
