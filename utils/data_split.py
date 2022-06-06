@@ -82,10 +82,11 @@ if __name__ == '__main__':
         '485290': {'num_active':281, 'num_inactive':341084},
         '9999':{'num_active':37, 'num_inactive':226},
     }
-    seed = 30
+    seed_list = list(range(1, 11))
     dataset_name_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290', '9999']
     # dataset_name_list = ['1798']
     for dataset_name in dataset_name_list:
-        num_actives = dataset_info[dataset_name]['num_active']
-        num_inactives = dataset_info[dataset_name]['num_inactive']
-        get_split(num_actives, num_inactives, seed, dataset_name, shrink=True)
+        for seed in seed_list:
+            num_actives = dataset_info[dataset_name]['num_active']
+            num_inactives = dataset_info[dataset_name]['num_inactive']
+            get_split(num_actives, num_inactives, seed, dataset_name, shrink=True)
