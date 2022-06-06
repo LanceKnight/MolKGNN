@@ -635,54 +635,7 @@ class QSARDataset(Dataset):
 
 
     def get_idx_split(self, seed):
-        num_active = self.num_actives#len(torch.nonzero(self.data.y))
-        # num_active = len(torch.nonzero(torch.tensor([data.y for data in
-        #                                              self.data])))
-        num_inactive = self.num_inactives#len(self.data.y) - num_active
-
-        active_idx = list(range(num_active))
-        inactive_idx = list(range(num_active, num_active+num_inactive))
-        # print(f'wrapper.py::first 10 of inactive_idx:{inactive_idx[0:10]}')
-        # print(f'wrapper.py::split:num_active{len(active_idx)}, num_inactive:'
-        #       f'{len(inactive_idx)}')
-        random.seed(seed)
-        random.shuffle(active_idx)
-        random.shuffle(inactive_idx)
-
-        num_active_train = round(num_active * 0.8)
-        num_inactive_train = round(num_inactive * 0.8)
-        num_active_valid = round(num_active * 0.1)
-        num_inactive_valid = round(num_inactive * 0.1)
-        num_active_test = round(num_active * 0.1)
-        num_inactive_test = round(num_inactive * 0.1)
-        # print(f'wrapper.py::num_active_train:{num_active_train} '
-        #       f'num_inactive_train:{num_inactive_train}')
-        # print(f'wrapper.py::num_active_valid:{num_active_valid} '
-        #       f'num_inactive_valid:{num_inactive_valid}')
-        # print(f'wrapper.py::num_active_test:{num_active_test} '
-        #       f'num_inactive_test:{num_inactive_test}')
-
-        split_dict = {}
-        split_dict['train'] = active_idx[:num_active_train]\
-                              + inactive_idx[:num_inactive_train]
-        split_dict['valid'] = active_idx[
-                              num_active_train:num_active_train
-                                               +num_active_valid] \
-                              + inactive_idx[
-                                num_inactive_train:num_inactive_train
-                                                   +num_inactive_valid]
-
-        split_dict['test'] = active_idx[
-                             num_active_train + num_active_valid
-                             : num_active_train
-                               + num_active_valid
-                               + num_active_test] \
-                             + inactive_idx[
-                               num_inactive_train + num_inactive_valid
-                               : num_inactive_train
-                                 + num_inactive_valid
-                                 + num_inactive_test]
-
+        split_dict = torch.load(f'data_split/shrink_{self.dataset}_seed{seed}.pt')
         return split_dict
 
     def get(self, idx):
@@ -877,9 +830,9 @@ if __name__ == "__main__":
     from clearml import Task
     from argparse import ArgumentParser
 
-    # gnn_type = 'kgnn'
+    gnn_type = 'kgnn'
     # gnn_type = 'chironet'
-    gnn_type = 'dimenet_pp'
+    # gnn_type = 'dimenet_pp'
     use_clearml = False
     if use_clearml:
         task = Task.init(project_name=f"DatasetCreation/kgnn",
@@ -889,7 +842,7 @@ if __name__ == "__main__":
                          )
 
     parser = ArgumentParser()
-    parser.add_argument('--dataset', type=str, default='9999')
+    parser.add_argument('--dataset', type=str, default='1798')
     parser.add_argument('--gnn_type', type=str, default=gnn_type)
     parser.add_argument('--task_name', type=str, default='Unnamed')
     args = parser.parse_args()
@@ -899,7 +852,7 @@ if __name__ == "__main__":
 
     qsar_dataset = QSARDataset(root='../dataset/qsar/clean_sdf',
                                dataset=args.dataset,
-                               # pre_transform=ToXAndPAndEdgeAttrForDeg(),
+                               pre_transform=ToXAndPAndEdgeAttrForDeg(),
                                gnn_type=args.gnn_type
                                )
 
