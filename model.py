@@ -17,7 +17,6 @@ import pytorch_lightning as pl
 from sklearn.metrics import mean_squared_error
 from torch.nn import Linear, Sigmoid, ReLU, Embedding, Dropout
 from torch_geometric.data import Data
-from torch_geometric.nn.acts import swish
 import torch
 from torch.optim import Adam
 import time
@@ -104,7 +103,7 @@ class GNNModel(pl.LightningModule):
                 num_before_skip=args.num_before_skip,
                 num_after_skip=args.num_after_skip,
                 num_output_layers=args.num_output_layers,
-                act=swish,
+                act_name='swish',
                 MLP_hidden_sizes=[],  # [] for contrastive)
             )
             out_dim = args.out_channels
@@ -126,7 +125,7 @@ class GNNModel(pl.LightningModule):
                 num_before_skip=args.num_before_skip,  # 1
                 num_after_skip=args.num_after_skip,  # 2
                 num_output_layers=args.num_output_layers,  # 3
-                act=swish,
+                act_name='swish',
                 output_init='GlorotOrthogonal',
                 use_node_features=True,
                 MLP_hidden_sizes=args.MLP_hidden_sizes,

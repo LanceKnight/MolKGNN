@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.nn import Linear, Embedding
 from torch_sparse import SparseTensor
-from torch_geometric.nn.acts import swish
+from torch_geometric.nn.resolver import activation_resolver
 from torch_geometric.nn.inits import glorot_orthogonal
 from torch_geometric.nn import radius_graph
 from torch_scatter import scatter
@@ -386,9 +386,9 @@ class emb(torch.nn.Module):
         return dist_emb, angle_emb, torsion_emb
 
 class ResidualLayer(torch.nn.Module):
-    def __init__(self, hidden_channels, act=swish):
+    def __init__(self, hidden_channels, act_name='swish'):
         super(ResidualLayer, self).__init__()
-        self.act = act
+        self.act = activation_resolver(act_name)
         self.lin1 = Linear(hidden_channels, hidden_channels)
         self.lin2 = Linear(hidden_channels, hidden_channels)
 
@@ -405,9 +405,9 @@ class ResidualLayer(torch.nn.Module):
 
 
 class init(torch.nn.Module):
-    def __init__(self, num_radial, hidden_channels, act=swish, use_node_features=True):
+    def __init__(self, num_radial, hidden_channels, act_name='swish', use_node_features=True):
         super(init, self).__init__()
-        self.act = act
+        self.act = activation_resolver(act_name)
         self.use_node_features = use_node_features
         if self.use_node_features:
             self.emb = Embedding(95, hidden_channels)
@@ -442,9 +442,9 @@ class init(torch.nn.Module):
 
 class update_e(torch.nn.Module):
     def __init__(self, hidden_channels, int_emb_size, basis_emb_size_dist, basis_emb_size_angle, basis_emb_size_torsion, num_spherical, num_radial,
-        num_before_skip, num_after_skip, act=swish):
+                 num_before_skip, num_after_skip, act_name='swish'):
         super(update_e, self).__init__()
-        self.act = act
+        self.act = activation_resolver(act_name)
         self.lin_rbf1 = nn.Linear(num_radial, basis_emb_size_dist, bias=False)
         self.lin_rbf2 = nn.Linear(basis_emb_size_dist, hidden_channels, bias=False)
         self.lin_sbf1 = nn.Linear(num_spherical * num_radial, basis_emb_size_angle, bias=False)
@@ -460,12 +460,12 @@ class update_e(torch.nn.Module):
         self.lin_up = nn.Linear(int_emb_size, hidden_channels, bias=False)
 
         self.layers_before_skip = torch.nn.ModuleList([
-            ResidualLayer(hidden_channels, act)
+            ResidualLayer(hidden_channels, act_name)
             for _ in range(num_before_skip)
         ])
         self.lin = nn.Linear(hidden_channels, hidden_channels)
         self.layers_after_skip = torch.nn.ModuleList([
-            ResidualLayer(hidden_channels, act)
+            ResidualLayer(hidden_channels, act_name)
             for _ in range(num_after_skip)
         ])
 
@@ -595,7 +595,7 @@ class SphereNet(torch.nn.Module):
             num_before_skip (int, optional): Number of residual layers in the interaction blocks before the skip connection. (default: :obj:`1`)
             num_after_skip (int, optional): Number of residual layers in the interaction blocks before the skip connection. (default: :obj:`2`)
             num_output_layers (int, optional): Number of linear layers for the output blocks. (default: :obj:`3`)
-            act: (function, optional): The activation funtion. (default: :obj:`swish`)
+            act_name: (function, optional): The activation funtion. (default: :obj:`swish`)
             output_init: (str, optional): The initialization fot the output. It could be :obj:`GlorotOrthogonal` and :obj:`zeros`. (default: :obj:`GlorotOrthogonal`)
             
     """
@@ -605,7 +605,7 @@ class SphereNet(torch.nn.Module):
         basis_emb_size_dist=8, basis_emb_size_angle=8, basis_emb_size_torsion=8, out_emb_channels=256,
         num_spherical=7, num_radial=6, envelope_exponent=5,
         num_before_skip=1, num_after_skip=2, num_output_layers=3,
-        act=swish, output_init='GlorotOrthogonal', use_node_features=True, MLP_hidden_sizes = []):
+        act_name='swish', output_init='GlorotOrthogonal', use_node_features=True, MLP_hidden_sizes = []):
         super(SphereNet, self).__init__()
         
         self.MLP_hidden_sizes = MLP_hidden_sizes
@@ -613,16 +613,16 @@ class SphereNet(torch.nn.Module):
         self.cutoff = cutoff
         self.energy_and_force = energy_and_force
 
-        self.init_e = init(num_radial, hidden_channels, act, use_node_features=use_node_features)
-        self.init_v = update_v(hidden_channels, out_emb_channels, out_channels, num_output_layers, act, output_init)
+        self.init_e = init(num_radial, hidden_channels, act_name, use_node_features=use_node_features)
+        self.init_v = update_v(hidden_channels, out_emb_channels, out_channels, num_output_layers, act_name, output_init)
         self.init_u = update_u()
         self.emb = emb(num_spherical, num_radial, self.cutoff, envelope_exponent)
 
         self.update_vs = torch.nn.ModuleList([
-            update_v(hidden_channels, out_emb_channels, out_channels, num_output_layers, act, output_init) for _ in range(num_layers)])
+            update_v(hidden_channels, out_emb_channels, out_channels, num_output_layers, act_name, output_init) for _ in range(num_layers)])
 
         self.update_es = torch.nn.ModuleList([
-            update_e(hidden_channels, int_emb_size, basis_emb_size_dist, basis_emb_size_angle, basis_emb_size_torsion, num_spherical, num_radial, num_before_skip, num_after_skip,act) for _ in range(num_layers)])
+            update_e(hidden_channels, int_emb_size, basis_emb_size_dist, basis_emb_size_angle, basis_emb_size_torsion, num_spherical, num_radial, num_before_skip, num_after_skip, act_name) for _ in range(num_layers)])
 
         self.update_us = torch.nn.ModuleList([update_u() for _ in range(num_layers)])
         
