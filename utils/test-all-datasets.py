@@ -6,6 +6,7 @@ from tqdm import tqdm
 import shutil, errno
 import itertools
 import time
+import pandas as pd
 
 branch = 'main' # Change this
 
@@ -68,14 +69,22 @@ if __name__ == '__main__':
             folder_list.append(osp.join(exp_dir, folder))
 
     # Update git and run testing
-    with Pool(processes = 9) as pool:
-        pool.map(run, folder_list)
+    # with Pool(processes = 9) as pool:
+    #     pool.map(run, folder_list)
 
     # Gather testing results
     file_name = 'logs/all_test_result.log'
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
+    out_table = {}
     with open(file_name, 'w') as output_file:
         for folder in folder_list:
+            metric_counter = 0 # if ==0, last metric, if ==1, best metric
+            base_name = osp.basename(folder)
+            name_components = base_name.split('_')
+            seed = name_components[2]
+            peak = name_components[5]
+            layers = name_components[7]
+            
             print('\n=======\n')
             with open(osp.join(exp_dir,f'{folder}/kgnn/logs/test_result.log'), 'r') as in_file:
                 for line in in_file:
@@ -83,14 +92,78 @@ if __name__ == '__main__':
                         components = line.split(', ')
                         for component in components:
                             if ('peak' in component) or ('layer') in component: # specifiy which arguments to print
-                                out_content = component
-                                print(out_content)
-                                output_file.write(out_content)
-                    else:
-                        out_content = line
-                        print(out_content)
-                        output_file.write(out_content)
+                                split_component = component.split('=')
+                                component_name = split_component[0]
+                                component_value = split_component[1]
+                                
+                                out_content = out_table
+                                # print(out_content)
+                                # output_file.write(out_content)
+                    else: # for metrics
+                        if 'logAUC' in line:
+                            print(line)
+                            split_line = line.split(',')
+                            loss = float(split_line[0].split(': ')[1]) # Get loss
+                            ppv = float(split_line[1].split(': ')[1]) # Get ppv
+                            logAUC = float(split_line[2].split(': ')[1])# Get logAUC
+                            f1 = float(split_line[3].split(': ')[1].split('}')[0]) # Get f1
+                            
+                            if metric_counter == 0:
+                                key = 'last_AUC'
+                                # out_table.setdefault(f'{peak}_{layers}',[]).append({f'{key}_{seed}':f'{logAUC}'})
+                                # out_content = out_table
+                                # print(out_content)
+                            else:
+                                key = 'best_AUC'
+                                out_table.setdefault(f'{peak}_{layers}',[]).append({f'{seed}':f'{f1}'})
+                                out_content = out_table
+                                # print(out_content)
+                            metric_counter+=1
+                        
+                        
+                        
+                        # output_file.write(out_content)
                 output_file.write('\n=======\n')
+
+
+
+        # for folder in folder_list:
+        #     print('\n=======\n')
+        #     with open(osp.join(exp_dir,f'{folder}/kgnn/logs/test_result.log'), 'r') as in_file:
+        #         for line in in_file:
+        #             if 'Namespace' in line: # for arguments
+        #                 components = line.split(', ')
+        #                 for component in components:
+        #                     if ('peak' in component) or ('layer') in component: # specifiy which arguments to print
+        #                         out_content = component
+        #                         print(out_content)
+        #                         output_file.write(out_content)
+        #             else:
+        #                 out_content = line
+        #                 print(out_content)
+        #                 output_file.write(out_content)
+        #         output_file.write('\n=======\n')
+
+    
+    # Prepare dataframe
+    for peak_layer_comb, peak_layer_list  in out_table.items():
+        print('====')
+        print(f'comb:{peak_layer_comb}:')
+        row_index = peak_layer_comb
+        sorted_list = sorted(peak_layer_list, key=lambda x:list(x.items())[0][0])
+        sorted_list = list(map(lambda x: list(x.items())[0][1], sorted_list))
+        out_table[peak_layer_comb] = sorted_list
+        for each in sorted_list:
+            print(each)
+    
+
+    sorted_out_table = out_table
+
+    output_df = pd.DataFrame.from_dict(sorted_out_table, orient='index')
+    print(output_df)
+    output_df.to_csv('logs/all_test_result_df.csv')    
+    print('\n')
+
     end_time=time.time()
     run_time = end_time-start_time
     print(f'finish getting all test result: {run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}')
