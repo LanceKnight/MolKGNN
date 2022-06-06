@@ -67,7 +67,7 @@ def copyanything(src, dst):
         else: raise
 
 def run(exp_id, *args):
-    exp_name = f'exp{exp_id}_full_param1' # Change this
+    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_end{args[5]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -109,14 +109,14 @@ if __name__ == '__main__':
 
     # Change this
     # Hyperparms
-    #dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
-    dataset_list = [ '9999' ] # arg0
-    seed_list = [42, 26, 30] # arg1
+    # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
+    dataset_list = [ '1798' ] # arg0
+    seed_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] # arg1
     warmup_list = [200] # arg2
     epochs_list = [20] # arg3
-    peak_lr_list = [5e-1] # arg4
+    peak_lr_list = [5e-1, 5e-2, 5e-3] # arg4
     end_lr_list = [1e-10] # arg5
-    num_layer_list = [1] # arg6
+    num_layer_list = [1,2,3] # arg6
     kernel1_list = [10] # arg7
     kernel2_list = [20] # arg8
     kernel3_list = [30] # arg9
@@ -142,7 +142,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 3) as pool:
+    with Pool(processes = 9) as pool:
         pool.starmap(run, data_pair_with_exp_id)
 
     end_time=time.time()

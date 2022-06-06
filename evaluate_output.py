@@ -63,7 +63,7 @@ def evaluate(dataset, model='kgnn', cutoff=0.5):
 
 if __name__ == '__main__':
 	datasets = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
-	models = ['bcl', 'kgnn']
+	models = ['bcl']
 	for dataset in datasets:
 		for model in models:
 			evaluate(dataset=dataset, model=model, cutoff=cutoff)
