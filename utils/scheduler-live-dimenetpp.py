@@ -29,17 +29,17 @@ def run_command(exp_id, args): # Change this
     os.system(f'python -W ignore entry.py \
         --task_name experiments{exp_id}\
         --dataset_name {args[0]} \
-        --seed 42\
         --num_workers 16 \
         --dataset_path ../../../dataset/ \
         --enable_oversampling_with_replacement \
         --warmup_iterations {args[1]} \
-        --max_epochs 20\
-        --peak_lr {args[2]} \
-        --end_lr {args[3]}\
+        --max_epochs {args[2]}\
+        --peak_lr {args[3]} \
+        --end_lr {args[4]}\
         --batch_size 32 \
         --default_root_dir actual_training_checkpoints \
         --gpus 1 \
+        --seed {args[5]}\
         ')
 
 def copyanything(src, dst):
@@ -97,8 +97,8 @@ if __name__ == '__main__':
     num_epochs = [20]  # args2
     peak_lr = [5e-1, 5e-2, 5e-3] # args3
     end_lr = [1e-9] # args4
-    # num_layers = [3]
-    data_pair = list(itertools.product(dataset_list, warmup, num_epochs, peak_lr, end_lr))
+    seed = [42] #arg5
+    data_pair = list(itertools.product(dataset_list, warmup, num_epochs, peak_lr, end_lr, seed))
     print(f'num data_pair:{len(data_pair)}')
     data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(len(data_pair))))
     print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
@@ -115,7 +115,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 6) as pool:
+    with Pool(processes = 1) as pool:
         pool.starmap(run, data_pair_with_exp_id)
     
     print(f'finish')
