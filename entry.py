@@ -334,11 +334,11 @@ if __name__ == '__main__':
     filename = 'logs/task_info.log'
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w') as out_file:
-        use_clearml = False
+        use_clearml = True
         if use_clearml:
-            task = Task.init(project_name=f"HyperParams/kgnn",
+            task = Task.init(project_name=f"Issues/seed_correlation",
                              task_name=f"{gnn_type}",
-                             tags=['chiro'],
+                             tags=['seed correlation'],
                              reuse_last_task_id=False
                              )
             out_file.write(f'task_id:{task.id}')
