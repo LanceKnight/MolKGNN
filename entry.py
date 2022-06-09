@@ -9,7 +9,9 @@ from monitors import LossMonitor, \
     RMSEMonitor,\
     AccuracyMonitor,\
     F1ScoreMonitor
+
 from argparse import ArgumentParser
+import math
 from pprint import pprint
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, TQDMProgressBar
@@ -44,14 +46,14 @@ def add_args(gnn_type):
 
 
     args = parser.parse_args()
-    args.tot_iterations = round(len(get_dataset(
-                                                dataset_name=args.dataset_name,
-                                                gnn_type=gnn_type,
-                                                dataset_path=args.dataset_path
-                                                )['dataset'],
-                                    ) * 0.8 /args.batch_size) \
-                          * args.max_epochs + 1
-    args.max_steps = args.tot_iterations + 1
+    # args.tot_iterations = round(len(get_dataset(
+    #                                             dataset_name=args.dataset_name,
+    #                                             gnn_type=gnn_type,
+    #                                             dataset_path=args.dataset_path
+    #                                             )['dataset'],
+    #                                 ) * 0.8 /args.batch_size) \
+    #                       * args.max_epochs + 1
+    # args.max_steps = args.tot_iterations + 1
 
     if use_clearml:
         task.set_name(args.task_name)
@@ -87,9 +89,26 @@ def prepare_data(args, enable_pretraining=False, gnn_type='kgnn'):
     actual_data_module = DataLoaderModule.from_argparse_args(args)
     data_modules.append(actual_data_module)
 
+    args.tot_iterations = (
+                            math.ceil(len(actual_data_module.dataset_train)
+                            /args.batch_size)
+                            # +
+                            # math.ceil(len(actual_data_module.dataset_val)
+                            # /args.batch_size)
+                            ) * args.max_epochs + 2
+    args.warmup_iterations+=2
+    args.max_steps = args.tot_iterations
+    print(f'train:{math.ceil(len(actual_data_module.dataset_train)/args.batch_size)}')
+    print(f'val:'
+          f''
+          f'{math.ceil(len(actual_data_module.dataset_val) / args.batch_size)}')
+    print(f'entry.py::args.total_iterations:{args.tot_iterations}')
+
     # Pretraining data module
     if enable_pretraining:
-        pass  # TODO: add pretraining data module
+        pass  # 
+        
+        # TODO: add pretraining data module
 
     return data_modules
 
@@ -175,7 +194,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
             '/last.ckpt'
 
 
-    prog_bar=TQDMProgressBar(refresh_rate=500)
+    prog_bar=TQDMProgressBar(refresh_rate=1)
     args.gpus = str(args.gpus)
     print(f'entry::cpus:{args.gpus}, type:{type(args.gpus)}')
     # print(f'entry::accelerator:{args.accelerator}, type:{type(args.accelerator)}')
@@ -197,8 +216,8 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                         logging_interval='epoch'))
 
         # Learning rate monitors
-        # trainer.callbacks.append(LearningRateMonitor(logging_interval='step'))
-        trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
+        trainer.callbacks.append(LearningRateMonitor(logging_interval='step'))
+        # trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 
         # Other metrics monitors
         metrics = get_dataset(dataset_name=args.dataset_name,

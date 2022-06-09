@@ -138,12 +138,11 @@ class DataLoaderModule(LightningDataModule):
         self.batch_size = batch_size
         self.seed = seed
         self.enable_oversampling_with_replacement = enable_oversampling_with_replacement
-        self.dataset_train = ...
-        self.dataset_val = ...
+        # self.dataset_train = ...
+        # self.dataset_val = ...
         self.gnn_type = gnn_type
         self.dataset_path = dataset_path
 
-    def setup(self, stage: str = None):
         split_idx = self.dataset['dataset'].get_idx_split(seed=self.seed)
 
         self.dataset_train = self.dataset['dataset'][split_idx["train"]]
@@ -154,6 +153,9 @@ class DataLoaderModule(LightningDataModule):
 
         self.dataset_test = self.dataset['dataset'][split_idx["test"]]
         print(f'testing len:{len(self.dataset_test)})')
+
+    def setup(self, stage: str = None):
+        pass
 
     def train_dataloader(self):
         # Calculate the number of samples in minority/majority class
