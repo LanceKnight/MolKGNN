@@ -174,14 +174,15 @@ def testing_procedure(trainer, data_module, args):
 
 def actual_training(model, data_module, use_clearml, gnn_type, args):
     # Add checkpoint
-    monitoring_metric = 'logAUC'
+    monitoring_metric = 'loss'
     actual_training_checkpoint_dir = args.default_root_dir
     actual_training_checkpoint_callback = ModelCheckpoint(
         monitor=monitoring_metric,
         dirpath=actual_training_checkpoint_dir,
-        filename='best_model_metric_{epoch}_{logAUC}', #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+        filename='best_model_metric_{epoch}_{loss}',
+        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
         save_top_k=1,
-        mode='max',
+        mode='min',
         save_last=True,
         save_on_train_epoch_end=False
     )
@@ -194,7 +195,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
             '/last.ckpt'
 
 
-    prog_bar=TQDMProgressBar(refresh_rate=1)
+    prog_bar=TQDMProgressBar(refresh_rate=500)
     args.gpus = str(args.gpus)
     print(f'entry::cpus:{args.gpus}, type:{type(args.gpus)}')
     # print(f'entry::accelerator:{args.accelerator}, type:{type(args.accelerator)}')

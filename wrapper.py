@@ -635,7 +635,7 @@ class QSARDataset(Dataset):
 
 
     def get_idx_split(self, seed):
-        split_dict = torch.load(f'data_split/shrink_{self.dataset}_seed{seed}.pt')
+        split_dict = torch.load(f'data_split/{self.dataset}_seed{seed}.pt')
         return split_dict
 
     def get(self, idx):

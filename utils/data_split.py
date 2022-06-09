@@ -20,14 +20,13 @@ def get_split(num_active, num_inactive, seed, dataset_name, shrink=None):
         num_active_test = num_active - num_active_train - num_active_valid
         num_inactive_test = round(num_inactive * 0.1)
         filename = f'data_split/{dataset_name}_seed{seed}.pt'
-    else:   
+    else:
         num_active_train = round(num_active * 0.8)
         num_inactive_train = 1000
         num_active_valid = round(num_active * 0.1)
-        num_inactive_valid = 100
+        num_inactive_valid = round(num_inactive * 0.1)
         num_active_test = num_active - num_active_train - num_active_valid
-        # num_active_test = round(num_active * 0.1)
-        num_inactive_test = 100
+        num_inactive_test = round(num_inactive * 0.1)
         filename = f'data_split/shrink_{dataset_name}_seed{seed}.pt'
 
     split_dict = {}
@@ -83,8 +82,8 @@ if __name__ == '__main__':
         '9999':{'num_active':37, 'num_inactive':226},
     }
     seed_list = list(range(1, 11))
-    dataset_name_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290', '9999']
-    # dataset_name_list = ['1798']
+    # dataset_name_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290', '9999']
+    dataset_name_list = ['1798']
     for dataset_name in dataset_name_list:
         for seed in seed_list:
             num_actives = dataset_info[dataset_name]['num_active']
