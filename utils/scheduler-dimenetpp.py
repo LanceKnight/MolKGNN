@@ -24,22 +24,22 @@ def gitupdate(dir_name):
     os.system('git pull')
     os.chdir(cwd)
 
-def run_command(exp_id, dataset, num_layers): # Change this
+def run_command(exp_id, args): # Change this
     # Model=kgnn
     os.system(f'python -W ignore entry.py \
         --task_name experiments{exp_id}\
-        --dataset_name {dataset} \
-        --seed 42\
+        --dataset_name {args[0]} \
         --num_workers 16 \
         --dataset_path ../../../dataset/ \
         --enable_oversampling_with_replacement \
-        --warmup_iterations 300 \
-        --max_epochs 20\
-        --peak_lr 1e-4 \
-        --end_lr 1e-9 \
-        --batch_size 17 \
+        --warmup_iterations {args[1]} \
+        --max_epochs {args[2]}\
+        --peak_lr {args[3]} \
+        --end_lr {args[4]}\
+        --batch_size 32 \
         --default_root_dir actual_training_checkpoints \
         --gpus 1 \
+        --seed {args[5]}\
         ')
 
 def copyanything(src, dst):
@@ -53,8 +53,8 @@ def copyanything(src, dst):
             shutil.copy(src, dst)
         else: raise
 
-def run(exp_id, dataset, num_layers):
-    exp_name = f'exp{exp_id}_dataset{dataset}_dimenetpp' # Change this
+def run(exp_id, *args):
+    exp_name = f'exp{exp_id}_dataset{args[0]}_dimenetpp_peak{args[3]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -70,7 +70,7 @@ def run(exp_id, dataset, num_layers):
     os.chdir(dir_name+'/kgnn')
 
     # # Task
-    run_command(exp_id, dataset, num_layers) # Change this
+    run_command(exp_id, args) # Change this
     # time.sleep(3)
     print(f'----{exp_name} finishes')
     os.chdir(cwd)
@@ -91,13 +91,15 @@ if __name__ == '__main__':
     mp.set_start_method('spawn')
 
 
-    dataset_list = ['485290', '488997', '2689', '1798', '435034', '463087']#['485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087']
-    # warmup = [200, 2000, 20000]
-    # # num_epochs = [10, 20, 50]q
-    # peak_lr = [5e-1, 5e-2, 5e-3]
-    # end_lr = [1e-8, 1e-9, 1e-10]
-    num_layers = [3]
-    data_pair = list(itertools.product(dataset_list, num_layers))
+    # dataset_list = ['485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087']
+    dataset_list = ['1798'] # args0
+    warmup = [200]  # args1
+    num_epochs = [20]  # args2
+    peak_lr = [5e-1, 5e-2, 5e-3] # args3
+    end_lr = [1e-9] # args4
+    seed = [1, 2, 3] #arg5
+    # num_layers = [3]
+    data_pair = list(itertools.product(dataset_list, warmup, num_epochs, peak_lr, end_lr, seed))
     print(f'num data_pair:{len(data_pair)}')
     data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(len(data_pair))))
     print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
@@ -114,7 +116,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 3) as pool:
+    with Pool(processes = 2) as pool:
         pool.starmap(run, data_pair_with_exp_id)
     
     print(f'finish')

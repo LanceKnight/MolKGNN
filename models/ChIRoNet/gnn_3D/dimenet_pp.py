@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torch_geometric.nn import radius_graph
-from torch_geometric.nn.acts import swish
+from torch_geometric.nn.resolver import activation_resolver
 from torch_geometric.nn.inits import glorot_orthogonal
 from torch_geometric.nn.models.dimenet import (
     BesselBasisLayer,
@@ -54,10 +54,10 @@ class InteractionPPBlock(torch.nn.Module):
         num_radial,
         num_before_skip,
         num_after_skip,
-        act=swish,
+        act_name='swish',
     ):
         super(InteractionPPBlock, self).__init__()
-        self.act = act
+        self.act = activation_resolver(act_name)
 
         # Transformations of Bessel and spherical basis representations.
         self.lin_rbf1 = nn.Linear(num_radial, basis_emb_size, bias=False)
@@ -78,14 +78,14 @@ class InteractionPPBlock(torch.nn.Module):
         # Residual layers before and after skip connection.
         self.layers_before_skip = torch.nn.ModuleList(
             [
-                ResidualLayer(hidden_channels, act)
+                ResidualLayer(hidden_channels, activation_resolver(act_name))
                 for _ in range(num_before_skip)
             ]
         )
         self.lin = nn.Linear(hidden_channels, hidden_channels)
         self.layers_after_skip = torch.nn.ModuleList(
             [
-                ResidualLayer(hidden_channels, act)
+                ResidualLayer(hidden_channels, activation_resolver(act_name))
                 for _ in range(num_after_skip)
             ]
         )
@@ -155,10 +155,10 @@ class OutputPPBlock(torch.nn.Module):
         out_emb_channels,
         out_channels,
         num_layers,
-        act=swish,
+        act_name='swish',
     ):
         super(OutputPPBlock, self).__init__()
-        self.act = act
+        self.act = activation_resolver(act_name)
 
         self.lin_rbf = nn.Linear(num_radial, hidden_channels, bias=False)
         self.lin_up = nn.Linear(hidden_channels, out_emb_channels, bias=True)
@@ -207,7 +207,7 @@ class DimeNetPlusPlus(torch.nn.Module):
             interaction blocks after the skip connection. (default: :obj:`2`)
         num_output_layers: (int, optional): Number of linear layers for the
             output blocks. (default: :obj:`3`)
-        act: (function, optional): The activation funtion.
+        act_name: (function, optional): The activation funtion.
             (default: :obj:`swish`)
     """
 
@@ -228,7 +228,7 @@ class DimeNetPlusPlus(torch.nn.Module):
         num_before_skip=1,
         num_after_skip=2,
         num_output_layers=3,
-        act=swish,
+        act_name='swish',
         MLP_hidden_sizes = [],
     ):
         super(DimeNetPlusPlus, self).__init__()
@@ -247,7 +247,7 @@ class DimeNetPlusPlus(torch.nn.Module):
             num_spherical, num_radial, cutoff, envelope_exponent
         )
 
-        self.emb = EmbeddingBlock(num_radial, hidden_channels, act)
+        self.emb = EmbeddingBlock(num_radial, hidden_channels, activation_resolver(act_name))
 
         self.output_blocks = torch.nn.ModuleList(
             [
@@ -257,7 +257,7 @@ class DimeNetPlusPlus(torch.nn.Module):
                     out_emb_channels,
                     out_channels,
                     num_output_layers,
-                    act,
+                    act_name,
                 )
                 for _ in range(num_blocks + 1)
             ]
@@ -273,7 +273,7 @@ class DimeNetPlusPlus(torch.nn.Module):
                     num_radial,
                     num_before_skip,
                     num_after_skip,
-                    act,
+                    act_name,
                 )
                 for _ in range(num_blocks)
             ]
