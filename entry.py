@@ -174,7 +174,7 @@ def testing_procedure(trainer, data_module, args):
 
 def actual_training(model, data_module, use_clearml, gnn_type, args):
     # Add checkpoint
-    monitoring_metric = 'loss'
+    monitoring_metric = 'logAUC'
     actual_training_checkpoint_dir = args.default_root_dir
     actual_training_checkpoint_callback = ModelCheckpoint(
         monitor=monitoring_metric,
@@ -182,7 +182,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         filename='best_model_metric_{epoch}_{loss}',
         #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
         save_top_k=1,
-        mode='min',
+        mode='max',
         save_last=True,
         save_on_train_epoch_end=False
     )
