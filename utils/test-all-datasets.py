@@ -59,7 +59,7 @@ def run(folder):
 
 if __name__ == '__main__':
     use_best = True
-    monitored_metric = 'ppv'
+    monitored_metric = 'logAUC'
     start_time = time.time()
     mp.set_start_method('spawn')
     exp_dir = '/home/liuy69/projects/unified_framework/experiments/'
