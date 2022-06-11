@@ -6,8 +6,9 @@ from tqdm import tqdm
 import shutil, errno
 import itertools
 import time
+import pandas as pd
 
-branch = 'Dataset-mem-issue' # Change this
+branch = 'main' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -25,36 +26,22 @@ def gitupdate():
 def run_command(dataset): # Change this
     cwd = os.getcwd()
     print(f'dataset:{dataset}')
-
-    # if logs/test_result.log does not exist, run the command
-    if not osp.exists('logs/test_result.log'):
-        # Model=kgnn
+    # Model=kgnn
+    if not osp.exists('logs/best_test_sample_scores.log'):
         os.system(f'python -W ignore entry.py \
-            --task_name {dataset}_test\
+            --task_name test_dimenetpp\
             --dataset_name {dataset} \
-            --seed 30\
-            --num_workers 5 \
+            --seed 42\
+            --num_workers 16 \
             --dataset_path ../../../dataset/ \
             --enable_oversampling_with_replacement \
             --warmup_iterations 300 \
             --max_epochs 20\
-            --peak_lr 5e-2 \
+            --peak_lr 1e-4 \
             --end_lr 1e-9 \
             --batch_size 17 \
             --default_root_dir actual_training_checkpoints \
             --gpus 1 \
-            --num_layers 3 \
-            --num_kernel1_1hop 10 \
-            --num_kernel2_1hop 20 \
-            --num_kernel3_1hop 30 \
-            --num_kernel4_1hop 50 \
-            --num_kernel1_Nhop 10 \
-            --num_kernel2_Nhop 20 \
-            --num_kernel3_Nhop 30 \
-            --num_kernel4_Nhop 50 \
-            --node_feature_dim 27 \
-            --edge_feature_dim 7 \
-            --hidden_dim 32\
             --test\
             ')
 
@@ -66,38 +53,117 @@ def run(folder):
 
     folder_name_components = folder.split('_')
     dataset = folder_name_components[2][7:]
-    # print(f'dataset:{dataset}')
     run_command(dataset)
 
-    
-    
+
 
 if __name__ == '__main__':
     start_time = time.time()
     mp.set_start_method('spawn')
-    exp_dir = '/home/live-lab/projects/unified_framework/experiments/'
+    exp_dir = '/home/liuy69/projects/unified_framework/experiments/'
 
-    # Get a list of folders
+   # Get a list of folders
     folder_list = []
     for folder in os.listdir(exp_dir):
         if 'exp' in folder:
             folder_list.append(osp.join(exp_dir, folder))
 
     # Update git and run testing
-    with Pool(processes = 9) as pool:
-        pool.map(run, folder_list)
+    # with Pool(processes = 9) as pool:
+    #     pool.map(run, folder_list)
 
     # Gather testing results
     file_name = 'logs/all_test_result.log'
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
+    out_table = {}
     with open(file_name, 'w') as output_file:
         for folder in folder_list:
+            metric_counter = 0 # if ==0, last metric, if ==1, best metric
+            base_name = osp.basename(folder)
+            name_components = base_name.split('_')
+            seed = name_components[2]
+            peak = name_components[5]
+            layers = name_components[7]
+            
+            print('\n=======\n')
             with open(osp.join(exp_dir,f'{folder}/kgnn/logs/test_result.log'), 'r') as in_file:
                 for line in in_file:
-                    output_file.write(line)
-                    print(line)
+                    if 'Namespace' in line: # for arguments
+                        components = line.split(', ')
+                        for component in components:
+                            if ('peak' in component) or ('layer') in component: # specifiy which arguments to print
+                                split_component = component.split('=')
+                                component_name = split_component[0]
+                                component_value = split_component[1]
+                                
+                                out_content = out_table
+                                # print(out_content)
+                                # output_file.write(out_content)
+                    else: # for metrics
+                        if 'logAUC' in line:
+                            print(line)
+                            split_line = line.split(',')
+                            loss = float(split_line[0].split(': ')[1]) # Get loss
+                            ppv = float(split_line[1].split(': ')[1]) # Get ppv
+                            logAUC = float(split_line[2].split(': ')[1])# Get logAUC
+                            f1 = float(split_line[3].split(': ')[1].split('}')[0]) # Get f1
+                            
+                            if metric_counter == 0:
+                                key = 'last_AUC'
+                                # out_table.setdefault(f'{peak}_{layers}',[]).append({f'{key}_{seed}':f'{logAUC}'})
+                                # out_content = out_table
+                                # print(out_content)
+                            else:
+                                key = 'best_AUC'
+                                out_table.setdefault(f'{peak}_{layers}',[]).append({f'{seed}':f'{f1}'})
+                                out_content = out_table
+                                # print(out_content)
+                            metric_counter+=1
+                        
+                        
+                        
+                        # output_file.write(out_content)
                 output_file.write('\n=======\n')
+
+
+
+        # for folder in folder_list:
+        #     print('\n=======\n')
+        #     with open(osp.join(exp_dir,f'{folder}/kgnn/logs/test_result.log'), 'r') as in_file:
+        #         for line in in_file:
+        #             if 'Namespace' in line: # for arguments
+        #                 components = line.split(', ')
+        #                 for component in components:
+        #                     if ('peak' in component) or ('layer') in component: # specifiy which arguments to print
+        #                         out_content = component
+        #                         print(out_content)
+        #                         output_file.write(out_content)
+        #             else:
+        #                 out_content = line
+        #                 print(out_content)
+        #                 output_file.write(out_content)
+        #         output_file.write('\n=======\n')
+
+    
+    # Prepare dataframe
+    for peak_layer_comb, peak_layer_list  in out_table.items():
+        print('====')
+        print(f'comb:{peak_layer_comb}:')
+        row_index = peak_layer_comb
+        sorted_list = sorted(peak_layer_list, key=lambda x:list(x.items())[0][0])
+        sorted_list = list(map(lambda x: list(x.items())[0][1], sorted_list))
+        out_table[peak_layer_comb] = sorted_list
+        for each in sorted_list:
+            print(each)
+    
+
+    sorted_out_table = out_table
+
+    output_df = pd.DataFrame.from_dict(sorted_out_table, orient='index')
+    print(output_df)
+    output_df.to_csv('logs/all_test_result_df.csv')    
+    print('\n')
+
     end_time=time.time()
     run_time = end_time-start_time
     print(f'finish getting all test result: {run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}')
-
