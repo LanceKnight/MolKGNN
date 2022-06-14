@@ -22,7 +22,7 @@ def get_split(num_active, num_inactive, seed, dataset_name, shrink=None):
         filename = f'data_split/{dataset_name}_seed{seed}.pt'
     else:
         num_active_train = round(num_active * 0.8)
-        num_inactive_train = 1000
+        num_inactive_train = 10000
         num_active_valid = round(num_active * 0.1)
         num_inactive_valid = round(num_inactive * 0.1)
         num_active_test = num_active - num_active_train - num_active_valid
