@@ -83,9 +83,10 @@ if __name__ == '__main__':
             metric_counter = 0 # if ==0, last metric, if ==1, best metric
             base_name = osp.basename(folder)
             name_components = base_name.split('_')
-            seed = name_components[2]
-            peak = name_components[5]
-            layers = name_components[7]
+            print(name_components)
+            seed = name_components[3]
+            peak = name_components[4]
+            # layers = name_components[7]
             
             print('\n=======\n')
             try:
@@ -94,7 +95,8 @@ if __name__ == '__main__':
                         if 'Namespace' in line: # for arguments
                             components = line.split(', ')
                             for component in components:
-                                if ('peak' in component) or ('layer') in component: # specifiy which arguments to print
+                                if ('seed' in component) or ('peak') in component: # specifiy which arguments to print
+                                    print(component)
                                     split_component = component.split('=')
                                     component_name = split_component[0]
                                     component_value = split_component[1]
@@ -104,7 +106,7 @@ if __name__ == '__main__':
                                     # output_file.write(out_content)
                         else: # for metrics
                             if 'logAUC' in line:
-                                print(f'peak_{peak};layer_{layers};seed_{seed}')
+                                print(f'peak_{peak};seed_{seed}')
                                 print(f'{line}')
                                 split_line = line.split(',')
                                 loss = float(split_line[0].split(': ')[1]) # Get loss
@@ -121,13 +123,13 @@ if __name__ == '__main__':
                                 if metric_counter == 0:
                                     key = 'last'
                                     if use_best == False:
-                                        out_table.setdefault(f'{peak}_{layers}',[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
+                                        out_table.setdefault(f'{peak}',[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
                                         out_content = out_table
                                         # print(out_content)
                                 else:
                                     key = 'best'
                                     if use_best == True:
-                                        out_table.setdefault(f'{peak}_{layers}',[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
+                                        out_table.setdefault(f'{peak}',[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
                                         out_content = out_table
                                     # print(out_content)
                                 metric_counter+=1
@@ -140,7 +142,7 @@ if __name__ == '__main__':
                 key = 'best' if use_best else 'last'
                 print(f'error message:{e}')
                 print(f'error folder:{folder}')
-                out_table.setdefault(f'{peak}_{layers}',[]).append({f'{key}_{monitored_metric}_{seed}':f'None'})
+                out_table.setdefault(f'{peak}',[]).append({f'{key}_{monitored_metric}_{seed}':f'None'})
 
 
         # for folder in folder_list:
