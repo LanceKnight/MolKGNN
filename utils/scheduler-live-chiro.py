@@ -57,7 +57,7 @@ def copyanything(src, dst):
 
 def run(exp_id, *args):
     print(f'args1:{args}')
-    exp_name = f'exp{exp_id}_dataset{args[0]}_chiro_seed{args[1]}_peak{args[2]}' # Change this
+    exp_name = f'exp{exp_id}_dataset{args[0]}_chiro_seed{args[1]}_peak{args[4]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -99,7 +99,7 @@ if __name__ == '__main__':
     dataset_list = [ '1798']
     seed_list = [1, 2, 3] # arg1
     warmup_list = [200] # arg2
-    epochs_list = [150] # arg3
+    epochs_list = [20] # arg3
     peak_lr_list = [6.04e-1, 6.04e-2, 6.04e-3] # arg4
     end_lr_list = [1e-9] # arg5
     
