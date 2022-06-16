@@ -212,12 +212,13 @@ class GNNModel(pl.LightningModule):
         pred_y = pred_y.view(-1)
         true_y = batch_data.y.view(-1)
 
-        # Get metrics
-        results = {}
-        results = self.get_evaluations(results, true_y, pred_y)
+        train_step_output = {}
+        train_step_output['pred_y'] = pred_y
+        train_step_output['true_y'] = true_y
+        loss = self.loss_func(pred_y, true_y.float())
+        train_step_output['loss'] = loss
+        return train_step_output
 
-        # self.log(f"train performance by step", results, on_step=True, prog_bar=True, logger=True)
-        return results
 
     def training_epoch_end(self, train_step_outputs):
         """
@@ -226,19 +227,19 @@ class GNNModel(pl.LightningModule):
         :return: None, But set self.train_epoch_outputs to a dictionary of
         the mean metrics, for monitoring purposes.
         """
-        train_epoch_outputs = {}
-        for key in train_step_outputs[0].keys():  # Here train_step_outputs
-            # is a list of dictionaries, with each dictionary being the
-            # output from each iteration. So train_step_outputs[0] is to get
-            # the first dictionary. See return function description from
-            # function training_step() above
-            mean_output = sum(output[key] for output in train_step_outputs) \
-                / len(train_step_outputs)
-            train_epoch_outputs[key] = mean_output
-            self.log(key, mean_output)
 
-        self.train_epoch_outputs = train_epoch_outputs
-        # self.log(f"train performance by epoch", train_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
+        results = {}
+        all_pred = [output['pred_y'] for output in train_step_outputs]
+        all_true = [output['true_y'] for output in train_step_outputs]
+        results = self.get_evaluations(
+            results, torch.cat(all_true),
+            torch.cat(all_pred))
+
+        self.train_epoch_outputs = results
+        # This log is used for monitoring metric and saving the best model. The actual logging happends within
+        # clearml. See Monitor.py
+        for key in results.keys():
+            self.log(key, results[key])
 
 
     def validation_step(self, batch_data, batch_idx):

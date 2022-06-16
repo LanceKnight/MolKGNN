@@ -28,7 +28,7 @@ def gitupdate(dir_name):
 def run_command(exp_id, args): 
     # Model=kgnn
     os.system(f'python -W ignore entry.py \
-        --task_name experiments{exp_id}\
+        --task_name exp{exp_id}_L{args[6]}_lr{args[4]}_seed{args[1]}\
         --dataset_name {args[0]} \
         --seed {args[1]}\
         --num_workers 11 \
