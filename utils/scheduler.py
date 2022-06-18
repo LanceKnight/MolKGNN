@@ -7,7 +7,7 @@ import itertools
 import time
 from datetime import datetime
 
-branch = 'main' # Change this
+branch = 'new_logAUC' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -111,12 +111,12 @@ if __name__ == '__main__':
     # Hyperparms
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
     dataset_list = [ '1798' ] # arg0
-    seed_list = [1,2] # arg1
+    seed_list = [1,2, 3, 4, 5] # arg1
     warmup_list = [200] # arg2
     epochs_list = [40] # arg3
-    peak_lr_list = [5e-2, 5e-3] # arg4
+    peak_lr_list = [5e-2] # arg4
     end_lr_list = [1e-10] # arg5
-    num_layer_list = [2,3] # arg6
+    num_layer_list = [3] # arg6
     kernel1_list = [10] # arg7
     kernel2_list = [20] # arg8
     kernel3_list = [30] # arg9
