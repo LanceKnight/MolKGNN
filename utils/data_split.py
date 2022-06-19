@@ -32,13 +32,13 @@ def get_split(num_active, num_inactive, seed, dataset_name, shrink=None):
     split_dict = {}
     split_dict['train'] = active_idx[:num_active_train]\
                           + inactive_idx[:num_inactive_train]
-    split_dict['test'] = active_idx[
+    split_dict['valid'] = active_idx[
                           num_active_train:num_active_train
                                            +num_active_valid] \
                           + inactive_idx[
                             num_inactive_train:num_inactive_train
                                                +num_inactive_valid]            
-    split_dict['valid'] = active_idx[
+    split_dict['test'] = active_idx[
                          num_active_train + num_active_valid
                          : num_active_train
                            + num_active_valid
