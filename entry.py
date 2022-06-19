@@ -388,7 +388,7 @@ if __name__ == '__main__':
     with open(filename, 'w') as out_file:
         use_clearml = True
         if use_clearml:
-            task = Task.init(project_name=f"Issues/valid_test_discrepancy",
+            task = Task.init(project_name=f"HyperParams",
                              task_name=f"{gnn_type}",
                              tags=[],
                              reuse_last_task_id=False

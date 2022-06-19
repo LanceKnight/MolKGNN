@@ -7,7 +7,7 @@ import itertools
 import time
 from datetime import datetime
 
-branch = 'new_logAUC' # Change this
+branch = 'main' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -29,7 +29,7 @@ def gitupdate(dir_name):
 def run_command(exp_id, args): 
     # Model=kgnn
     os.system(f'python -W ignore entry.py \
-        --task_name experiments{exp_id}\
+        --task_name id{exp_id}_lr{args[4]}_L{args[6]}_seed{args[1]}\
         --dataset_name {args[0]} \
         --seed {args[1]}\
         --num_workers 11 \
@@ -54,6 +54,7 @@ def run_command(exp_id, args):
         --edge_feature_dim 7 \
         --hidden_dim {args[11]}\
         --batch_size {args[12]}\
+        --train_metric
         ')\
 
 def copyanything(src, dst):
@@ -112,7 +113,7 @@ if __name__ == '__main__':
     # Hyperparms
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
     dataset_list = [ '1798' ] # arg0
-    seed_list = [1,2, 3, 4, 5] # arg1
+    seed_list = [1, 2, 3, 4] # arg1
     warmup_list = [200] # arg2
     epochs_list = [20] # arg3
     peak_lr_list = [5e-2] # arg4
