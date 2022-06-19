@@ -251,7 +251,7 @@ class GNNModel(pl.LightningModule):
         # self.log(f"train performance by epoch", train_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
 
-    def validation_step(self, batch_data, batch_idx):
+    def validation_step(self, batch_data, batch_idx, dataloader_idx):
         """
         Process the data in validation dataloader in evaluation mode
         :param batch_data:
@@ -276,28 +276,56 @@ class GNNModel(pl.LightningModule):
 
     def validation_epoch_end(self, valid_step_outputs):
 
-        results = {}
-        all_pred = [output['pred_y'] for output in valid_step_outputs]
-        all_true = [output['true_y'] for output in valid_step_outputs]
+        for i, outputs_each_dataloader in enumerate(valid_step_outputs):
+            results = {}
+            all_pred = [output['pred_y'] for output in outputs_each_dataloader]
+            all_true = [output['true_y'] for output in outputs_each_dataloader]
+            results = self.get_evaluations(results, torch.cat(all_true), torch.cat(all_pred))
+            if i == 0:
+                self.valid_epoch_outputs = results
+                # Only log validation dataloader b/c this log is used for
+                # monitoring metric and saving the best model. The actual logging happends within
+                # clearml. See Monitor.py
+                for key in results.keys():
+                    self.log(key, results[key])
 
-        # Store prediciton and labels if needed
-        if self.record_valid_pred:
-            filename = f'logs/valid_predictions/epoch_{self.current_epoch}'
-            os.makedirs(os.path.dirname(filename), exist_ok=True)
-            with open(filename, 'w+') as out_file:
-                for i, pred in enumerate(all_pred):
-                    true = all_true[i]
-                    out_file.write(f'{pred},{true}\n')
+                # Store prediciton and labels if needed
+                if self.record_valid_pred:
+                    filename = f'logs/valid_predictions/epoch_{self.current_epoch}'
+                    os.makedirs(os.path.dirname(filename), exist_ok=True)
+                    with open(filename, 'w+') as out_file:
+                        for i, pred in enumerate(all_pred):
+                            true = all_true[i]
+                            out_file.write(f'{pred},{true}\n')
+            else:
+                for key in results.keys():
+                    new_key = key + "_no_dropout"
+                    self.valid_epoch_outputs[new_key] = results[key]
 
-        results = self.get_evaluations(
-            results, torch.cat(all_true),
-            torch.cat(all_pred))
 
-        self.valid_epoch_outputs = results
-        # This log is used for monitoring metric and saving the best model. The actual logging happends within
-        # clearml. See Monitor.py
-        for key in results.keys():
-            self.log(key, results[key])
+
+        # results = {}
+        # all_pred = [output['pred_y'] for output in valid_step_outputs]
+        # all_true = [output['true_y'] for output in valid_step_outputs]
+        #
+        # # Store prediciton and labels if needed
+        # if self.record_valid_pred:
+        #     filename = f'logs/valid_predictions/epoch_{self.current_epoch}'
+        #     os.makedirs(os.path.dirname(filename), exist_ok=True)
+        #     with open(filename, 'w+') as out_file:
+        #         for i, pred in enumerate(all_pred):
+        #             true = all_true[i]
+        #             out_file.write(f'{pred},{true}\n')
+        #
+        # results = self.get_evaluations(
+        #     results, torch.cat(all_true),
+        #     torch.cat(all_pred))
+        #
+        # self.valid_epoch_outputs = results
+        # # This log is used for monitoring metric and saving the best model. The actual logging happends within
+        # # clearml. See Monitor.py
+        # for key in results.keys():
+        #     self.log(key, results[key])
             
         # Logging
         # self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)

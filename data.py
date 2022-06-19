@@ -257,7 +257,7 @@ class DataLoaderModule(LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
         )
-        return val_loader#, train_loader
+        return val_loader, train_loader
 
     def test_dataloader(self):
         # Test laader
