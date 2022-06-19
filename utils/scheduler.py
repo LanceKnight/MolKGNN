@@ -21,7 +21,8 @@ def gitupdate(dir_name):
     cwd = os.getcwd()
     os.chdir(dir_name+'/kgnn')
     os.system('git gc')
-    os.system(f'git checkout {branch}') 
+    os.system('git pull')
+    os.system(f'git checkout {branch}')
     os.system('git pull')
     os.chdir(cwd)
 

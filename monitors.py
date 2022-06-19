@@ -125,21 +125,31 @@ class LossNoDropoutMonitor(MetricMonitor):
                                                    series='no_dropout')
 
 
-# LogAUC Monitors
-class LogAUCMonitor(MetricMonitor):
+# LogAUC0.001_0.1 Monitors
+class LogAUC0_001to0_1Monitor(MetricMonitor):
     def __init__(self, stage='valid', logger=None, logging_interval=None,
                  title=None):
-        super(LogAUCMonitor, self).__init__(stage=stage, metric="logAUC",
-                                            logger=logger,
-                                            logging_interval=logging_interval,
-                                            title=f'logAUC_by_'
-                                                  f'{logging_interval}')
+        super(LogAUC0_001to0_1Monitor, self).__init__(stage=stage,
+                                                      metric="logAUC_0.001_0.1",
+                                                      logger=logger,
+                                                      logging_interval=logging_interval,
+                                                      title=f'logAUC_by_{logging_interval}')
 
-
-class LogAUCNoDropoutMonitor(MetricMonitor):
+# LogAUC_0.001_1 Monitors
+class LogAUC0_001to1Monitor(MetricMonitor):
     def __init__(self, stage='valid', logger=None, logging_interval=None,
                  title=None):
-        super(LogAUCNoDropoutMonitor, self).__init__(stage=stage,
+        super(LogAUC0_001to1Monitor, self).__init__(stage=stage,
+                                                      metric="logAUC_0.001_1",
+                                                      logger=logger,
+                                                      logging_interval=logging_interval,
+                                                      title=f'logAUC_by_{logging_interval}')
+
+
+class LogAUC0_001to1NoDropoutMonitor(MetricMonitor):
+    def __init__(self, stage='valid', logger=None, logging_interval=None,
+                 title=None):
+        super(LogAUC0_001to1NoDropoutMonitor, self).__init__(stage=stage,
                                                      metric="logAUC_no_dropout",
                                                      logger=logger,
                                                      logging_interval=logging_interval,
@@ -148,6 +158,25 @@ class LogAUCNoDropoutMonitor(MetricMonitor):
                                                            f'{logging_interval}',
                                                      series='no_dropout')
 
+# AUC
+class AUCMonitor(MetricMonitor):
+    def __init__(self, stage='valid', logger=None, logging_interval=None,
+                 title=None):
+        super(AUCMonitor, self).__init__(stage=stage,
+                                                      metric="AUC",
+                                                      logger=logger,
+                                                      logging_interval=logging_interval,
+                                                      title=f'AUC_by_{logging_interval}')
+
+class AUCNoDropoutMonitor(MetricMonitor):
+    def __init__(self, stage='valid', logger=None, logging_interval=None,
+                 title=None):
+        super(AUCNoDropoutMonitor, self).__init__(stage=stage,
+                                                     metric="AUC_no_dropout",
+                                                     logger=logger,
+                                                     logging_interval=logging_interval,
+                                                     title=f'AUC_by_{logging_interval}',
+                                                     series='no_dropout')
 
 # PPV Monitors
 class PPVMonitor(MetricMonitor):

@@ -7,7 +7,7 @@ from models.ChIRoNet.ChIRoNet import ChIRoNet
 from models.ChIRoNet.params_interpreter import string_to_object
 from models.SphereNet.SphereNet import SphereNet
 from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy, \
-    calculate_f1_score
+    calculate_f1_score, calculate_auc
 from lr import PolynomialDecayLR
 
 # Public libraries
@@ -173,6 +173,8 @@ class GNNModel(pl.LightningModule):
                                    dataset_path=args.dataset_path
                                    )['metrics']
         self.valid_epoch_outputs = {}
+        self.record_valid_pred = args.record_valid_pred
+        self.train_metric = args.train_metric
 
     def forward(self, data):
 
@@ -212,9 +214,16 @@ class GNNModel(pl.LightningModule):
         pred_y = pred_y.view(-1)
         true_y = batch_data.y.view(-1)
 
+        # print(f'pred_y')
+        # print(f'{pred_y}')
+        # print(f'true_y')
+        # print(f'{true_y}')
+
         # Get metrics
         results = {}
-        results = self.get_evaluations(results, true_y, pred_y)
+        loss = self.loss_func(pred_y, true_y.float())
+        results['loss'] = loss
+        # results = self.get_evaluations(results, true_y, pred_y)
 
         # self.log(f"train performance by step", results, on_step=True, prog_bar=True, logger=True)
         return results
@@ -226,18 +235,19 @@ class GNNModel(pl.LightningModule):
         :return: None, But set self.train_epoch_outputs to a dictionary of
         the mean metrics, for monitoring purposes.
         """
-        train_epoch_outputs = {}
-        for key in train_step_outputs[0].keys():  # Here train_step_outputs
-            # is a list of dictionaries, with each dictionary being the
-            # output from each iteration. So train_step_outputs[0] is to get
-            # the first dictionary. See return function description from
-            # function training_step() above
-            mean_output = sum(output[key] for output in train_step_outputs) \
-                / len(train_step_outputs)
-            train_epoch_outputs[key] = mean_output
-            self.log(key, mean_output)
+        # train_epoch_outputs = {}
+        # for key in train_step_outputs[0].keys():  # Here train_step_outputs
+        #     # is a list of dictionaries, with each dictionary being the
+        #     # output from each iteration. So train_step_outputs[0] is to get
+        #     # the first dictionary. See return function description from
+        #     # function training_step() above
+        #     mean_output = sum(output[key] for output in train_step_outputs) \
+        #         / len(train_step_outputs)
+        #     train_epoch_outputs[key] = mean_output
+        #     self.log(key, mean_output)
+        #
+        # self.train_epoch_outputs = train_epoch_outputs
 
-        self.train_epoch_outputs = train_epoch_outputs
         # self.log(f"train performance by epoch", train_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
 
@@ -269,6 +279,16 @@ class GNNModel(pl.LightningModule):
         results = {}
         all_pred = [output['pred_y'] for output in valid_step_outputs]
         all_true = [output['true_y'] for output in valid_step_outputs]
+
+        # Store prediciton and labels if needed
+        if self.record_valid_pred:
+            filename = f'logs/valid_predictions/epoch_{self.current_epoch}'
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+            with open(filename, 'w+') as out_file:
+                for i, pred in enumerate(all_pred):
+                    true = all_true[i]
+                    out_file.write(f'{pred},{true}\n')
+
         results = self.get_evaluations(
             results, torch.cat(all_true),
             torch.cat(all_pred))
@@ -425,6 +445,10 @@ class GNNModel(pl.LightningModule):
         parser.add_argument('--seed', type=int, default=42)
         parser.add_argument('--validate', action='store_true', default=False)
         parser.add_argument('--test', action='store_true', default=False)
+        parser.add_argument('--record_valid_pred', action='store_true',
+                            default=False)
+        parser.add_argument(f'--train_metric', action = 'store_true',
+                            default=False)
         parser.add_argument('--warmup_iterations', type=int, default=60000)
         parser.add_argument('--peak_lr', type=float, default=5e-2)
         parser.add_argument('--end_lr', type=float, default=1e-9)
@@ -478,13 +502,20 @@ class GNNModel(pl.LightningModule):
                                           squared=False)  # Setting
                 # squared=False returns RMSE
                 results['RMSE'] = rmse
-            if metric == 'logAUC':
+            if metric == 'logAUC_0.001_0.1':
                 logAUC = calculate_logAUC(numpy_y, numpy_prediction)
-                results['logAUC'] = logAUC
+                results['logAUC_0.001_0.1'] = logAUC
+            if metric == 'logAUC_0.001_1':
+                logAUC = calculate_logAUC(numpy_y, numpy_prediction,
+                                          FPR_range=(0.001, 1))
+                results['logAUC_0.001_1'] = logAUC
             if metric == 'ppv':
                 ppv = calculate_ppv(numpy_y, numpy_prediction)
                 results['ppv'] = ppv
             if metric == 'f1_score':
                 f1_sc = calculate_f1_score(numpy_y, numpy_prediction)
                 results['f1_score'] = f1_sc
+            if metric == 'AUC':
+                AUC = calculate_auc(numpy_y, numpy_prediction)
+                results['AUC'] = AUC
         return results

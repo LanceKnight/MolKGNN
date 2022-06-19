@@ -1,7 +1,8 @@
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix, auc, roc_curve, f1_score
+from sklearn.metrics import confusion_matrix, auc, roc_curve, f1_score, \
+    roc_auc_score
 
 
 def sigmoid(x):
@@ -53,14 +54,14 @@ def calculate_logAUC(true_y, predicted_score, FPR_range=(0.001, 0.1)):
     if (lower_bound >= upper_bound):
         raise Exception('FPR upper_bound must be greater than lower_bound')
 
-    print(f'true_y:')
-    print(true_y)
-    print(f'predicted_score:')
-    print(predicted_score)
+    # print(f'true_y:')
+    # print(true_y)
+    # print(f'predicted_score:')
+    # print(predicted_score)
 
     fpr, tpr, thresholds = roc_curve(true_y, predicted_score, pos_label=1)
-    print(f'ori_tpr:{tpr}')
-    print(f'ori_fpr:{fpr}')
+    # print(f'ori_tpr:{tpr}')
+    # print(f'ori_fpr:{fpr}')
 
     # ori_fig, ori_ax = plt.subplots()
     # ori_ax.plot(fpr, tpr)
@@ -108,12 +109,15 @@ def calculate_logAUC(true_y, predicted_score, FPR_range=(0.001, 0.1)):
     trim_y = y[lower_bound_idx:upper_bound_idx + 1]
 
     # print(f'\n')
-    print(f'trim_x:{trim_x}')
-    print(f'trim_y:{trim_y}')
+    # print(f'trim_x:{trim_x}')
+    # print(f'trim_y:{trim_y}')
     area = auc(trim_x, trim_y) / 2
     # print(f'evaluation.py::fpr:{trim_x} tpr:{trim_y}')
 
     return area
+
+def calculate_auc(true_y, predicted_score):
+    return roc_auc_score(true_y, predicted_score)
 
 
 def calculate_ppv(true_y, predicted_score, cutoff = 0.5):

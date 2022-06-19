@@ -17,7 +17,7 @@
 # python entry.py --dataset_name 435034 --num_workers 2 --enable_oversampling_with_replacement --warmup_iterations 200 --max_epochs 20 --peak_lr 5e-2 --end_lr 1e-9 --batch_size 17 --node_feature_dim 27 --hidden_dim 32 --output_dim 1 --default_root_dir actual_training_checkpoints --gpus 1 --num_layers 3
 
 # DimeNetPP
-python entry.py --dataset_name 9999 --num_workers 16 --dataset_path ../dataset/ --enable_oversampling_with_replacement --warmup_iterations 200 --max_epochs 3 --peak_lr 1e-4 --end_lr 1e-9 --batch_size 17 --default_root_dir actual_training_checkpoints --gpus 1 --test
+python entry.py --dataset_name 9999 --num_workers 16 --dataset_path ../dataset/ --enable_oversampling_with_replacement --warmup_iterations 200 --max_epochs 3 --peak_lr 1e-4 --end_lr 1e-9 --batch_size 16 --default_root_dir actual_training_checkpoints --gpus 1
 
 # ChIRoNet
 # python entry.py --dataset_name 9999 --num_workers 16 --dataset_path ../dataset/ --enable_oversampling_with_replacement --warmup_iterations 200 --max_epochs 3 --peak_lr 6.06e-4 --end_lr 1e-9 --default_root_dir actual_training_checkpoints --gpus 1 
