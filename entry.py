@@ -209,9 +209,9 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         # Loss monitors
         # trainer.callbacks.append(
         #     LossMonitor(stage='train', logger=logger, logging_interval='step'))
-        # trainer.callbacks.append(
-        #     LossMonitor(stage='train', logger=logger,
-        #                 logging_interval='epoch'))
+        trainer.callbacks.append(
+            LossMonitor(stage='train', logger=logger,
+                        logging_interval='epoch'))
         # trainer.callbacks.append(
         #     LossMonitor(stage='valid', logger=logger, logging_interval='step'))
         trainer.callbacks.append(

@@ -133,7 +133,7 @@ class LogAUC0_001to0_1Monitor(MetricMonitor):
                                                       metric="logAUC_0.001_0.1",
                                                       logger=logger,
                                                       logging_interval=logging_interval,
-                                                      title=f'logAUC_by_{logging_interval}')
+                                                      title=f'logAUC_0.001_0.1_by_{logging_interval}')
 
 # LogAUC_0.001_1 Monitors
 class LogAUC0_001to1Monitor(MetricMonitor):
@@ -143,7 +143,7 @@ class LogAUC0_001to1Monitor(MetricMonitor):
                                                       metric="logAUC_0.001_1",
                                                       logger=logger,
                                                       logging_interval=logging_interval,
-                                                      title=f'logAUC_by_{logging_interval}')
+                                                      title=f'logAUC_0.001_1_by_{logging_interval}')
 
 
 class LogAUC0_001to1NoDropoutMonitor(MetricMonitor):
@@ -153,8 +153,7 @@ class LogAUC0_001to1NoDropoutMonitor(MetricMonitor):
                                                      metric="logAUC_no_dropout",
                                                      logger=logger,
                                                      logging_interval=logging_interval,
-                                                     title=f'logA'
-                                                           f'UC_by_'
+                                                     title=f'logAUC0.001_1_by_'
                                                            f'{logging_interval}',
                                                      series='no_dropout')
 
