@@ -235,18 +235,18 @@ class GNNModel(pl.LightningModule):
         :return: None, But set self.train_epoch_outputs to a dictionary of
         the mean metrics, for monitoring purposes.
         """
-        # train_epoch_outputs = {}
-        # for key in train_step_outputs[0].keys():  # Here train_step_outputs
-        #     # is a list of dictionaries, with each dictionary being the
-        #     # output from each iteration. So train_step_outputs[0] is to get
-        #     # the first dictionary. See return function description from
-        #     # function training_step() above
-        #     mean_output = sum(output[key] for output in train_step_outputs) \
-        #         / len(train_step_outputs)
-        #     train_epoch_outputs[key] = mean_output
-        #     self.log(key, mean_output)
-        #
-        # self.train_epoch_outputs = train_epoch_outputs
+        train_epoch_outputs = {}
+        for key in train_step_outputs[0].keys():  # Here train_step_outputs
+            # is a list of dictionaries, with each dictionary being the
+            # output from each iteration. So train_step_outputs[0] is to get
+            # the first dictionary. See return function description from
+            # function training_step() above
+            mean_output = sum(output[key] for output in train_step_outputs) \
+                / len(train_step_outputs)
+            train_epoch_outputs[key] = mean_output
+            self.log(key, mean_output)
+
+        self.train_epoch_outputs = train_epoch_outputs
 
         # self.log(f"train performance by epoch", train_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
