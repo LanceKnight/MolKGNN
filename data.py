@@ -54,7 +54,8 @@ def get_dataset(dataset_name='435034', gnn_type='kgnn',
             'num_class': 1,
             'dataset': qsar_dataset,
             'num_samples': len(qsar_dataset),
-            'metrics': ['ppv', 'logAUC', 'f1_score'],
+            'metrics': ['ppv', 'logAUC_0.001_0.1', 'logAUC_0.001_1',
+                        'f1_score', 'AUC'],
             'loss_func': BCEWithLogitsLoss()
         }
 
@@ -256,7 +257,7 @@ class DataLoaderModule(LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
         )
-        return val_loader#, train_loader
+        return val_loader, train_loader
 
     def test_dataloader(self):
         # Test laader

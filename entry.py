@@ -4,11 +4,21 @@ from data import DataLoaderModule, get_dataset
 import glob
 from model import GNNModel
 from monitors import LossMonitor, \
-    LogAUCMonitor,  \
+    LossNoDropoutMonitor,\
+    LogAUC0_001to0_1Monitor,  \
+    LogAUC0_001to0_1NoDropoutMonitor,\
+    LogAUC0_001to1Monitor,  \
+    LogAUC0_001to1NoDropoutMonitor,  \
+    AUCMonitor,\
+    AUCNoDropoutMonitor,\
     PPVMonitor,\
+    PPVNoDropoutMonitor,\
     RMSEMonitor,\
+    RMSENoDropoutMonitor,\
     AccuracyMonitor,\
-    F1ScoreMonitor
+    AccuracyNoDropoutMonitor,\
+    F1ScoreMonitor,\
+    F1ScoreNoDropoutMonitor
 
 from argparse import ArgumentParser
 import math
@@ -174,7 +184,7 @@ def testing_procedure(trainer, data_module, args):
 
 def actual_training(model, data_module, use_clearml, gnn_type, args):
     # Add checkpoint
-    monitoring_metric = 'logAUC'
+    monitoring_metric = 'logAUC_0.001_0.1'
     actual_training_checkpoint_dir = args.default_root_dir
     actual_training_checkpoint_callback = ModelCheckpoint(
         monitor=monitoring_metric,
@@ -206,15 +216,10 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     if use_clearml:
         # Loss monitors
         # trainer.callbacks.append(
-        #     LossMonitor(stage='train', logger=logger, logging_interval='step'))
-        trainer.callbacks.append(
-            LossMonitor(stage='train', logger=logger,
-                        logging_interval='epoch'))
-        # trainer.callbacks.append(
-        #     LossMonitor(stage='valid', logger=logger, logging_interval='step'))
-        trainer.callbacks.append(
-            LossMonitor(stage='valid', logger=logger,
-                        logging_interval='epoch'))
+        trainer.callbacks.append(LossMonitor(stage='train', logger=logger, logging_interval='epoch'))
+        trainer.callbacks.append(LossMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+        if args.train_metric:
+            trainer.callbacks.append(LossNoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch'))
 
         # Learning rate monitors
         trainer.callbacks.append(LearningRateMonitor(logging_interval='step'))
@@ -228,50 +233,77 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         for metric in metrics:
             if metric == 'accuracy':
                 # Accuracy monitors
-                trainer.callbacks.append(
-                    AccuracyMonitor(stage='train', logger=logger,
-                                    logging_interval='epoch'))
-                trainer.callbacks.append(
-                    AccuracyMonitor(stage='valid', logger=logger,
-                                    logging_interval='epoch'))
+                # trainer.callbacks.append(
+                #     AccuracyMonitor(stage='train', logger=logger,
+                #                     logging_interval='epoch'))
+                trainer.callbacks.append(AccuracyMonitor(stage='valid', logger=logger, logging_interval='epoch'))
                 continue
 
             if metric == 'RMSE':
                 # Accuracy monitors
-                trainer.callbacks.append(
-                    RMSEMonitor(stage='train', logger=logger,
-                                logging_interval='epoch'))
-                trainer.callbacks.append(
-                    RMSEMonitor(stage='valid', logger=logger,
-                                logging_interval='epoch'))
+                # trainer.callbacks.append(
+                    # RMSEMonitor(stage='train', logger=logger,
+                    #             logging_interval='epoch'))
+                trainer.callbacks.append(RMSEMonitor(stage='valid', logger=logger, logging_interval='epoch'))
                 continue
 
-            if metric == 'logAUC':
+            if metric == 'logAUC_0.001_0.1':
                 # LogAUC monitors
-                trainer.callbacks.append(
-                    LogAUCMonitor(stage='train', logger=logger,
-                                  logging_interval='epoch'))
-                trainer.callbacks.append(
-                    LogAUCMonitor(stage='valid', logger=logger,
-                                  logging_interval='epoch'))
+                # trainer.callbacks.append(
+                #     LogAUC0_001to0_1Monitor(stage='train', logger=logger,
+                #                             logging_interval='epoch'))
+                trainer.callbacks.append(LogAUC0_001to0_1Monitor(stage='valid', logger=logger, logging_interval='epoch'))
+                if args.train_metric:
+                    trainer.callbacks.append(
+                        LogAUC0_001to0_1NoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch')
+                    )
+                continue
+
+            if metric == 'logAUC_0.001_1':
+                # LogAUC monitors
+                # trainer.callbacks.append(
+                #     LogAUC0_001to1Monitor(stage='train', logger=logger,
+                #                             logging_interval='epoch'))
+                trainer.callbacks.append(LogAUC0_001to1Monitor(stage='valid', logger=logger, logging_interval='epoch'))
+                if args.train_metric:
+                    trainer.callbacks.append(
+                        LogAUC0_001to1NoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch')
+                    )
+                continue
+
+            if metric == 'AUC':
+                # LogAUC monitors
+                # trainer.callbacks.append(
+                #     LogAUC0_001to1Monitor(stage='train', logger=logger,
+                #                             logging_interval='epoch'))
+                trainer.callbacks.append(AUCMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+                if args.train_metric:
+                    trainer.callbacks.append(
+                        AUCNoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch')
+                    )
                 continue
 
             if metric == 'ppv':
                 # PPV monitors
-                trainer.callbacks.append(
-                    PPVMonitor(stage='train', logger=logger, logging_interval='epoch'))
-                trainer.callbacks.append(
-                    PPVMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+                # trainer.callbacks.append(
+                #     PPVMonitor(stage='train', logger=logger, logging_interval='epoch'))
+                trainer.callbacks.append(PPVMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+                if args.train_metric:
+                    trainer.callbacks.append(
+                        PPVNoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch')
+                    )
                 continue
 
             if metric == 'f1_score':
                 # F1 monitors
-                trainer.callbacks.append(
-                    F1ScoreMonitor(stage='train', logger=logger,
-                                   logging_interval='epoch'))
-                trainer.callbacks.append(
-                    F1ScoreMonitor(stage='valid', logger=logger,
-                                   logging_interval='epoch'))
+                # trainer.callbacks.append(
+                #     F1ScoreMonitor(stage='train', logger=logger,
+                #                    logging_interval='epoch'))
+                trainer.callbacks.append(F1ScoreMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+                if args.train_metric:
+                    trainer.callbacks.append(
+                        F1ScoreNoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch')
+                    )
                 continue
 
     if args.test:
@@ -356,9 +388,9 @@ if __name__ == '__main__':
     with open(filename, 'w') as out_file:
         use_clearml = True
         if use_clearml:
-            task = Task.init(project_name=f"Issues/seed_correlation",
+            task = Task.init(project_name=f"HyperParams",
                              task_name=f"{gnn_type}",
-                             tags=['seed correlation'],
+                             tags=[],
                              reuse_last_task_id=False
                              )
             out_file.write(f'task_id:{task.id}')

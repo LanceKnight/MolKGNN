@@ -7,7 +7,7 @@ from models.ChIRoNet.ChIRoNet import ChIRoNet
 from models.ChIRoNet.params_interpreter import string_to_object
 from models.SphereNet.SphereNet import SphereNet
 from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy, \
-    calculate_f1_score
+    calculate_f1_score, calculate_auc
 from lr import PolynomialDecayLR
 
 # Public libraries
@@ -173,6 +173,8 @@ class GNNModel(pl.LightningModule):
                                    dataset_path=args.dataset_path
                                    )['metrics']
         self.valid_epoch_outputs = {}
+        self.record_valid_pred = args.record_valid_pred
+        self.train_metric = args.train_metric
 
     def forward(self, data):
 
@@ -212,9 +214,16 @@ class GNNModel(pl.LightningModule):
         pred_y = pred_y.view(-1)
         true_y = batch_data.y.view(-1)
 
+        # print(f'pred_y')
+        # print(f'{pred_y}')
+        # print(f'true_y')
+        # print(f'{true_y}')
+
         # Get metrics
         results = {}
-        results = self.get_evaluations(results, true_y, pred_y)
+        loss = self.loss_func(pred_y, true_y.float())
+        results['loss'] = loss
+        # results = self.get_evaluations(results, true_y, pred_y)
 
         # self.log(f"train performance by step", results, on_step=True, prog_bar=True, logger=True)
         return results
@@ -238,10 +247,11 @@ class GNNModel(pl.LightningModule):
             self.log(key, mean_output)
 
         self.train_epoch_outputs = train_epoch_outputs
+
         # self.log(f"train performance by epoch", train_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
 
-    def validation_step(self, batch_data, batch_idx):
+    def validation_step(self, batch_data, batch_idx, dataloader_idx):
         """
         Process the data in validation dataloader in evaluation mode
         :param batch_data:
@@ -266,18 +276,56 @@ class GNNModel(pl.LightningModule):
 
     def validation_epoch_end(self, valid_step_outputs):
 
-        results = {}
-        all_pred = [output['pred_y'] for output in valid_step_outputs]
-        all_true = [output['true_y'] for output in valid_step_outputs]
-        results = self.get_evaluations(
-            results, torch.cat(all_true),
-            torch.cat(all_pred))
+        for i, outputs_each_dataloader in enumerate(valid_step_outputs):
+            results = {}
+            all_pred = [output['pred_y'] for output in outputs_each_dataloader]
+            all_true = [output['true_y'] for output in outputs_each_dataloader]
+            results = self.get_evaluations(results, torch.cat(all_true), torch.cat(all_pred))
+            if i == 0:
+                self.valid_epoch_outputs = results
+                # Only log validation dataloader b/c this log is used for
+                # monitoring metric and saving the best model. The actual logging happends within
+                # clearml. See Monitor.py
+                for key in results.keys():
+                    self.log(key, results[key])
 
-        self.valid_epoch_outputs = results
-        # This log is used for monitoring metric and saving the best model. The actual logging happends within
-        # clearml. See Monitor.py
-        for key in results.keys():
-            self.log(key, results[key])
+                # Store prediciton and labels if needed
+                if self.record_valid_pred:
+                    filename = f'logs/valid_predictions/epoch_{self.current_epoch}'
+                    os.makedirs(os.path.dirname(filename), exist_ok=True)
+                    with open(filename, 'w+') as out_file:
+                        for i, pred in enumerate(all_pred):
+                            true = all_true[i]
+                            out_file.write(f'{pred},{true}\n')
+            else:
+                for key in results.keys():
+                    new_key = key + "_no_dropout"
+                    self.valid_epoch_outputs[new_key] = results[key]
+
+
+
+        # results = {}
+        # all_pred = [output['pred_y'] for output in valid_step_outputs]
+        # all_true = [output['true_y'] for output in valid_step_outputs]
+        #
+        # # Store prediciton and labels if needed
+        # if self.record_valid_pred:
+        #     filename = f'logs/valid_predictions/epoch_{self.current_epoch}'
+        #     os.makedirs(os.path.dirname(filename), exist_ok=True)
+        #     with open(filename, 'w+') as out_file:
+        #         for i, pred in enumerate(all_pred):
+        #             true = all_true[i]
+        #             out_file.write(f'{pred},{true}\n')
+        #
+        # results = self.get_evaluations(
+        #     results, torch.cat(all_true),
+        #     torch.cat(all_pred))
+        #
+        # self.valid_epoch_outputs = results
+        # # This log is used for monitoring metric and saving the best model. The actual logging happends within
+        # # clearml. See Monitor.py
+        # for key in results.keys():
+        #     self.log(key, results[key])
             
         # Logging
         # self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
@@ -425,6 +473,10 @@ class GNNModel(pl.LightningModule):
         parser.add_argument('--seed', type=int, default=42)
         parser.add_argument('--validate', action='store_true', default=False)
         parser.add_argument('--test', action='store_true', default=False)
+        parser.add_argument('--record_valid_pred', action='store_true',
+                            default=False)
+        parser.add_argument(f'--train_metric', action = 'store_true',
+                            default=False)
         parser.add_argument('--warmup_iterations', type=int, default=60000)
         parser.add_argument('--peak_lr', type=float, default=5e-2)
         parser.add_argument('--end_lr', type=float, default=1e-9)
@@ -478,13 +530,20 @@ class GNNModel(pl.LightningModule):
                                           squared=False)  # Setting
                 # squared=False returns RMSE
                 results['RMSE'] = rmse
-            if metric == 'logAUC':
+            if metric == 'logAUC_0.001_0.1':
                 logAUC = calculate_logAUC(numpy_y, numpy_prediction)
-                results['logAUC'] = logAUC
+                results['logAUC_0.001_0.1'] = logAUC
+            if metric == 'logAUC_0.001_1':
+                logAUC = calculate_logAUC(numpy_y, numpy_prediction,
+                                          FPR_range=(0.001, 1))
+                results['logAUC_0.001_1'] = logAUC
             if metric == 'ppv':
                 ppv = calculate_ppv(numpy_y, numpy_prediction)
                 results['ppv'] = ppv
             if metric == 'f1_score':
                 f1_sc = calculate_f1_score(numpy_y, numpy_prediction)
                 results['f1_score'] = f1_sc
+            if metric == 'AUC':
+                AUC = calculate_auc(numpy_y, numpy_prediction)
+                results['AUC'] = AUC
         return results
