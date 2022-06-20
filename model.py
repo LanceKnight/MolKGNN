@@ -275,7 +275,7 @@ class GNNModel(pl.LightningModule):
         return valid_step_output
 
     def validation_epoch_end(self, valid_step_outputs):
-
+        
         for i, outputs_each_dataloader in enumerate(valid_step_outputs):
             results = {}
             all_pred = [output['pred_y'] for output in outputs_each_dataloader]

@@ -99,20 +99,21 @@ def prepare_data(args, enable_pretraining=False, gnn_type='kgnn'):
     actual_data_module = DataLoaderModule.from_argparse_args(args)
     data_modules.append(actual_data_module)
 
-    args.tot_iterations = (
-                            math.ceil(len(actual_data_module.dataset_train)
-                            /args.batch_size)
-                            # +
-                            # math.ceil(len(actual_data_module.dataset_val)
-                            # /args.batch_size)
-                            ) * args.max_epochs + 2
+    num_train_batches = math.ceil(len(actual_data_module.dataset_train)/args.batch_size)
+    num_valid_batches = math.ceil(len(actual_data_module.dataset_val) / args.batch_size)
+    args.tot_iterations = (num_train_batches) * args.max_epochs + 2
     args.warmup_iterations+=2
     args.max_steps = args.tot_iterations
-    print(f'train:{math.ceil(len(actual_data_module.dataset_train)/args.batch_size)}')
-    print(f'val:'
-          f''
-          f'{math.ceil(len(actual_data_module.dataset_val) / args.batch_size)}')
+
+    print(f'entry.py::train # batches:{num_train_batches}')
+    print(f'entry.py::val # batches:{num_valid_batches}')
     print(f'entry.py::args.total_iterations:{args.tot_iterations}')
+    if args.train_metric:
+        print(f'entry.py:: steps/epoch = num_train_batches({num_train_batches})*2 + num_valid_batches('
+              f'{num_valid_batches}) = {num_train_batches*2+num_valid_batches}')
+    else:
+        print(f'entry.py:: steps/epoch = num_train_batches({num_train_batches}) + num_valid_batches('
+              f'{num_valid_batches}) = {num_train_batches+num_valid_batches}')
 
     # Pretraining data module
     if enable_pretraining:
