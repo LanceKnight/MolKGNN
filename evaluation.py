@@ -117,7 +117,11 @@ def calculate_logAUC(true_y, predicted_score, FPR_range=(0.001, 0.1)):
     return area
 
 def calculate_auc(true_y, predicted_score):
-    return roc_auc_score(true_y, predicted_score)
+    try:
+        res = roc_auc_score(true_y, predicted_score)
+    except:
+        res = -1
+    return res
 
 
 def calculate_ppv(true_y, predicted_score, cutoff = 0.5):
