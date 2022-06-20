@@ -54,7 +54,7 @@ def run_command(exp_id, args):
         --edge_feature_dim 7 \
         --hidden_dim {args[11]}\
         --batch_size {args[12]}\
-        --train_metric
+        --train_metric\
         ')\
 
 def copyanything(src, dst):
