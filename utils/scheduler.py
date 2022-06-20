@@ -116,7 +116,7 @@ if __name__ == '__main__':
     seed_list = [1, 2, 3, 4] # arg1
     warmup_list = [200] # arg2
     epochs_list = [20] # arg3
-    peak_lr_list = [5e-2] # arg4
+    peak_lr_list = [5e-3] # arg4
     end_lr_list = [1e-10] # arg5
     num_layer_list = [3] # arg6
     kernel1_list = [10] # arg7
@@ -124,7 +124,7 @@ if __name__ == '__main__':
     kernel3_list = [30] # arg9
     kernel4_list = [50] # arg10
     hidden_dim = [32] # arg11
-    batch_size = [17] # arg12
+    batch_size = [16] # arg12
     data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim, batch_size )) 
     print(f'num data_pair:{len(data_pair)}')
     data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(len(data_pair))))

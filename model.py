@@ -275,7 +275,7 @@ class GNNModel(pl.LightningModule):
         return valid_step_output
 
     def validation_epoch_end(self, valid_step_outputs):
-        
+
         for i, outputs_each_dataloader in enumerate(valid_step_outputs):
             results = {}
             all_pred = [output['pred_y'] for output in outputs_each_dataloader]
@@ -526,16 +526,14 @@ class GNNModel(pl.LightningModule):
                 results['accuracy'] = accuracy
                 continue
             if metric == 'RMSE':
-                rmse = mean_squared_error(numpy_y, numpy_prediction,
-                                          squared=False)  # Setting
+                rmse = mean_squared_error(numpy_y, numpy_prediction, squared=False)  # Setting
                 # squared=False returns RMSE
                 results['RMSE'] = rmse
             if metric == 'logAUC_0.001_0.1':
                 logAUC = calculate_logAUC(numpy_y, numpy_prediction)
                 results['logAUC_0.001_0.1'] = logAUC
             if metric == 'logAUC_0.001_1':
-                logAUC = calculate_logAUC(numpy_y, numpy_prediction,
-                                          FPR_range=(0.001, 1))
+                logAUC = calculate_logAUC(numpy_y, numpy_prediction, FPR_range=(0.001, 1))
                 results['logAUC_0.001_1'] = logAUC
             if metric == 'ppv':
                 ppv = calculate_ppv(numpy_y, numpy_prediction)
