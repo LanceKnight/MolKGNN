@@ -54,7 +54,8 @@ def get_dataset(dataset_name='435034', gnn_type='kgnn',
             'num_class': 1,
             'dataset': qsar_dataset,
             'num_samples': len(qsar_dataset),
-            'metrics': ['ppv', 'logAUC', 'f1_score'],
+            'metrics': ['ppv', 'logAUC_0.001_0.1', 'logAUC_0.001_1',
+                        'f1_score', 'AUC'],
             'loss_func': BCEWithLogitsLoss()
         }
 
@@ -146,13 +147,13 @@ class DataLoaderModule(LightningDataModule):
         split_idx = self.dataset['dataset'].get_idx_split(seed=self.seed)
 
         self.dataset_train = self.dataset['dataset'][split_idx["train"]]
-        print(f'training len:{len(self.dataset_train)})')
+        print(f'training # samples:{len(self.dataset_train)})')
 
         self.dataset_val = self.dataset['dataset'][split_idx["valid"]]
-        print(f'validation len:{len(self.dataset_val)})')
+        print(f'validation # samples:{len(self.dataset_val)})')
 
         self.dataset_test = self.dataset['dataset'][split_idx["test"]]
-        print(f'testing len:{len(self.dataset_test)})')
+        print(f'testing # samples:{len(self.dataset_test)})')
 
     def setup(self, stage: str = None):
         pass
@@ -162,9 +163,7 @@ class DataLoaderModule(LightningDataModule):
         num_train_active = len(torch.nonzero(
             torch.tensor([data.y for data in self.dataset_train])))
         num_train_inactive = len(self.dataset_train) - num_train_active
-        print(
-            f'training size: {len(self.dataset_train)}, actives: '
-            f'{num_train_active}')
+        print(f'training # of molecules: {len(self.dataset_train)}, actives: {num_train_active}')
 
         if self.enable_oversampling_with_replacement:
             print('data.py::with resampling')
@@ -192,7 +191,7 @@ class DataLoaderModule(LightningDataModule):
             )
         else:  # Regular sampling without oversampling
             print('data.py::no resampling')
-            print(f'dataset_train:{self.dataset_train[0]}')
+            # print(f'dataset_train:{self.dataset_train[0]}')
             train_loader = DataLoader(
                 self.dataset_train,
                 batch_size=self.batch_size,
@@ -206,7 +205,7 @@ class DataLoaderModule(LightningDataModule):
 
     def val_dataloader(self):
         # Validation laader
-        print(f'dataset_valid:{self.dataset_val[0]}')
+        # print(f'dataset_valid:{self.dataset_val[0]}')
         num_valid_active = len(torch.nonzero(
             torch.tensor([data.y for data in self.dataset_val])))
         num_valid_inactive = len(self.dataset_val) - num_valid_active
@@ -232,7 +231,7 @@ class DataLoaderModule(LightningDataModule):
         )
 
         # Train loader in evaluation mode
-        print(f'dataset_train:{self.dataset_train[0]}')
+        # print(f'dataset_train:{self.dataset_train[0]}')
         num_train_active = len(torch.nonzero(
             torch.tensor([data.y for data in self.dataset_train])))
         num_train_inactive = len(self.dataset_train) - num_train_active
@@ -256,11 +255,11 @@ class DataLoaderModule(LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
         )
-        return val_loader#, train_loader
+        return val_loader, train_loader
 
     def test_dataloader(self):
         # Test laader
-        print(f'dataset_test:{self.dataset_test}')
+        # print(f'dataset_test:{self.dataset_test}')
         num_test_active = len(torch.nonzero(
             torch.tensor([data.y for data in self.dataset_test])))
         num_test_inactive = len(self.dataset_test) - num_test_active

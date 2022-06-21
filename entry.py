@@ -4,11 +4,21 @@ from data import DataLoaderModule, get_dataset
 import glob
 from model import GNNModel
 from monitors import LossMonitor, \
-    LogAUCMonitor,  \
+    LossNoDropoutMonitor,\
+    LogAUC0_001to0_1Monitor,  \
+    LogAUC0_001to0_1NoDropoutMonitor,\
+    LogAUC0_001to1Monitor,  \
+    LogAUC0_001to1NoDropoutMonitor,  \
+    AUCMonitor,\
+    AUCNoDropoutMonitor,\
     PPVMonitor,\
+    PPVNoDropoutMonitor,\
     RMSEMonitor,\
+    RMSENoDropoutMonitor,\
     AccuracyMonitor,\
-    F1ScoreMonitor
+    AccuracyNoDropoutMonitor,\
+    F1ScoreMonitor,\
+    F1ScoreNoDropoutMonitor
 
 from argparse import ArgumentParser
 import math
@@ -89,20 +99,21 @@ def prepare_data(args, enable_pretraining=False, gnn_type='kgnn'):
     actual_data_module = DataLoaderModule.from_argparse_args(args)
     data_modules.append(actual_data_module)
 
-    args.tot_iterations = (
-                            math.ceil(len(actual_data_module.dataset_train)
-                            /args.batch_size)
-                            # +
-                            # math.ceil(len(actual_data_module.dataset_val)
-                            # /args.batch_size)
-                            ) * args.max_epochs + 2
+    num_train_batches = math.ceil(len(actual_data_module.dataset_train)/args.batch_size)
+    num_valid_batches = math.ceil(len(actual_data_module.dataset_val) / args.batch_size)
+    args.tot_iterations = (num_train_batches) * args.max_epochs + 2
     args.warmup_iterations+=2
     args.max_steps = args.tot_iterations
-    print(f'train:{math.ceil(len(actual_data_module.dataset_train)/args.batch_size)}')
-    print(f'val:'
-          f''
-          f'{math.ceil(len(actual_data_module.dataset_val) / args.batch_size)}')
+
+    print(f'entry.py::train # batches:{num_train_batches}')
+    print(f'entry.py::val # batches:{num_valid_batches}')
     print(f'entry.py::args.total_iterations:{args.tot_iterations}')
+    if args.train_metric:
+        print(f'entry.py:: steps/epoch = num_train_batches({num_train_batches})*2 + num_valid_batches('
+              f'{num_valid_batches}) = {num_train_batches*2+num_valid_batches}')
+    else:
+        print(f'entry.py:: steps/epoch = num_train_batches({num_train_batches}) + num_valid_batches('
+              f'{num_valid_batches}) = {num_train_batches+num_valid_batches}')
 
     # Pretraining data module
     if enable_pretraining:
@@ -174,7 +185,7 @@ def testing_procedure(trainer, data_module, args):
 
 def actual_training(model, data_module, use_clearml, gnn_type, args):
     # Add checkpoint
-    monitoring_metric = 'logAUC'
+    monitoring_metric = 'logAUC_0.001_0.1'
     actual_training_checkpoint_dir = args.default_root_dir
     actual_training_checkpoint_callback = ModelCheckpoint(
         monitor=monitoring_metric,
@@ -206,15 +217,10 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     if use_clearml:
         # Loss monitors
         # trainer.callbacks.append(
-        #     LossMonitor(stage='train', logger=logger, logging_interval='step'))
-        trainer.callbacks.append(
-            LossMonitor(stage='train', logger=logger,
-                        logging_interval='epoch'))
-        # trainer.callbacks.append(
-        #     LossMonitor(stage='valid', logger=logger, logging_interval='step'))
-        trainer.callbacks.append(
-            LossMonitor(stage='valid', logger=logger,
-                        logging_interval='epoch'))
+        trainer.callbacks.append(LossMonitor(stage='train', logger=logger, logging_interval='epoch'))
+        trainer.callbacks.append(LossMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+        if args.train_metric:
+            trainer.callbacks.append(LossNoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch'))
 
         # Learning rate monitors
         trainer.callbacks.append(LearningRateMonitor(logging_interval='step'))
@@ -228,50 +234,77 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         for metric in metrics:
             if metric == 'accuracy':
                 # Accuracy monitors
-                trainer.callbacks.append(
-                    AccuracyMonitor(stage='train', logger=logger,
-                                    logging_interval='epoch'))
-                trainer.callbacks.append(
-                    AccuracyMonitor(stage='valid', logger=logger,
-                                    logging_interval='epoch'))
+                # trainer.callbacks.append(
+                #     AccuracyMonitor(stage='train', logger=logger,
+                #                     logging_interval='epoch'))
+                trainer.callbacks.append(AccuracyMonitor(stage='valid', logger=logger, logging_interval='epoch'))
                 continue
 
             if metric == 'RMSE':
                 # Accuracy monitors
-                trainer.callbacks.append(
-                    RMSEMonitor(stage='train', logger=logger,
-                                logging_interval='epoch'))
-                trainer.callbacks.append(
-                    RMSEMonitor(stage='valid', logger=logger,
-                                logging_interval='epoch'))
+                # trainer.callbacks.append(
+                    # RMSEMonitor(stage='train', logger=logger,
+                    #             logging_interval='epoch'))
+                trainer.callbacks.append(RMSEMonitor(stage='valid', logger=logger, logging_interval='epoch'))
                 continue
 
-            if metric == 'logAUC':
+            if metric == 'logAUC_0.001_0.1':
                 # LogAUC monitors
-                trainer.callbacks.append(
-                    LogAUCMonitor(stage='train', logger=logger,
-                                  logging_interval='epoch'))
-                trainer.callbacks.append(
-                    LogAUCMonitor(stage='valid', logger=logger,
-                                  logging_interval='epoch'))
+                # trainer.callbacks.append(
+                #     LogAUC0_001to0_1Monitor(stage='train', logger=logger,
+                #                             logging_interval='epoch'))
+                trainer.callbacks.append(LogAUC0_001to0_1Monitor(stage='valid', logger=logger, logging_interval='epoch'))
+                if args.train_metric:
+                    trainer.callbacks.append(
+                        LogAUC0_001to0_1NoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch')
+                    )
+                continue
+
+            if metric == 'logAUC_0.001_1':
+                # LogAUC monitors
+                # trainer.callbacks.append(
+                #     LogAUC0_001to1Monitor(stage='train', logger=logger,
+                #                             logging_interval='epoch'))
+                trainer.callbacks.append(LogAUC0_001to1Monitor(stage='valid', logger=logger, logging_interval='epoch'))
+                if args.train_metric:
+                    trainer.callbacks.append(
+                        LogAUC0_001to1NoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch')
+                    )
+                continue
+
+            if metric == 'AUC':
+                # LogAUC monitors
+                # trainer.callbacks.append(
+                #     LogAUC0_001to1Monitor(stage='train', logger=logger,
+                #                             logging_interval='epoch'))
+                trainer.callbacks.append(AUCMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+                if args.train_metric:
+                    trainer.callbacks.append(
+                        AUCNoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch')
+                    )
                 continue
 
             if metric == 'ppv':
                 # PPV monitors
-                trainer.callbacks.append(
-                    PPVMonitor(stage='train', logger=logger, logging_interval='epoch'))
-                trainer.callbacks.append(
-                    PPVMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+                # trainer.callbacks.append(
+                #     PPVMonitor(stage='train', logger=logger, logging_interval='epoch'))
+                trainer.callbacks.append(PPVMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+                if args.train_metric:
+                    trainer.callbacks.append(
+                        PPVNoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch')
+                    )
                 continue
 
             if metric == 'f1_score':
                 # F1 monitors
-                trainer.callbacks.append(
-                    F1ScoreMonitor(stage='train', logger=logger,
-                                   logging_interval='epoch'))
-                trainer.callbacks.append(
-                    F1ScoreMonitor(stage='valid', logger=logger,
-                                   logging_interval='epoch'))
+                # trainer.callbacks.append(
+                #     F1ScoreMonitor(stage='train', logger=logger,
+                #                    logging_interval='epoch'))
+                trainer.callbacks.append(F1ScoreMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+                if args.train_metric:
+                    trainer.callbacks.append(
+                        F1ScoreNoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch')
+                    )
                 continue
 
     if args.test:

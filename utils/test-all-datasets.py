@@ -83,6 +83,7 @@ if __name__ == '__main__':
             metric_counter = 0 # if ==0, last metric, if ==1, best metric
             base_name = osp.basename(folder)
             name_components = base_name.split('_')
+            exp_id = name_components[0]
             seed = name_components[2]
             peak = name_components[5]
             layers = name_components[7]
@@ -104,7 +105,7 @@ if __name__ == '__main__':
                                     # output_file.write(out_content)
                         else: # for metrics
                             if 'logAUC' in line:
-                                print(f'peak_{peak};layer_{layers};seed_{seed}')
+                                print(f'id_{exp_id}_peak_{peak};layer_{layers};seed_{seed}')
                                 print(f'{line}')
                                 split_line = line.split(',')
                                 loss = float(split_line[0].split(': ')[1]) # Get loss
