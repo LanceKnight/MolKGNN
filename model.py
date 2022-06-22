@@ -162,16 +162,10 @@ class GNNModel(pl.LightningModule):
         self.tot_iterations = args.tot_iterations
         self.peak_lr = args.peak_lr
         self.end_lr = args.end_lr
-        self.loss_func = get_dataset(dataset_name=args.dataset_name,
-                                     gnn_type=gnn_type, 
-                                     dataset_path=args.dataset_path
-                                    )['loss_func']
+        self.loss_func = args.loss_func
         self.graph_embedding = None
         self.smiles_list = None
-        self.metrics = get_dataset(dataset_name=args.dataset_name,
-                                   gnn_type=gnn_type,
-                                   dataset_path=args.dataset_path
-                                   )['metrics']
+        self.metrics = args.metrics
         self.valid_epoch_outputs = {}
         self.record_valid_pred = args.record_valid_pred
         self.train_metric = args.train_metric
