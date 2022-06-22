@@ -2,7 +2,7 @@ from .KernelLayer import MolGCN
 from lr import PolynomialDecayLR
 
 import torch
-from torch.nn import Linear, Sigmoid
+from torch.nn import Linear, Sigmoid, BatchNorm1d
 from torch_geometric.nn import global_add_pool
 from torch.optim import Adam
 
@@ -23,6 +23,8 @@ class KGNNNet(torch.nn.Module):
             + num_kernel3_Nhop
             + num_kernel4_Nhop
             , graph_embedding_dim)
+        self.node_batch_norm = BatchNorm1d(x_dim)
+        self.edge_batch_norm = BatchNorm1d(edge_attr_dim)
 
         if self.num_layers < 1:
             raise ValueError(
@@ -100,9 +102,10 @@ class KGNNNet(torch.nn.Module):
 
         # print(f'x:{x.shape}')
         # print(f'self.atom_encoder{self.atom_encoder}')
-        x = self.atom_encoder(data.x)
-        edge_attr = self.bond_encoder(data.edge_attr)
-        
+        # x = self.atom_encoder(data.x)
+        # edge_attr = self.bond_encoder(data.edge_attr)
+        x = self.node_batch_norm(x)
+        edge_attr = self.edge_batch_norm(edge_attr)
         node_representation = self.gnn(x=x, edge_index=edge_index,
                                        edge_attr=edge_attr, p=p,
                                        p_focal_deg1=p_focal_deg1,
