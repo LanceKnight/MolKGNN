@@ -343,7 +343,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
             model.save_atom_encoder(dir = 'analyses/atom_encoder/',
             file_name='atom_encoder.pt')
             model.save_kernels(dir='analyses/atom_encoder/', file_name='kernels.pt')
-            model.print_graph_embedding()
+            # model.print_graph_embedding()
             model.save_graph_embedding('analyses/atom_encoder/graph_embedding')
 
 
@@ -406,7 +406,7 @@ if __name__ == '__main__':
     filename = 'logs/task_info.log'
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w') as out_file:
-        use_clearml = False
+        use_clearml = True
         if use_clearml:
             task = Task.init(project_name=f"HyperParams",
                              task_name=f"{gnn_type}",

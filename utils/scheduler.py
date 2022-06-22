@@ -1,13 +1,14 @@
 import multiprocessing as mp
 from multiprocessing import Pool, Value
 import os
+import os.path as osp
 from tqdm import tqdm
 import shutil, errno
 import itertools
 import time
 from datetime import datetime
 
-branch = 'main' # Change this
+branch = 'batch_norm' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -112,6 +113,7 @@ def run(exp_id, *args):
             os.chdir(cwd)
             overwrite_dir(github_repo_dir, dir_name)
             os.chdir(dir_name+'/kgnn') 
+        os.makedirs('logs', exist_ok=True)
         with open('logs/params.log', 'w+') as out:
             out.write(f'dataset:{args[0]}')
             out.write(f'seed:{args[1]}')

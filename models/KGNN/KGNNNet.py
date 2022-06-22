@@ -38,7 +38,7 @@ class KGNNNet(torch.nn.Module):
                           num_kernel1_Nhop=num_kernel1_Nhop,
                           num_kernel2_Nhop=num_kernel2_Nhop,
                           num_kernel3_Nhop=num_kernel3_Nhop,
-                          num_kernel4_Nhop=num_kernel4_Nhop, x_dim=graph_embedding_dim,
+                          num_kernel4_Nhop=num_kernel4_Nhop, x_dim=x_dim,
                           p_dim=p_dim, edge_attr_dim=edge_attr_dim,
                           predefined_kernelsets=predefined_kernelsets)
 
