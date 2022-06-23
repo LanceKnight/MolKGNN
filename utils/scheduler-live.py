@@ -22,6 +22,7 @@ def gitupdate(dir_name):
     cwd = os.getcwd()
     os.chdir(dir_name+'/kgnn')
     os.system('git gc')
+    os.system('git pull')
     os.system(f'git checkout {branch}') 
     os.system('git pull')
     os.chdir(cwd)
@@ -29,7 +30,7 @@ def gitupdate(dir_name):
 def run_command(exp_id, args): 
     # Model=kgnn
     os.system(f'python -W ignore entry.py \
-        --task_name experiments{exp_id}\
+        --task_name id{exp_id}_lr{args[4]}_L{args[6]}_seed{args[1]}\
         --dataset_name {args[0]} \
         --seed {args[1]}\
         --num_workers 11 \
@@ -91,7 +92,7 @@ def overwrite_dir(src, dst):
         else: raise
 
 def run(exp_id, *args):
-    exp_name = f'exp{exp_id}_full_param1' # Change this
+    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_end{args[5]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -157,18 +158,18 @@ if __name__ == '__main__':
     # Hyperparms
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
     dataset_list = [ '1798' ] # arg0
-    seed_list = [42, 26, 30] # arg1
+    seed_list = [1, 2, 3, 4] # arg1
     warmup_list = [200] # arg2
     epochs_list = [20] # arg3
-    peak_lr_list = [5e-1, 5e-2, 5e-3] # arg4
+    peak_lr_list = [5e-2, 5e-3] # arg4
     end_lr_list = [1e-10] # arg5
-    num_layer_list = [1, 2, 3, 4, 5] # arg6
+    num_layer_list = [2, 3] # arg6
     kernel1_list = [10] # arg7
     kernel2_list = [20] # arg8
     kernel3_list = [30] # arg9
-    kernel4_list = [50, 100] # arg10
-    hidden_dim = [32, 64] # arg11
-    batch_size = [17] # arg12
+    kernel4_list = [50] # arg10
+    hidden_dim = [32] # arg11
+    batch_size = [16] # arg12
     data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim, batch_size )) 
     print(f'num data_pair:{len(data_pair)}')
     data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(len(data_pair))))
@@ -188,7 +189,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 6) as pool:
+    with Pool(processes = 7) as pool:
         pool.starmap(run, data_pair_with_exp_id)
 
     end_time=time.time()
