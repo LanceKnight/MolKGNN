@@ -112,6 +112,7 @@ def run(exp_id, *args):
             os.chdir(cwd)
             overwrite_dir(github_repo_dir, dir_name)
             os.chdir(dir_name+'/kgnn') 
+        os.makedirs('logs', exist_ok=True)
         with open('logs/params.log', 'w+') as out:
             out.write(f'dataset:{args[0]}')
             out.write(f'seed:{args[1]}')
