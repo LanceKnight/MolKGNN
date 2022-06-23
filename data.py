@@ -54,8 +54,7 @@ def get_dataset(dataset_name='435034', gnn_type='kgnn',
             'num_class': 1,
             'dataset': qsar_dataset,
             'num_samples': len(qsar_dataset),
-            'metrics': ['ppv', 'logAUC_0.001_0.1', 'logAUC_0.001_1',
-                        'f1_score', 'AUC'],
+            'metrics': ['ppv', 'logAUC_0.001_0.1', 'logAUC_0.001_1', 'f1_score', 'AUC'],
             'loss_func': BCEWithLogitsLoss()
         }
 
