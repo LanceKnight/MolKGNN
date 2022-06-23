@@ -59,7 +59,7 @@ def run(folder):
 
 if __name__ == '__main__':
     use_best = True
-    monitored_metric = 'logAUC'
+    monitored_metric = 'f1'
     start_time = time.time()
     mp.set_start_method('spawn')
     exp_dir = '/home/live-lab/projects/unified_framework/experiments/'
@@ -107,18 +107,27 @@ if __name__ == '__main__':
                         else: # for metrics
                             if 'logAUC' in line:
                                 print(f'peak_{peak};seed_{seed}')
-                                print(f'{line}')
+                                # print(f'{line}')
                                 split_line = line.split(',')
+                                print(split_line)
                                 loss = float(split_line[0].split(': ')[1]) # Get loss
                                 ppv = float(split_line[1].split(': ')[1]) # Get ppv
-                                logAUC = float(split_line[2].split(': ')[1])# Get logAUC
-                                f1 = float(split_line[3].split(': ')[1].split('}')[0]) # Get f1
-                                if monitored_metric == 'logAUC':
-                                    metric = logAUC
+                                logAUC_0_001_0_1 = float(split_line[2].split(': ')[1])# Get logAUC_0_001_0_1
+                                logAUC_0_001_1 = float(split_line[3].split(': ')[1])# Get logAUC_0_001_0_1
+                                f1 = float(split_line[4].split(': ')[1].split('}')[0]) # Get f1
+                                AUC = float(split_line[5].split(': ')[1].split('}')[0]) # Get f1
+                                if monitored_metric == 'logAUC_0_001_0_1':
+                                    metric = logAUC_0_001_0_1
                                 elif monitored_metric == 'ppv':
                                     metric = ppv
                                 elif monitored_metric == 'f1':
                                     metric = f1
+                                elif monitored_metric == 'logAUC_0_001_1':
+                                    metric = logAUC_0_001_1
+                                elif monitored_metric == 'AUC':
+                                    metric = AUC
+                                elif monitored_metric == 'loss':
+                                    metric = loss
 
                                 if metric_counter == 0:
                                     key = 'last'
