@@ -1,13 +1,14 @@
 import multiprocessing as mp
 from multiprocessing import Pool, Value
 import os
+import os.path as osp
 from tqdm import tqdm
 import shutil, errno
 import itertools
 import time
 from datetime import datetime
 
-branch = 'main' # Change this
+branch = 'pred_score_trick' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()

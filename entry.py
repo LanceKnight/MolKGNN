@@ -207,12 +207,23 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     )
 
     best_AUC_callback = ModelCheckpoint(
-        monitor=monitoring_metric,
+        monitor='AUC',
         dirpath=actual_training_checkpoint_dir,
         filename='best_model_metric_{epoch}_{AUC}',
         #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
         save_top_k=1,
         mode='max',
+        save_last=True,
+        save_on_train_epoch_end=False
+    )
+
+    best_loss_callback = ModelCheckpoint(
+        monitor='loss',
+        dirpath=actual_training_checkpoint_dir,
+        filename='best_model_metric_{epoch}_{loss}',
+        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+        save_top_k=1,
+        mode='min',
         save_last=True,
         save_on_train_epoch_end=False
     )
@@ -235,6 +246,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     trainer.callbacks=[prog_bar]
     trainer.callbacks.append(actual_training_checkpoint_callback)
     trainer.callbacks.append(best_AUC_callback)
+    trainer.callbacks.append(best_loss_callback)
 
     if use_clearml:
         # Loss monitors
