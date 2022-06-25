@@ -223,7 +223,7 @@ class GNNModel(pl.LightningModule):
         # print(f'model::py:true_y')
         # print(f'{true_y.float()}')
         # print(f'model::py:loss:{loss}')
-        # results['loss'] = loss
+        results['loss'] = loss
         # results = self.get_evaluations(results, true_y, pred_y)
 
         # self.log(f"train performance by step", results, on_step=True, prog_bar=True, logger=True)
