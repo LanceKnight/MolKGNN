@@ -41,6 +41,7 @@ class GNNModel(pl.LightningModule):
         if gnn_type == 'gcn':
             self.gnn_model = GCNNet(args.node_feature_dim, args.hidden_dim,
                                     args.num_layers)
+            out_dim = args.hidden_dim
         elif gnn_type == 'chebnet':
             self.gnn_model = ChebNet(args.node_feature_dim, args.hidden_dim, args.num_layers, args.K)
         # elif gnn_type == 'dimenet':
@@ -217,7 +218,12 @@ class GNNModel(pl.LightningModule):
         # Get metrics
         results = {}
         loss = self.loss_func(pred_y, true_y.float())
-        results['loss'] = loss
+        # print(f'model::py:pred_y')
+        # print(f'{pred_y}')
+        # print(f'model::py:true_y')
+        # print(f'{true_y.float()}')
+        # print(f'model::py:loss:{loss}')
+        # results['loss'] = loss
         # results = self.get_evaluations(results, true_y, pred_y)
 
         # self.log(f"train performance by step", results, on_step=True, prog_bar=True, logger=True)

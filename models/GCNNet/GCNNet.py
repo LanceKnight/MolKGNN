@@ -48,6 +48,9 @@ class GCNNet(torch.nn.Module):
         """
         parser = parent_parser.add_argument_group("GCNNet")
         parser.add_argument('--num_layers', type=int, default=3)
+        parser.add_argument('--node_feature_dim', type=int, default=27)
+        parser.add_argument('--hidden_dim', type=int, default=32)
+        parser.add_argument('--output_dim', type=int, default=1)
         # Add specific model arguments below
         # E.g., parser.add_argument('--GCN_arguments', type=int,
         # default=12)
