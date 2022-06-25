@@ -214,7 +214,9 @@ class InternalCoordinateEncoder(nn.Module):
         phase_shift_linear_output = (self.Encoder_sinusoidal_shift(hi_hj_hk_hl_tensor_forward) + self.Encoder_sinusoidal_shift(hi_hj_hk_hl_tensor_reverse)) # [linear_cos, linear_sin]
 
         phase_shift_norm = torch.linalg.norm(phase_shift_linear_output, ord=2, dim=1, keepdim=True)
-        phase_shift_linear_output_normalized = phase_shift_linear_output / torch.max(phase_shift_norm, torch.cuda.FloatTensor(1).fill_(1e-12).squeeze()) if torch.cuda.is_available() else phase_shift_linear_output / torch.max(phase_shift_norm, torch.FloatTensor(1).fill_(1e-12).squeeze())
+        phase_shift_linear_output_normalized = phase_shift_linear_output / torch.max(phase_shift_norm, torch.tensor(1e-12, dtype=torch.float, device=hi_hj_d_tensor_forward.device).squeeze())
+                                               # phase_shift_linear_output / torch.max(phase_shift_norm, torch.cuda.FloatTensor(1).fill_(1e-12).squeeze()) if torch.cuda.is_available() else \
+                                               # phase_shift_linear_output / torch.max(phase_shift_norm, torch.FloatTensor(1).fill_(1e-12).squeeze())
 
         phase_cos = phase_shift_linear_output_normalized[:,0]
         phase_sin = phase_shift_linear_output_normalized[:,1]
