@@ -194,7 +194,11 @@ if __name__ == '__main__':
 
     end_time=time.time()
     run_time = end_time-start_time
-    print(f'scheduler running time: {run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}')
+    
+    run_time = end-start
+    run_time_str = f'run_time:{math.floor(run_time/3600)}h{math.floor((run_time)%3600/60)}m' \
+                   f'{math.floor(run_time%60)}s'
+    print(run_time_str)
     now = datetime.now()
     print(f'scheduler finsh time:{now}')
 
