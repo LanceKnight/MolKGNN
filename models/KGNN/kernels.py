@@ -581,6 +581,7 @@ class KernelConv(Module):
                               edge_attr_neighbor):
         # Calibrate neighbor coordinates
         # Calibrated coordinates = original coordinates - center coordinates
+        a = time.time()
         p_neighbor = p_neighbor - p_focal.unsqueeze(1)
 
         # Get kernel params
@@ -709,7 +710,8 @@ class KernelConv(Module):
                  # + position_sc * self.length_sc_weight
              ) / (self.support_attr_sc_weight+self.center_attr_sc_weight +
                   self.edge_attr_support_sc_weight)
-        b = time.time()
+        b = time.time('total_time for deg {deg}:{b-a}')
+
         return sc
         # return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, \
         #        edge_attr_support_sc
