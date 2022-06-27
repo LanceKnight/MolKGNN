@@ -401,7 +401,7 @@ def main(gnn_type, use_clearml):
 
 if __name__ == '__main__':
     torch.backends.cudnn.benchmark = False
-    torch.use_deterministic_algorithms()
+    torch.use_deterministic_algorithms(True)
     start = time.time()
     Task.set_offline(offline_mode=True)
     # The reason that gnn_type cannot be a cmd line
