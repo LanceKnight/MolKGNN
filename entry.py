@@ -29,6 +29,7 @@ import os
 import os.path as osp
 from clearml import Task
 import time
+import torch
 
 
 def add_args(gnn_type):
@@ -146,7 +147,7 @@ def prepare_actual_model(args):
 
 def load_best_model(trainer, data_module, metric=None, args=None):
     # Load best model
-    search_name = f'best*{metric}*'
+    search_name = f'best*_{metric}*'
     try:
         best_path = glob.glob(osp.join(args.default_root_dir, search_name))[0]
     except:
@@ -399,6 +400,8 @@ def main(gnn_type, use_clearml):
 
 
 if __name__ == '__main__':
+    torch.backends.cudnn.benchmark = False
+    torch.use_deterministic_algorithms()
     start = time.time()
     Task.set_offline(offline_mode=True)
     # The reason that gnn_type cannot be a cmd line
