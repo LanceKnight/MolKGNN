@@ -43,6 +43,29 @@ class KGNNNet(torch.nn.Module):
         self.pool = global_add_pool
         self.atom_encoder = Linear(x_dim, graph_embedding_dim)
         self.bond_encoder = Linear(edge_attr_dim, graph_embedding_dim)
+        self.MLP = Linear(graph_embedding_dim, 110)
+
+    # def my_global_add_pool(x, batch, size= None) :
+    #     r"""Returns batch-wise graph-level-outputs by adding node features
+    #     across the node dimension, so that for a single graph
+    #     :math:`\mathcal{G}_i` its output is computed by
+    #
+    #     .. math::
+    #         \mathbf{r}_i = \sum_{n=1}^{N_i} \mathbf{x}_n
+    #
+    #     Args:
+    #         x (Tensor): Node feature matrix
+    #             :math:`\mathbf{X} \in \mathbb{R}^{(N_1 + \ldots + N_B) \times F}`.
+    #         batch (LongTensor, optional): Batch vector
+    #             :math:`\mathbf{b} \in {\{ 0, \ldots, B-1\}}^N`, which assigns each
+    #             node to a specific example.
+    #         size (int, optional): Batch-size :math:`B`.
+    #             Automatically calculated if not given. (default: :obj:`None`)
+    #     """
+    #     if batch is None:
+    #         return x.sum(dim=-2, keepdim=x.dim() == 2)
+    #     size = int(batch.max().item() + 1) if size is None else size
+    #     return scatter(x, batch, dim=-2, dim_size=size, reduce='add')
 
     def save_kernellayer(self, path, time_stamp):
         layers = self.gnn.layers
@@ -102,33 +125,38 @@ class KGNNNet(torch.nn.Module):
         # print(f'self.atom_encoder{self.atom_encoder}')
         x = self.atom_encoder(data.x)
         edge_attr = self.bond_encoder(data.edge_attr)
-        
-        node_representation = self.gnn(x=x, edge_index=edge_index,
-                                       edge_attr=edge_attr, p=p,
-                                       p_focal_deg1=p_focal_deg1,
-                                       p_focal_deg2=p_focal_deg2,
-                                       p_focal_deg3=p_focal_deg3,
-                                       p_focal_deg4=p_focal_deg4,
-                                       nei_p_deg1=nei_p_deg1,
-                                       nei_p_deg2=nei_p_deg2,
-                                       nei_p_deg3=nei_p_deg3,
-                                       nei_p_deg4=nei_p_deg4,
-                                       nei_edge_attr_deg1=nei_edge_attr_deg1,
-                                       nei_edge_attr_deg2=nei_edge_attr_deg2,
-                                       nei_edge_attr_deg3=nei_edge_attr_deg3,
-                                       nei_edge_attr_deg4=nei_edge_attr_deg4,
-                                       selected_index_deg1=selected_index_deg1,
-                                       selected_index_deg2=selected_index_deg2,
-                                       selected_index_deg3=selected_index_deg3,
-                                       selected_index_deg4=selected_index_deg4,
-                                       nei_index_deg1=nei_index_deg1,
-                                       nei_index_deg2=nei_index_deg2,
-                                       nei_index_deg3=nei_index_deg3,
-                                       nei_index_deg4=nei_index_deg4,
-                                       save_score=save_score)
 
-        graph_representation = self.graph_embedding_linear(
-            self.pool(node_representation, batch))
+        node_representation = self.MLP(x)
+        # print(f'node_rep:{node_representation.shape}')
+
+        # node_representation = self.gnn(x=x, edge_index=edge_index,
+        #                                edge_attr=edge_attr, p=p,
+        #                                p_focal_deg1=p_focal_deg1,
+        #                                p_focal_deg2=p_focal_deg2,
+        #                                p_focal_deg3=p_focal_deg3,
+        #                                p_focal_deg4=p_focal_deg4,
+        #                                nei_p_deg1=nei_p_deg1,
+        #                                nei_p_deg2=nei_p_deg2,
+        #                                nei_p_deg3=nei_p_deg3,
+        #                                nei_p_deg4=nei_p_deg4,
+        #                                nei_edge_attr_deg1=nei_edge_attr_deg1,
+        #                                nei_edge_attr_deg2=nei_edge_attr_deg2,
+        #                                nei_edge_attr_deg3=nei_edge_attr_deg3,
+        #                                nei_edge_attr_deg4=nei_edge_attr_deg4,
+        #                                selected_index_deg1=selected_index_deg1,
+        #                                selected_index_deg2=selected_index_deg2,
+        #                                selected_index_deg3=selected_index_deg3,
+        #                                selected_index_deg4=selected_index_deg4,
+        #                                nei_index_deg1=nei_index_deg1,
+        #                                nei_index_deg2=nei_index_deg2,
+        #                                nei_index_deg3=nei_index_deg3,
+        #                                nei_index_deg4=nei_index_deg4,
+        #                                save_score=save_score)
+        # print(f'node_rep gnn:{node_representation.shape}')
+
+        graph_representation = self.graph_embedding_linear(node_representation[:len(data.y), :])
+        # graph_representation = self.graph_embedding_linear(
+        #     self.pool(node_representation, batch))
 
         return graph_representation
 

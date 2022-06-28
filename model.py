@@ -171,9 +171,10 @@ class GNNModel(pl.LightningModule):
         self.valid_epoch_outputs = {}
         self.record_valid_pred = args.record_valid_pred
         self.train_metric = args.train_metric
+        self.MLP = Linear(args.node_feature_dim, args.task_dim)
 
     def forward(self, data):
-
+        # prediction = self.MLP(data.x[:len(data.y),:])
         graph_embedding = self.gnn_model(data)
         graph_embedding = self.dropout(graph_embedding)
         prediction = self.ffn(graph_embedding)
@@ -182,7 +183,7 @@ class GNNModel(pl.LightningModule):
         # print(f'model.py::smiles:{data.smiles}\n ')
         # print(f'prediction:\n{prediction}\n ')
         # print(f'graph_embedding:\n:{graph_embedding}')
-
+        # graph_embedding = prediction
         self.graph_embedding = graph_embedding
         self.smiles_list = data.smiles
         return prediction, graph_embedding
