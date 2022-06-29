@@ -21,6 +21,7 @@ from monitors import LossMonitor, \
     F1ScoreNoDropoutMonitor
 
 from argparse import ArgumentParser
+from datetime import datetime
 import math
 from pprint import pprint
 import pytorch_lightning as pl
@@ -29,6 +30,7 @@ import os
 import os.path as osp
 from clearml import Task
 import time
+
 
 
 def add_args(gnn_type):
@@ -217,6 +219,18 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         save_on_train_epoch_end=False
     )
 
+    best_AUC_0_001_0_1_callback = ModelCheckpoint(
+        monitor=monitoring_metric,
+        dirpath=actual_training_checkpoint_dir,
+        filename='best_model_metric_{epoch}_{logAUC_0.001_1}',
+        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+        save_top_k=1,
+        mode='max',
+        save_last=True,
+        save_on_train_epoch_end=False
+    )
+
+
     best_loss_callback = ModelCheckpoint(
         monitor='loss',
         dirpath=actual_training_checkpoint_dir,
@@ -245,6 +259,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     trainer.callbacks=[prog_bar]
     trainer.callbacks.append(actual_training_checkpoint_callback)
     trainer.callbacks.append(best_AUC_callback)
+    trainer.callbacks.append(best_AUC_0_001_0_1_callback)
     trainer.callbacks.append(best_loss_callback)
 
     if use_clearml:
@@ -398,6 +413,8 @@ def main(gnn_type, use_clearml):
 
 
 if __name__ == '__main__':
+    start_sys_time = datetime.now()
+    print(f'scheduler start time:{start_sys_time}')
     start = time.time()
     Task.set_offline(offline_mode=True)
     # The reason that gnn_type cannot be a cmd line
@@ -432,8 +449,14 @@ if __name__ == '__main__':
         main(gnn_type, use_clearml)
         end = time.time()
         run_time = end-start
-        print(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')    
-        out_file.write(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')
+        run_time_str = f'run_time:{math.floor(run_time/3600)}h{math.floor((run_time)%3600/60)}m' \
+                       f'{math.floor(run_time%60)}s'
+        print(run_time_str)
+        end_sys_time = datetime.now()
+        print(f'task finsh time:{end_sys_time}')
+        out_file.write(run_time_str)
+        out_file.write(f'task start time:{start_sys_time}')
+        out_file.write(f'task finsh time:{end_sys_time}')
 
     print(f'========================')
     print(f'Runing model: {gnn_type}')

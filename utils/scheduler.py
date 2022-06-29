@@ -92,7 +92,7 @@ def overwrite_dir(src, dst):
         else: raise
 
 def run(exp_id, *args):
-    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_end{args[5]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}' # Change this
+    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_end{args[5]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}_trial{args[13]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     # Hyperparms
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
     dataset_list = [ '1798' ] # arg0
-    seed_list = [1, 2, 3, 4] # arg1
+    seed_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] # arg1
     warmup_list = [200] # arg2
     epochs_list = [20] # arg3
     peak_lr_list = [5e-2,5e-3] # arg4
@@ -171,7 +171,8 @@ if __name__ == '__main__':
     kernel4_list = [50] # arg10
     hidden_dim = [32] # arg11
     batch_size = [16] # arg12
-    data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim, batch_size )) 
+    trials=[0]
+    data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim, batch_size, trials )) 
     print(f'num data_pair:{len(data_pair)}')
     data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(len(data_pair))))
     print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
@@ -195,7 +196,9 @@ if __name__ == '__main__':
 
     end_time=time.time()
     run_time = end_time-start_time
-    print(f'scheduler running time: {run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}')
+    run_time_str = f'run_time:{math.floor(run_time/3600)}h{math.floor((run_time)%3600/60)}m' \
+                   f'{math.floor(run_time%60)}s'
+    print(run_time_str)
     now = datetime.now()
     print(f'scheduler finsh time:{now}')
 

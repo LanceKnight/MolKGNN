@@ -22,6 +22,7 @@ def gitupdate(dir_name):
     cwd = os.getcwd()
     os.chdir(dir_name+'/kgnn')
     os.system('git gc')
+    os.system('git pull')
     os.system(f'git checkout {branch}') 
     os.system('git pull')
     os.chdir(cwd)
@@ -29,7 +30,7 @@ def gitupdate(dir_name):
 def run_command(exp_id, args): 
     # Model=kgnn
     os.system(f'python -W ignore entry.py \
-        --task_name experiments{exp_id}\
+        --task_name id{exp_id}_lr{args[4]}_L{args[6]}_seed{args[1]}\
         --dataset_name {args[0]} \
         --seed {args[1]}\
         --num_workers 11 \
@@ -111,7 +112,8 @@ def run(exp_id, *args):
         if not newly_created:
             os.chdir(cwd)
             overwrite_dir(github_repo_dir, dir_name)
-            os.chdir(dir_name+'/kgnn') 
+            os.chdir(dir_name+'/kgnn')
+        os.makedirs('logs', exist_ok=True) 
         with open('logs/params.log', 'w+') as out:
             out.write(f'dataset:{args[0]}')
             out.write(f'seed:{args[1]}')
@@ -157,18 +159,18 @@ if __name__ == '__main__':
     # Hyperparms
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
     dataset_list = [ '1798' ] # arg0
-    seed_list = [42, 26, 30] # arg1
+    seed_list = [1, 2, 3, 4] # arg1
     warmup_list = [200] # arg2
     epochs_list = [20] # arg3
-    peak_lr_list = [5e-1, 5e-2, 5e-3] # arg4
+    peak_lr_list = [5e-2, 5e-3] # arg4
     end_lr_list = [1e-10] # arg5
-    num_layer_list = [1, 2, 3, 4, 5] # arg6
+    num_layer_list = [2, 3] # arg6
     kernel1_list = [10] # arg7
     kernel2_list = [20] # arg8
     kernel3_list = [30] # arg9
-    kernel4_list = [50, 100] # arg10
-    hidden_dim = [32, 64] # arg11
-    batch_size = [17] # arg12
+    kernel4_list = [50] # arg10
+    hidden_dim = [32] # arg11
+    batch_size = [16] # arg12
     data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim, batch_size )) 
     print(f'num data_pair:{len(data_pair)}')
     data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(len(data_pair))))
@@ -188,12 +190,15 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 6) as pool:
+    with Pool(processes = 7) as pool:
         pool.starmap(run, data_pair_with_exp_id)
 
     end_time=time.time()
     run_time = end_time-start_time
-    print(f'scheduler running time: {run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}')
+    run_time = end-start
+    run_time_str = f'run_time:{math.floor(run_time/3600)}h{math.floor((run_time)%3600/60)}m' \
+                   f'{math.floor(run_time%60)}s'
+    print(run_time_str)
     now = datetime.now()
     print(f'scheduler finsh time:{now}')
 

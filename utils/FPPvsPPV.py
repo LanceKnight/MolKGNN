@@ -1,7 +1,7 @@
 import os
 
 in_file = '"logs/best_test_sample_scores.log"'
-in_file = '"../examples/bcl/20_models/results/1798.RSR.1_32_005_025/independent0-4_monitoring0-4_number0.gz.txt"'
+# in_file = '"../examples/bcl/20_models/results/1798.RSR.1_32_005_025/independent0-4_monitoring0-4_number0.gz.txt"'
 
 out_file = '"logs/bcl_output"'
 obj_function = '"FPPvsPPV(cutoff=0.1, cutoff_type=fpp_percent, parity=1)"'
