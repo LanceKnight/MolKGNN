@@ -559,6 +559,7 @@ class KernelConv(Module):
                     t2_support = support_list[1]
                     t3_support = support_list[2]
 
+                    tetra_start_time = time.time()
                     # Calculate the tetrahedral volume sign
                     sign_nei = torch.sign(torch.dot(t3_nei, torch.cross(
                         t1_nei, t2_nei)))
@@ -566,6 +567,8 @@ class KernelConv(Module):
                                                         torch.cross(
                                                             t1_support,
                                                             t2_support)))
+                    tetra_end_time = time.time()
+                    print(f'tetra_time:{tetra_end_time-tetra_start_time}')
 
                     if sign_nei == sign_support:
                         kernel_res_list.append(1)
@@ -664,22 +667,22 @@ class KernelConv(Module):
 
         # Debug
         # if deg == 4:
-        #     # print(f'best_support_attr_sc:{best_support_attr_sc}\n '
-        #     #       f'best_support_attr_sc_index:{best_support_attr_sc_index}'
-        #     #       f'\n ')
-        #     print(f'best_position_sc:{position_sc}')
+            # print(f'best_support_attr_sc:{best_support_attr_sc}\n '
+            #       f'best_support_attr_sc_index:{best_support_attr_sc_index}'
+            #       f'\n ')
+            # print(f'best_position_sc:{position_sc}')
 
-        # if deg == 4:
-        #     start_chirality = time.time()
-        #     chirality_sign = self.get_chirality_sign(p_neighbor,
-        #                                              x_neighbor,
-        #                                              best_p_support
-        #                                              )
-        #     # print(f'chirality sign: support_attr_sc:{support_attr_sc.shape}')
-        #     # print(f'chirality sign: chirality_sign:{chirality_sign.shape}')
-        #     support_attr_sc = support_attr_sc * chirality_sign
-        #     end_chirality = time.time()
-        #     print(f'=====kernels.py::chirality:{end_chirality-start_chirality}')
+        if deg == 4:
+            start_chirality = time.time()
+            chirality_sign = self.get_chirality_sign(p_neighbor,
+                                                     x_neighbor,
+                                                     best_p_support
+                                                     )
+            # print(f'chirality sign: support_attr_sc:{support_attr_sc.shape}')
+            # print(f'chirality sign: chirality_sign:{chirality_sign.shape}')
+            support_attr_sc = support_attr_sc * chirality_sign
+            end_chirality = time.time()
+            print(f'=====kernels.py::chirality time:{end_chirality-start_chirality}')
 
 
         # Debug
@@ -710,7 +713,8 @@ class KernelConv(Module):
                  # + position_sc * self.length_sc_weight
              ) / (self.support_attr_sc_weight+self.center_attr_sc_weight +
                   self.edge_attr_support_sc_weight)
-        b = time.time('total_time for deg {deg}:{b-a}')
+        b = time.time()
+        print(f'total_time for deg {deg}:{b-a}')
 
         return sc
         # return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, \
