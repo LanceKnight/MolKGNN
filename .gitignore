@@ -20,3 +20,9 @@ analyses/atom_encoder/*.pt
 logs/
 scheduler.log
 task_info
+
+# Data & plots
+*.data
+*.png
+*.gnuplot
+table.txt
