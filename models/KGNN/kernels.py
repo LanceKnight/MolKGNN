@@ -547,6 +547,7 @@ class KernelConv(Module):
                 support_kernel_list = p_support.unbind()
                 p_nei_node_list = p_nei.unbind()
                 kernel_res_list = []
+                tot_tetra_start_time = time.time()
                 for kernel_id, kernel in enumerate(support_kernel_list):
                     support_node_list = kernel.unbind()
                     support_list = support_node_list[node_id].unbind()
@@ -574,6 +575,8 @@ class KernelConv(Module):
                         kernel_res_list.append(1)
                     else:
                         kernel_res_list.append(-1)
+                tot_tetra_end_time = time.time()
+                print(f'tot_tetra_time:{tot_tetra_end_time-tot_tetra_start_time}')
                 node_res_list.append(kernel_res_list)
 
         result = torch.tensor(node_res_list, device = x_nei.device).T
