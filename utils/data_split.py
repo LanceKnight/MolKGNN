@@ -3,7 +3,7 @@ import random
 import hashlib
 import json
 
-def get_split(num_active, num_inactive, seed, dataset_name, shrink=None):
+def get_split(num_active, num_inactive, seed, dataset_name, shrink=False):
     active_idx = list(range(num_active))
     inactive_idx = list(range(num_active, num_active + num_inactive))
 
@@ -12,7 +12,7 @@ def get_split(num_active, num_inactive, seed, dataset_name, shrink=None):
     random.shuffle(inactive_idx)
 
 
-    if shrink == None:
+    if shrink == False:
         num_active_train = round(num_active * 0.8)
         num_inactive_train = round(num_inactive * 0.8)
         num_active_valid = round(num_active * 0.1)
@@ -48,12 +48,8 @@ def get_split(num_active, num_inactive, seed, dataset_name, shrink=None):
                            : num_inactive_train
                              + num_inactive_valid
                              + num_inactive_test]
-    # split_dict['test'] = active_idx[
-    #                      num_active_train + num_active_valid
-    #                      :] \
-    #                      + inactive_idx[
-    #                        num_inactive_train + num_inactive_valid
-    #                        :]
+
+    # print(f'split_dict:{split_dict["test"]}')
     num_train = len(split_dict['train'])
     num_valid = len(split_dict['valid'])
     num_test = len(split_dict['test'])
@@ -80,11 +76,11 @@ if __name__ == '__main__':
         '485290': {'num_active':281, 'num_inactive':341084},
         '9999':{'num_active':37, 'num_inactive':226},
     }
-    seed_list = list(range(1, 6))
+    seed_list = list(range(1,6))
     # dataset_name_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290', '9999']
     dataset_name_list = ['1798']
     for dataset_name in dataset_name_list:
         for seed in seed_list:
             num_active = dataset_info[dataset_name]['num_active']
             num_inactive = dataset_info[dataset_name]['num_inactive']
-            get_split(num_active, num_inactive, seed, dataset_name, shrink=True)
+            get_split(num_active, num_inactive, seed, dataset_name, shrink=False)

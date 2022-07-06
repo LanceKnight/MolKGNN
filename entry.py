@@ -21,6 +21,7 @@ from monitors import LossMonitor, \
     F1ScoreNoDropoutMonitor
 
 from argparse import ArgumentParser
+from datetime import datetime
 import math
 from pprint import pprint
 import pytorch_lightning as pl
@@ -29,6 +30,7 @@ import os
 import os.path as osp
 from clearml import Task
 import time
+
 
 
 def add_args(gnn_type):
@@ -104,6 +106,8 @@ def prepare_data(args, enable_pretraining=False, gnn_type='kgnn'):
     args.tot_iterations = (num_train_batches) * args.max_epochs + 2
     args.warmup_iterations+=2
     args.max_steps = args.tot_iterations
+    args.metrics = data_modules[0].dataset['metrics']
+    args.loss_func = data_modules[0].dataset['loss_func']
 
     print(f'entry.py::train # batches:{num_train_batches}')
     print(f'entry.py::val # batches:{num_valid_batches}')
@@ -142,33 +146,35 @@ def prepare_actual_model(args):
         model = GNNModel(gnn_type, args=args)
     return model
 
+def load_best_model(trainer, data_module, metric=None, args=None):
+    # Load best model
+    search_name = f'best*{metric}*'
+    try:
+        best_path = glob.glob(osp.join(args.default_root_dir, search_name))[0]
+    except:
+        print(f'No best model saved for {metric}')
+        return False
+    print(f"glob result:{best_path}")
+
+    model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type, args=args)
+    print(f'====best_{metric}_result====:\n')
+    best_result = trainer.test(model, datamodule=data_module)
+    new_name = f'logs/best_{metric}_sample_scores.log'
+    os.rename('logs/test_sample_scores.log', new_name)
+    return best_result
+
+
 def testing_procedure(trainer, data_module, args):
     print(f'In Testing Mode:')
     print(f'default_root_dir:{args.default_root_dir}')
 
-    # Load best model
-    best_path = glob.glob(osp.join(args.default_root_dir, 'best*'))[0]
-    print(f"glob result:{best_path}")
-
-    model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
-                                          args=args)
-    best_result = trainer.test(model, datamodule=data_module)
-    os.rename('logs/test_sample_scores.log',
-              'logs/best_test_sample_scores.log')
-    print('best_result:\n')
-    pprint(best_result)
-
-
     # Load last model
     last_path = osp.join(args.default_root_dir, 'last.ckpt')
-    model  = GNNModel.load_from_checkpoint(last_path, gnn_type=gnn_type,
-                                          args=args)
+    model  = GNNModel.load_from_checkpoint(last_path, gnn_type=gnn_type, args=args)
+    print('====last_result====:\n')
     last_result = trainer.test(model, datamodule=data_module)
     os.rename('logs/test_sample_scores.log',
               'logs/last_test_sample_scores.log')
-    print('last_result:\n')
-    pprint(last_result)
-
 
     # Save the result to a file
     filename = 'logs/test_result.log'
@@ -177,8 +183,12 @@ def testing_procedure(trainer, data_module, args):
         out_file.write(f'{args.dataset_name}\n')
         out_file.write('last:\n')
         out_file.write(f'{str(last_result)}\n')
-        out_file.write('best:\n')
-        out_file.write(f'{str(best_result)}')
+
+        for metric in data_module.dataset["metrics"]:
+            best_result = load_best_model(trainer=trainer, data_module=data_module, metric=metric, args=args)
+            if best_result is not False:
+                out_file.write(f'best_{metric}:\n')
+                out_file.write(f'{str(best_result)}\n')
         out_file.write(f'args:\n')
         out_file.write(f'{args}')
 
@@ -190,13 +200,50 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     actual_training_checkpoint_callback = ModelCheckpoint(
         monitor=monitoring_metric,
         dirpath=actual_training_checkpoint_dir,
-        filename='best_model_metric_{epoch}_{loss}',
+        filename='best_model_metric_{epoch}_{logAUC_0.001_0.1}',
         #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
         save_top_k=1,
         mode='max',
         save_last=True,
         save_on_train_epoch_end=False
     )
+
+    best_AUC_callback = ModelCheckpoint(
+        monitor='AUC',
+        dirpath=actual_training_checkpoint_dir,
+        filename='best_model_metric_{epoch}_{AUC}',
+        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+        save_top_k=1,
+        mode='max',
+        save_last=True,
+        save_on_train_epoch_end=False
+    )
+
+    best_AUC_0_001_0_1_callback = ModelCheckpoint(
+        monitor=monitoring_metric,
+        dirpath=actual_training_checkpoint_dir,
+        filename='best_model_metric_{epoch}_{logAUC_0.001_1}',
+        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+        save_top_k=1,
+        mode='max',
+        save_last=True,
+        save_on_train_epoch_end=False
+    )
+
+    best_loss_callback = ModelCheckpoint(
+        monitor='loss',
+        dirpath=actual_training_checkpoint_dir,
+        filename='best_model_metric_{epoch}_{loss}',
+        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+        save_top_k=1,
+        mode='min',
+        save_last=True,
+        save_on_train_epoch_end=False
+    )
+
+
+
+
 
     # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
     if not args.test and not args.validate and os.path.exists(
@@ -213,6 +260,9 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks=[prog_bar]
     trainer.callbacks.append(actual_training_checkpoint_callback)
+    trainer.callbacks.append(best_AUC_callback)
+    trainer.callbacks.append(best_AUC_0_001_0_1_callback)
+    trainer.callbacks.append(best_loss_callback)
 
     if use_clearml:
         # Loss monitors
@@ -227,10 +277,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         # trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 
         # Other metrics monitors
-        metrics = get_dataset(dataset_name=args.dataset_name,
-                              gnn_type=gnn_type,
-                              dataset_path=args.dataset_path
-                              )['metrics']
+        metrics = data_module.dataset['metrics']
         for metric in metrics:
             if metric == 'accuracy':
                 # Accuracy monitors
@@ -368,6 +415,8 @@ def main(gnn_type, use_clearml):
 
 
 if __name__ == '__main__':
+    start_sys_time = datetime.now()
+    print(f'scheduler start time:{start_sys_time}')
     start = time.time()
     Task.set_offline(offline_mode=True)
     # The reason that gnn_type cannot be a cmd line
@@ -402,8 +451,14 @@ if __name__ == '__main__':
         main(gnn_type, use_clearml)
         end = time.time()
         run_time = end-start
-        print(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')    
-        out_file.write(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')
+        run_time_str = f'run_time:{math.floor(run_time/3600)}h{math.floor((run_time)%3600/60)}m' \
+                       f'{math.floor(run_time%60)}s'
+        print(run_time_str)
+        end_sys_time = datetime.now()
+        print(f'task finsh time:{end_sys_time}')
+        out_file.write(run_time_str)
+        out_file.write(f'task start time:{start_sys_time}')
+        out_file.write(f'task finsh time:{end_sys_time}')
 
     print(f'========================')
     print(f'Runing model: {gnn_type}')
