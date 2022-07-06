@@ -153,7 +153,7 @@ class GNNModel(pl.LightningModule):
             raise ValueError(f"model.py::GNNModel: GNN model type is not "
                              f"defined. gnn_type={gnn_type}")
         # self.atom_encoder = Embedding(118, hidden_dim)
-        self.lin1 = Linear(args.ffn_hidden_dim, args.ffn_hidden_dim)
+        self.lin1 = Linear(out_dim, args.ffn_hidden_dim)
         self.lin2 = Linear(args.ffn_hidden_dim, args.task_dim)
         self.ffn = Linear(out_dim, args.task_dim)
         self.dropout = Dropout(p= args.ffn_dropout_rate)
@@ -174,7 +174,7 @@ class GNNModel(pl.LightningModule):
 
         graph_embedding = self.gnn_model(data)
         graph_embedding = self.dropout(graph_embedding)
-        prediction = self.ffn(graph_embedding)
+        prediction = self.lin2(self.lin1(graph_embedding))
 
         # # Debug
         # print(f'model.py::smiles:{data.smiles}\n ')
