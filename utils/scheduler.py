@@ -9,7 +9,7 @@ import time
 from datetime import datetime
 import math
 
-branch = 'main' # Change this
+branch = 'mlp-before-pool' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -163,9 +163,9 @@ if __name__ == '__main__':
     seed_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] # arg1
     warmup_list = [200] # arg2
     epochs_list = [20] # arg3
-    peak_lr_list = [5e-2,5e-3] # arg4
+    peak_lr_list = [5e-3] # arg4
     end_lr_list = [1e-10] # arg5
-    num_layer_list = [4,5] # arg6
+    num_layer_list = [4] # arg6
     kernel1_list = [10] # arg7
     kernel2_list = [20] # arg8
     kernel3_list = [30] # arg9

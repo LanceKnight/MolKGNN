@@ -17,11 +17,15 @@ class KGNNNet(torch.nn.Module):
         self.num_layers = num_layers
         self.drop_ratio = drop_ratio
         self.D = p_dim
-        self.graph_embedding_linear = Linear(
+        self.graph_embedding_lin1 = Linear(
             num_kernel1_Nhop
             + num_kernel2_Nhop
             + num_kernel3_Nhop
             + num_kernel4_Nhop
+            , graph_embedding_dim)
+
+        self.graph_embedding_lin2 = Linear(
+            graph_embedding_dim
             , graph_embedding_dim)
 
         if self.num_layers < 1:
@@ -127,8 +131,8 @@ class KGNNNet(torch.nn.Module):
                                        nei_index_deg4=nei_index_deg4,
                                        save_score=save_score)
 
-        graph_representation = self.graph_embedding_linear(
-            self.pool(node_representation, batch))
+        graph_representation = self.pool(self.graph_embedding_lin2(self.graph_embedding_lin1(node_representation)),
+                                         batch)
 
         return graph_representation
 
