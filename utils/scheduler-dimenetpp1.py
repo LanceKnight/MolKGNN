@@ -8,7 +8,7 @@ import time
 from datetime import datetime
 import torch
 
-branch = 'chiro' # Change this
+branch = 'dimenet_pp' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -104,7 +104,7 @@ if __name__ == '__main__':
     seed_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] # arg1
     warmup_list = [200] # arg2
     epochs_list = [80] # arg3
-    peak_lr_list = [6.04e-3, 6.04e-4, 6.04e-5] # arg4
+    peak_lr_list = [5e-1, 5e-2, 5e-3] # arg4
     end_lr_list = [1e-9] # arg5
     
 

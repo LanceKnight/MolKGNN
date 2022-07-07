@@ -59,7 +59,7 @@ def run(folder):
 def get_table(use_best, best_based_on, monitored_metric, ):
     exp_dir = '/home/live-lab/projects/unified_framework/experiments/'
 
-   # Get a list of folders
+    # Get a list of folders
     folder_list = []
     for folder in os.listdir(exp_dir):
         if 'exp' in folder:
@@ -78,19 +78,20 @@ def get_table(use_best, best_based_on, monitored_metric, ):
             metric_counter = 0 # if ==0, last metric, if ==1, best metric
             base_name = osp.basename(folder)
             name_components = base_name.split('_')
-            exp_id = name_components[0]
-            seed = name_components[2]
-            peak = name_components[5]
-            layers = name_components[7]
+            print(name_components)
+            seed = name_components[3]
+            peak = name_components[4]
+            # layers = name_components[7]
             
-            # print('\n=======\n')
+            print('\n=======\n')
             try:
                 with open(osp.join(exp_dir,f'{folder}/kgnn/logs/test_result.log'), 'r') as in_file:
                     for line in in_file:
                         if 'Namespace' in line: # for arguments
                             components = line.split(', ')
                             for component in components:
-                                if ('peak' in component) or ('layer') in component: # specifiy which arguments to print
+                                if ('seed' in component) or ('peak') in component: # specifiy which arguments to print
+                                    print(component)
                                     split_component = component.split('=')
                                     component_name = split_component[0]
                                     component_value = split_component[1]
@@ -99,22 +100,17 @@ def get_table(use_best, best_based_on, monitored_metric, ):
                                     # print(out_content)
                                     # output_file.write(out_content)
                         else: # for metrics
-                            if line == ('best_'+best_based_on+":\n") or (best_based_on == 'last' and line == 'last:\n'):
-                                if (line == 'last:\n'):
-                                    is_last = True
-                                else:
-                                    is_last = False
-                                line = next(in_file)
-                                # print(f'id_{exp_id}_{peak};{layers};{seed}')
+                            if 'logAUC' in line:
+                                print(f'peak_{peak};seed_{seed}')
                                 # print(f'{line}')
                                 split_line = line.split(',')
+                                print(split_line)
                                 loss = float(split_line[0].split(': ')[1]) # Get loss
                                 ppv = float(split_line[1].split(': ')[1]) # Get ppv
-                                logAUC_0_001_0_1 = float(split_line[2].split(': ')[1])# Get logAUC_0.001_0.1
-                                logAUC_0_001_1 = float(split_line[3].split(': ')[1])# Get logAUC_0.001_1
+                                logAUC_0_001_0_1 = float(split_line[2].split(': ')[1])# Get logAUC_0_001_0_1
+                                logAUC_0_001_1 = float(split_line[3].split(': ')[1])# Get logAUC_0_001_0_1
                                 f1 = float(split_line[4].split(': ')[1].split('}')[0]) # Get f1
-                                AUC = float(split_line[5].split(': ')[1].split('}')[0]) # Get f1
-
+                                AUC = float(split_line[5].split(': ')[1].split('}')[0]) # Get AUC
                                 if monitored_metric == 'logAUC_0.001_0.1':
                                     metric = logAUC_0_001_0_1
                                 elif monitored_metric == 'ppv':
@@ -127,21 +123,19 @@ def get_table(use_best, best_based_on, monitored_metric, ):
                                     metric = AUC
                                 elif monitored_metric == 'loss':
                                     metric = loss
-                                
 
-                                if is_last:
+                                if metric_counter == 0:
                                     key = 'last'
                                     if use_best == False:
-                                        out_table.setdefault(f'{peak}_{layers}',[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
+                                        out_table.setdefault(f'{peak}',[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
                                         out_content = out_table
                                         # print(out_content)
                                 else:
                                     key = 'best'
                                     if use_best == True:
-                                        out_table.setdefault(f'{peak}_{layers}',[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
+                                        out_table.setdefault(f'{peak}',[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
                                         out_content = out_table
-                                    # print(out_content)
-                                # metric_counter+=1
+                                metric_counter+=1
                             
                             
                             
@@ -151,7 +145,7 @@ def get_table(use_best, best_based_on, monitored_metric, ):
                 key = 'best' if use_best else 'last'
                 print(f'error message:{e}')
                 print(f'error folder:{folder}')
-                out_table.setdefault(f'{peak}_{layers}',[]).append({f'{key}_{monitored_metric}_{seed}':f'None'})
+                out_table.setdefault(f'{peak}',[]).append({f'{key}_{monitored_metric}_{seed}':f'None'})
 
 
         # for folder in folder_list:
@@ -175,17 +169,17 @@ def get_table(use_best, best_based_on, monitored_metric, ):
     # Prepare dataframe
     sorted_key_list = []
     for peak_layer_comb, peak_layer_list  in out_table.items():
-        # print('====')
-        # print(f'comb:{peak_layer_comb}:')
+        print('====')
+        print(f'comb:{peak_layer_comb}:')
         row_index = peak_layer_comb
         ori_sorted_list = sorted(peak_layer_list, key=lambda x:list(x.items())[0][0])
         sorted_list = list(map(lambda x: list(x.items())[0][1], ori_sorted_list))
-        # print(f'sorted_list:{sorted_list}')
+        print(f'sorted_list:{sorted_list}')
         sorted_key_list = list(map(lambda x: list(x.items())[0][0], ori_sorted_list))
-        # print(f'sorted_key:{sorted_key_list}')
+        print(f'sorted_key:{sorted_key_list}')
         out_table[peak_layer_comb] = sorted_list
-        # for each in sorted_list:
-        #     print(each)
+        for each in sorted_list:
+            print(each)
     
 
     sorted_out_table = out_table
@@ -216,4 +210,5 @@ if __name__ == '__main__':
     all_table.to_csv(f'logs/all_test_result_df_all_table.csv')
     end_time=time.time()
     run_time = end_time-start_time
+      
     print(f'finish getting all test result: {run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}')
