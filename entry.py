@@ -4,12 +4,25 @@ from data import DataLoaderModule, get_dataset
 import glob
 from model import GNNModel
 from monitors import LossMonitor, \
-    LogAUCMonitor,  \
+    LossNoDropoutMonitor,\
+    LogAUC0_001to0_1Monitor,  \
+    LogAUC0_001to0_1NoDropoutMonitor,\
+    LogAUC0_001to1Monitor,  \
+    LogAUC0_001to1NoDropoutMonitor,  \
+    AUCMonitor,\
+    AUCNoDropoutMonitor,\
     PPVMonitor,\
+    PPVNoDropoutMonitor,\
     RMSEMonitor,\
+    RMSENoDropoutMonitor,\
     AccuracyMonitor,\
-    F1ScoreMonitor
+    AccuracyNoDropoutMonitor,\
+    F1ScoreMonitor,\
+    F1ScoreNoDropoutMonitor
+
 from argparse import ArgumentParser
+from datetime import datetime
+import math
 from pprint import pprint
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor, TQDMProgressBar
@@ -17,6 +30,7 @@ import os
 import os.path as osp
 from clearml import Task
 import time
+
 
 
 def add_args(gnn_type):
@@ -44,14 +58,14 @@ def add_args(gnn_type):
 
 
     args = parser.parse_args()
-    args.tot_iterations = round(len(get_dataset(
-                                                dataset_name=args.dataset_name,
-                                                gnn_type=gnn_type,
-                                                dataset_path=args.dataset_path
-                                                )['dataset'],
-                                    ) * 0.8 /args.batch_size) \
-                          * args.max_epochs + 1
-    args.max_steps = args.tot_iterations + 1
+    # args.tot_iterations = round(len(get_dataset(
+    #                                             dataset_name=args.dataset_name,
+    #                                             gnn_type=gnn_type,
+    #                                             dataset_path=args.dataset_path
+    #                                             )['dataset'],
+    #                                 ) * 0.8 /args.batch_size) \
+    #                       * args.max_epochs + 1
+    # args.max_steps = args.tot_iterations + 1
 
     if use_clearml:
         task.set_name(args.task_name)
@@ -87,9 +101,29 @@ def prepare_data(args, enable_pretraining=False, gnn_type='kgnn'):
     actual_data_module = DataLoaderModule.from_argparse_args(args)
     data_modules.append(actual_data_module)
 
+    num_train_batches = math.ceil(len(actual_data_module.dataset_train)/args.batch_size)
+    num_valid_batches = math.ceil(len(actual_data_module.dataset_val) / args.batch_size)
+    args.tot_iterations = (num_train_batches) * args.max_epochs + 2
+    args.warmup_iterations+=2
+    args.max_steps = args.tot_iterations
+    args.metrics = data_modules[0].dataset['metrics']
+    args.loss_func = data_modules[0].dataset['loss_func']
+
+    print(f'entry.py::train # batches:{num_train_batches}')
+    print(f'entry.py::val # batches:{num_valid_batches}')
+    print(f'entry.py::args.total_iterations:{args.tot_iterations}')
+    if args.train_metric:
+        print(f'entry.py:: steps/epoch = num_train_batches({num_train_batches})*2 + num_valid_batches('
+              f'{num_valid_batches}) = {num_train_batches*2+num_valid_batches}')
+    else:
+        print(f'entry.py:: steps/epoch = num_train_batches({num_train_batches}) + num_valid_batches('
+              f'{num_valid_batches}) = {num_train_batches+num_valid_batches}')
+
     # Pretraining data module
     if enable_pretraining:
-        pass  # TODO: add pretraining data module
+        pass  # 
+        
+        # TODO: add pretraining data module
 
     return data_modules
 
@@ -112,33 +146,35 @@ def prepare_actual_model(args):
         model = GNNModel(gnn_type, args=args)
     return model
 
+def load_best_model(trainer, data_module, metric=None, args=None):
+    # Load best model
+    search_name = f'best*{metric}*'
+    try:
+        best_path = glob.glob(osp.join(args.default_root_dir, search_name))[0]
+    except:
+        print(f'No best model saved for {metric}')
+        return False
+    print(f"glob result:{best_path}")
+
+    model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type, args=args)
+    print(f'====best_{metric}_result====:\n')
+    best_result = trainer.test(model, datamodule=data_module)
+    new_name = f'logs/best_{metric}_sample_scores.log'
+    os.rename('logs/test_sample_scores.log', new_name)
+    return best_result
+
+
 def testing_procedure(trainer, data_module, args):
     print(f'In Testing Mode:')
     print(f'default_root_dir:{args.default_root_dir}')
 
-    # Load best model
-    best_path = glob.glob(osp.join(args.default_root_dir, 'best*'))[0]
-    print(f"glob result:{best_path}")
-
-    model  = GNNModel.load_from_checkpoint(best_path, gnn_type=gnn_type,
-                                          args=args)
-    best_result = trainer.test(model, datamodule=data_module)
-    os.rename('logs/test_sample_scores.log',
-              'logs/best_test_sample_scores.log')
-    print('best_result:\n')
-    pprint(best_result)
-
-
     # Load last model
     last_path = osp.join(args.default_root_dir, 'last.ckpt')
-    model  = GNNModel.load_from_checkpoint(last_path, gnn_type=gnn_type,
-                                          args=args)
+    model  = GNNModel.load_from_checkpoint(last_path, gnn_type=gnn_type, args=args)
+    print('====last_result====:\n')
     last_result = trainer.test(model, datamodule=data_module)
     os.rename('logs/test_sample_scores.log',
               'logs/last_test_sample_scores.log')
-    print('last_result:\n')
-    pprint(last_result)
-
 
     # Save the result to a file
     filename = 'logs/test_result.log'
@@ -147,25 +183,67 @@ def testing_procedure(trainer, data_module, args):
         out_file.write(f'{args.dataset_name}\n')
         out_file.write('last:\n')
         out_file.write(f'{str(last_result)}\n')
-        out_file.write('best:\n')
-        out_file.write(f'{str(best_result)}')
+
+        for metric in data_module.dataset["metrics"]:
+            best_result = load_best_model(trainer=trainer, data_module=data_module, metric=metric, args=args)
+            if best_result is not False:
+                out_file.write(f'best_{metric}:\n')
+                out_file.write(f'{str(best_result)}\n')
         out_file.write(f'args:\n')
         out_file.write(f'{args}')
 
 
 def actual_training(model, data_module, use_clearml, gnn_type, args):
     # Add checkpoint
-    monitoring_metric = 'logAUC'
+    monitoring_metric = 'logAUC_0.001_0.1'
     actual_training_checkpoint_dir = args.default_root_dir
     actual_training_checkpoint_callback = ModelCheckpoint(
         monitor=monitoring_metric,
         dirpath=actual_training_checkpoint_dir,
-        filename='best_model_metric_{epoch}_{logAUC}', #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+        filename='best_model_metric_{epoch}_{logAUC_0.001_0.1}',
+        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
         save_top_k=1,
         mode='max',
         save_last=True,
         save_on_train_epoch_end=False
     )
+
+    best_AUC_callback = ModelCheckpoint(
+        monitor='AUC',
+        dirpath=actual_training_checkpoint_dir,
+        filename='best_model_metric_{epoch}_{AUC}',
+        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+        save_top_k=1,
+        mode='max',
+        save_last=True,
+        save_on_train_epoch_end=False
+    )
+
+    best_AUC_0_001_0_1_callback = ModelCheckpoint(
+        monitor=monitoring_metric,
+        dirpath=actual_training_checkpoint_dir,
+        filename='best_model_metric_{epoch}_{logAUC_0.001_1}',
+        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+        save_top_k=1,
+        mode='max',
+        save_last=True,
+        save_on_train_epoch_end=False
+    )
+
+    best_loss_callback = ModelCheckpoint(
+        monitor='loss',
+        dirpath=actual_training_checkpoint_dir,
+        filename='best_model_metric_{epoch}_{loss}',
+        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+        save_top_k=1,
+        mode='min',
+        save_last=True,
+        save_on_train_epoch_end=False
+    )
+
+
+
+
 
     # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
     if not args.test and not args.validate and os.path.exists(
@@ -182,76 +260,98 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks=[prog_bar]
     trainer.callbacks.append(actual_training_checkpoint_callback)
+    trainer.callbacks.append(best_AUC_callback)
+    trainer.callbacks.append(best_AUC_0_001_0_1_callback)
+    trainer.callbacks.append(best_loss_callback)
 
     if use_clearml:
         # Loss monitors
         # trainer.callbacks.append(
-        #     LossMonitor(stage='train', logger=logger, logging_interval='step'))
-        trainer.callbacks.append(
-            LossMonitor(stage='train', logger=logger,
-                        logging_interval='epoch'))
-        # trainer.callbacks.append(
-        #     LossMonitor(stage='valid', logger=logger, logging_interval='step'))
-        trainer.callbacks.append(
-            LossMonitor(stage='valid', logger=logger,
-                        logging_interval='epoch'))
+        trainer.callbacks.append(LossMonitor(stage='train', logger=logger, logging_interval='epoch'))
+        trainer.callbacks.append(LossMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+        if args.train_metric:
+            trainer.callbacks.append(LossNoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch'))
 
         # Learning rate monitors
-        # trainer.callbacks.append(LearningRateMonitor(logging_interval='step'))
-        trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
+        trainer.callbacks.append(LearningRateMonitor(logging_interval='step'))
+        # trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 
         # Other metrics monitors
-        metrics = get_dataset(dataset_name=args.dataset_name,
-                              gnn_type=gnn_type,
-                              dataset_path=args.dataset_path
-                              )['metrics']
+        metrics = data_module.dataset['metrics']
         for metric in metrics:
             if metric == 'accuracy':
                 # Accuracy monitors
-                trainer.callbacks.append(
-                    AccuracyMonitor(stage='train', logger=logger,
-                                    logging_interval='epoch'))
-                trainer.callbacks.append(
-                    AccuracyMonitor(stage='valid', logger=logger,
-                                    logging_interval='epoch'))
+                # trainer.callbacks.append(
+                #     AccuracyMonitor(stage='train', logger=logger,
+                #                     logging_interval='epoch'))
+                trainer.callbacks.append(AccuracyMonitor(stage='valid', logger=logger, logging_interval='epoch'))
                 continue
 
             if metric == 'RMSE':
                 # Accuracy monitors
-                trainer.callbacks.append(
-                    RMSEMonitor(stage='train', logger=logger,
-                                logging_interval='epoch'))
-                trainer.callbacks.append(
-                    RMSEMonitor(stage='valid', logger=logger,
-                                logging_interval='epoch'))
+                # trainer.callbacks.append(
+                    # RMSEMonitor(stage='train', logger=logger,
+                    #             logging_interval='epoch'))
+                trainer.callbacks.append(RMSEMonitor(stage='valid', logger=logger, logging_interval='epoch'))
                 continue
 
-            if metric == 'logAUC':
+            if metric == 'logAUC_0.001_0.1':
                 # LogAUC monitors
-                trainer.callbacks.append(
-                    LogAUCMonitor(stage='train', logger=logger,
-                                  logging_interval='epoch'))
-                trainer.callbacks.append(
-                    LogAUCMonitor(stage='valid', logger=logger,
-                                  logging_interval='epoch'))
+                # trainer.callbacks.append(
+                #     LogAUC0_001to0_1Monitor(stage='train', logger=logger,
+                #                             logging_interval='epoch'))
+                trainer.callbacks.append(LogAUC0_001to0_1Monitor(stage='valid', logger=logger, logging_interval='epoch'))
+                if args.train_metric:
+                    trainer.callbacks.append(
+                        LogAUC0_001to0_1NoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch')
+                    )
+                continue
+
+            if metric == 'logAUC_0.001_1':
+                # LogAUC monitors
+                # trainer.callbacks.append(
+                #     LogAUC0_001to1Monitor(stage='train', logger=logger,
+                #                             logging_interval='epoch'))
+                trainer.callbacks.append(LogAUC0_001to1Monitor(stage='valid', logger=logger, logging_interval='epoch'))
+                if args.train_metric:
+                    trainer.callbacks.append(
+                        LogAUC0_001to1NoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch')
+                    )
+                continue
+
+            if metric == 'AUC':
+                # LogAUC monitors
+                # trainer.callbacks.append(
+                #     LogAUC0_001to1Monitor(stage='train', logger=logger,
+                #                             logging_interval='epoch'))
+                trainer.callbacks.append(AUCMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+                if args.train_metric:
+                    trainer.callbacks.append(
+                        AUCNoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch')
+                    )
                 continue
 
             if metric == 'ppv':
                 # PPV monitors
-                trainer.callbacks.append(
-                    PPVMonitor(stage='train', logger=logger, logging_interval='epoch'))
-                trainer.callbacks.append(
-                    PPVMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+                # trainer.callbacks.append(
+                #     PPVMonitor(stage='train', logger=logger, logging_interval='epoch'))
+                trainer.callbacks.append(PPVMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+                if args.train_metric:
+                    trainer.callbacks.append(
+                        PPVNoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch')
+                    )
                 continue
 
             if metric == 'f1_score':
                 # F1 monitors
-                trainer.callbacks.append(
-                    F1ScoreMonitor(stage='train', logger=logger,
-                                   logging_interval='epoch'))
-                trainer.callbacks.append(
-                    F1ScoreMonitor(stage='valid', logger=logger,
-                                   logging_interval='epoch'))
+                # trainer.callbacks.append(
+                #     F1ScoreMonitor(stage='train', logger=logger,
+                #                    logging_interval='epoch'))
+                trainer.callbacks.append(F1ScoreMonitor(stage='valid', logger=logger, logging_interval='epoch'))
+                if args.train_metric:
+                    trainer.callbacks.append(
+                        F1ScoreNoDropoutMonitor(stage='valid', logger=logger, logging_interval='epoch')
+                    )
                 continue
 
     if args.test:
@@ -315,6 +415,8 @@ def main(gnn_type, use_clearml):
 
 
 if __name__ == '__main__':
+    start_sys_time = datetime.now()
+    print(f'scheduler start time:{start_sys_time}')
     start = time.time()
     Task.set_offline(offline_mode=True)
     # The reason that gnn_type cannot be a cmd line
@@ -334,11 +436,11 @@ if __name__ == '__main__':
     filename = 'logs/task_info.log'
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w') as out_file:
-        use_clearml = False
+        use_clearml = True
         if use_clearml:
-            task = Task.init(project_name=f"HyperParams/kgnn",
+            task = Task.init(project_name=f"HyperParams",
                              task_name=f"{gnn_type}",
-                             tags=['chiro'],
+                             tags=[],
                              reuse_last_task_id=False
                              )
             out_file.write(f'task_id:{task.id}')
@@ -349,8 +451,14 @@ if __name__ == '__main__':
         main(gnn_type, use_clearml)
         end = time.time()
         run_time = end-start
-        print(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')    
-        out_file.write(f'run_time:{run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}s')
+        run_time_str = f'run_time:{math.floor(run_time/3600)}h{math.floor((run_time)%3600/60)}m' \
+                       f'{math.floor(run_time%60)}s'
+        print(run_time_str)
+        end_sys_time = datetime.now()
+        print(f'task finsh time:{end_sys_time}')
+        out_file.write(run_time_str)
+        out_file.write(f'task start time:{start_sys_time}')
+        out_file.write(f'task finsh time:{end_sys_time}')
 
     print(f'========================')
     print(f'Runing model: {gnn_type}')

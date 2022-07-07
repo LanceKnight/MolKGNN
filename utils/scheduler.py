@@ -1,11 +1,13 @@
 import multiprocessing as mp
 from multiprocessing import Pool, Value
 import os
+import os.path as osp
 from tqdm import tqdm
 import shutil, errno
 import itertools
 import time
 from datetime import datetime
+import math
 
 branch = 'main' # Change this
 
@@ -21,14 +23,15 @@ def gitupdate(dir_name):
     cwd = os.getcwd()
     os.chdir(dir_name+'/kgnn')
     os.system('git gc')
-    os.system(f'git checkout {branch}') 
+    os.system('git pull')
+    os.system(f'git checkout {branch}')
     os.system('git pull')
     os.chdir(cwd)
 
 def run_command(exp_id, args): 
     # Model=kgnn
     os.system(f'python -W ignore entry.py \
-        --task_name experiments{exp_id}\
+        --task_name id{exp_id}_lr{args[4]}_L{args[6]}_seed{args[1]}\
         --dataset_name {args[0]} \
         --seed {args[1]}\
         --num_workers 11 \
@@ -56,9 +59,32 @@ def run_command(exp_id, args):
         ')\
 
 def copyanything(src, dst):
+    '''
+    does not overwrite
+    return True if created a new one
+    return False if folder exist
+    '''
+    if os.path.exists(dst):
+        # shutil.rmtree(dst)
+        print(f'{dst} exists and remain untouched')
+        return False
+    else:
+        try:
+            shutil.copytree(src, dst)
+        except OSError as exc: # python >2.5
+            if exc.errno in (errno.ENOTDIR, errno.EINVAL):
+                shutil.copy(src, dst)
+            else: raise
+        return True
+
+def overwrite_dir(src, dst):
+    '''
+    copy and overwrite
+    '''
     # If dst exits, remove it first
     if os.path.exists(dst):
         shutil.rmtree(dst)
+        print(f'{dst} exists and overwritten')
     try:
         shutil.copytree(src, dst)
     except OSError as exc: # python >2.5
@@ -67,7 +93,7 @@ def copyanything(src, dst):
         else: raise
 
 def run(exp_id, *args):
-    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_end{args[5]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}' # Change this
+    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_end{args[5]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}_trial{args[13]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -78,14 +104,37 @@ def run(exp_id, *args):
     # gitupdate(dir_name)
 
     global github_repo_dir
-    copyanything(github_repo_dir, dir_name)
+    newly_created = copyanything(github_repo_dir, dir_name)
     cwd = os.getcwd()
     os.chdir(dir_name+'/kgnn')
 
     # # Task
-    run_command(exp_id, args)
-    # time.sleep(3)
-    print(f'----{exp_name} finishes')
+    if not osp.exists('logs/test_sample_scores.log'):
+        if not newly_created:
+            os.chdir(cwd)
+            overwrite_dir(github_repo_dir, dir_name)
+            os.chdir(dir_name+'/kgnn') 
+        os.makedirs('logs', exist_ok=True)
+        with open('logs/params.log', 'w+') as out:
+            out.write(f'dataset:{args[0]}')
+            out.write(f'seed:{args[1]}')
+            out.write(f'warmup:{args[2]}')
+            out.write(f'epochs:{args[3]}')
+            out.write(f'peak:{args[4]}')
+            out.write(f'end:{args[5]}')
+            out.write(f'layers:{args[6]}')
+            out.write(f'kernel1:{args[7]}')
+            out.write(f'kernel2:{args[8]}')
+            out.write(f'kernel3:{args[9]}')
+            out.write(f'kernel4:{args[10]}')
+            out.write(f'hidden_dim:{args[11]}')
+            out.write(f'batch_size:{args[12]}')
+
+        run_command(exp_id, args)
+        # time.sleep(3)
+        print(f'----{exp_name} finishes')
+    else:
+        print(f'----{exp_name} was done previously')
     os.chdir(cwd)
     
 
@@ -114,21 +163,22 @@ if __name__ == '__main__':
     seed_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] # arg1
     warmup_list = [200] # arg2
     epochs_list = [20] # arg3
-    peak_lr_list = [5e-1, 5e-2, 5e-3] # arg4
+    peak_lr_list = [5e-2,5e-3] # arg4
     end_lr_list = [1e-10] # arg5
-    num_layer_list = [1,2,3] # arg6
+    num_layer_list = [4,5] # arg6
     kernel1_list = [10] # arg7
     kernel2_list = [20] # arg8
     kernel3_list = [30] # arg9
     kernel4_list = [50] # arg10
     hidden_dim = [32] # arg11
-    batch_size = [17] # arg12
-    data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim, batch_size )) 
+    batch_size = [16] # arg12
+    trials=[0]
+    data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim, batch_size, trials )) 
     print(f'num data_pair:{len(data_pair)}')
     data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(len(data_pair))))
     print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
 
-    file_name='utils/scheduler.log'
+    file_name='logs/scheduler.log'
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
     with open(file_name, "w") as out_file:
         out_file.write(f'num data_pair:{len(data_pair)}\n\n')
@@ -142,12 +192,14 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 9) as pool:
+    with Pool(processes = 5) as pool:
         pool.starmap(run, data_pair_with_exp_id)
 
     end_time=time.time()
     run_time = end_time-start_time
-    print(f'scheduler running time: {run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}')
+    run_time_str = f'run_time:{math.floor(run_time/3600)}h{math.floor((run_time)%3600/60)}m' \
+                   f'{math.floor(run_time%60)}s'
+    print(run_time_str)
     now = datetime.now()
     print(f'scheduler finsh time:{now}')
 
