@@ -257,44 +257,70 @@ class GNNModel(pl.LightningModule):
         which each item being the dictionary from each step.
         """
 
-        output = self(batch_data)
-        pred_y = output[0].view(-1)
-        true_y = batch_data.y.view(-1)
-        # print(f'y_pred.shape:{y_pred.shape} y_true:{y_true.shape}')
+        # Only run validation dataset if train_metric is not set
+        if ((not self.train_metric) and (dataloader_idx == 0)) or (self.train_metric):
+            output = self(batch_data)
+            pred_y = output[0].view(-1)
+            true_y = batch_data.y.view(-1)
 
-        # Get numpy_prediction and numpy_y and concate those from all batches
-        valid_step_output = {}
-        valid_step_output['pred_y'] = pred_y
-        valid_step_output['true_y'] = true_y
-        return valid_step_output
+            # Get numpy_prediction and numpy_y and concate those from all batches
+            valid_step_output = {}
+            valid_step_output['pred_y'] = pred_y
+            valid_step_output['true_y'] = true_y
+            return valid_step_output
 
     def validation_epoch_end(self, valid_step_outputs):
+        # Only run validation dataset if train_metric is not set
+        if self.train_metric:
+            for i, outputs_each_dataloader in enumerate(valid_step_outputs):
+                results = {}
+                all_pred = [output['pred_y'] for output in outputs_each_dataloader]
+                all_true = [output['true_y'] for output in outputs_each_dataloader]
+                results = self.get_evaluations(results, torch.cat(all_true), torch.cat(all_pred))
+                if i == 0:
+                    self.valid_epoch_outputs = results
+                    # Only log validation dataloader b/c this log is used for
+                    # monitoring metric and saving the best model. The actual logging happends within
+                    # clearml. See Monitor.py
+                    for key in results.keys():
+                        self.log(key, results[key])
 
-        for i, outputs_each_dataloader in enumerate(valid_step_outputs):
+                    # Store prediciton and labels if needed
+                    if self.record_valid_pred:
+                        filename = f'logs/valid_predictions/epoch_{self.current_epoch}'
+                        os.makedirs(os.path.dirname(filename), exist_ok=True)
+                        with open(filename, 'w+') as out_file:
+                            for i, pred in enumerate(all_pred):
+                                true = all_true[i]
+                                out_file.write(f'{pred},{true}\n')
+                else:
+                    for key in results.keys():
+                        new_key = key + "_no_dropout"
+                        self.valid_epoch_outputs[new_key] = results[key]
+        else: # Only run validation dataset if train_metric is not set
+            valid_step_outputs = valid_step_outputs[0]
             results = {}
-            all_pred = [output['pred_y'] for output in outputs_each_dataloader]
-            all_true = [output['true_y'] for output in outputs_each_dataloader]
-            results = self.get_evaluations(results, torch.cat(all_true), torch.cat(all_pred))
-            if i == 0:
-                self.valid_epoch_outputs = results
-                # Only log validation dataloader b/c this log is used for
-                # monitoring metric and saving the best model. The actual logging happends within
-                # clearml. See Monitor.py
-                for key in results.keys():
-                    self.log(key, results[key])
+            all_pred = [output['pred_y'] for output in valid_step_outputs]
+            all_true = [output['true_y'] for output in valid_step_outputs]
 
-                # Store prediciton and labels if needed
-                if self.record_valid_pred:
-                    filename = f'logs/valid_predictions/epoch_{self.current_epoch}'
-                    os.makedirs(os.path.dirname(filename), exist_ok=True)
-                    with open(filename, 'w+') as out_file:
-                        for i, pred in enumerate(all_pred):
-                            true = all_true[i]
-                            out_file.write(f'{pred},{true}\n')
-            else:
-                for key in results.keys():
-                    new_key = key + "_no_dropout"
-                    self.valid_epoch_outputs[new_key] = results[key]
+            # Store prediciton and labels if needed
+            if self.record_valid_pred:
+                filename = f'logs/valid_predictions/epoch_{self.current_epoch}'
+                os.makedirs(os.path.dirname(filename), exist_ok=True)
+                with open(filename, 'w+') as out_file:
+                    for i, pred in enumerate(all_pred):
+                        true = all_true[i]
+                        out_file.write(f'{pred},{true}\n')
+
+            results = self.get_evaluations(
+                results, torch.cat(all_true),
+                torch.cat(all_pred))
+
+            self.valid_epoch_outputs = results
+            # This log is used for monitoring metric and saving the best model. The actual logging happends within
+            # clearml. See Monitor.py
+            for key in results.keys():
+                self.log(key, results[key])
 
 
 
