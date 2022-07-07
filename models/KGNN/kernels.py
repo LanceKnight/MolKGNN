@@ -634,14 +634,13 @@ class KernelConv(Module):
         # #     permuted_p_support.shape[3],
         # #     permuted_p_support.shape[4])
         # # best_p_support = torch.gather(permuted_p_support, 1, selected_index)
-        angle_sc = self.get_angle_score(p_neighbor, best_p_support)
+        # angle_sc = self.get_angle_score(p_neighbor, best_p_support)
         #
         # # print(f'best_p_support:{best_p_support}')
         #
         # # Calculate length score
         # best_p_support = best_p_support.squeeze(1)
-        length_sc = self.get_length_score(p_neighbor,
-                                          best_p_support)
+        length_sc = self.get_length_score(p_neighbor, best_p_support)
 
         # Calculate the center attribute score
         center_attr_sc = self.get_center_attribute_score(x_focal,
@@ -702,13 +701,13 @@ class KernelConv(Module):
         # Each score is of Shape[num_kernel, num_nodes_of_this_degree]
         sc = (
                  length_sc * self.length_sc_weight
-                 + angle_sc * self.angle_sc_weight
+                 # + angle_sc * self.angle_sc_weight
                  + support_attr_sc * self.support_attr_sc_weight
                  + center_attr_sc * self.center_attr_sc_weight
                  + edge_attr_support_sc * self.edge_attr_support_sc_weight
                  # + position_sc * self.length_sc_weight
              ) / (self.support_attr_sc_weight+self.center_attr_sc_weight +
-                  self.edge_attr_support_sc_weight + self.length_sc_weight + self.angle_sc_weight)
+                  self.edge_attr_support_sc_weight + self.length_sc_weight)
         b = time.time()
         return sc
         # return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, \
