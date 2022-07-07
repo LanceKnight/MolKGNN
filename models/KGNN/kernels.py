@@ -271,12 +271,12 @@ class KernelConv(Module):
             for node_id, p_support_each_node in \
                     enumerate(p_support_for_all_node):
                 support_intra_angle = self.intra_angle(p_support_each_node)
-                support_intra_angle = (support_intra_angle * 10).round() / 10
+                # support_intra_angle = (support_intra_angle * 10).round() / 10
                 # print(f'support_intra_angle:{support_intra_angle}')
 
                 neighbor_intra_angle = self.intra_angle(
                     p_neighbor_for_all_node[node_id])
-                neighbor_intra_angle = (neighbor_intra_angle * 10).round()/10
+                # neighbor_intra_angle = (neighbor_intra_angle * 10).round()/10
                 # print(f'neighbor_intra_angle:{neighbor_intra_angle}')
                 intra_angle_similarity = \
                     self.calculate_average_similarity_score(
@@ -308,38 +308,38 @@ class KernelConv(Module):
         # print(f'get_angle():sc:{sc.shape}')
         # return sc.squeeze(1)
 
-    # def get_length_score(self, p_neighbor, p_support):
-    #     """
-    #     Compare the length of the neighbors and supports
-    #
-    #     It calculates the norm for all vectors in neighbors/supports first
-    #     and then calculates similarities between those norms
-    #     :param p_neighbor: Shape[num_nodes_in_this_degree, degree, dim]
-    #     :param p_support: Shape[num_kernels, num_nodes_in_this_degree,
-    #     degree, dim]
-    #     :return: a tensor. Shape[num_kernel, num_nodes_in_this_degree]
-    #     """
-    #     len_p_neighbor = torch.norm(p_neighbor, dim=-1)
-    #     len_p_support = torch.norm(p_support, dim=-1)
-    #
-    #
-    #
-    #     # Round the length of neighbors to 0.1. E.g., 1.512 becomes 1.5
-    #     # This eliminates the impact of small difference in lengths
-    #     len_p_neighbor = (len_p_neighbor * 10).round()/10
-    #
-    #     # Debug
-    #     # deg = p_neighbor.shape[-2]
-    #     # if deg == 4:
-    #     #     print(f'get_length():p_neighbor:{p_neighbor}')
-    #     #     print(f'get_length_score():p_neighbor:{p_neighbor.shape} p_support:'
-    #     #           f'{p_support.shape}')
-    #     #     print(f'get_length_score():\nlen_p_neighbor:\n'
-    #     #           f'{len_p_neighbor}\nlen_p_support:\n{len_p_support}')
-    #
-    #     # Get the similarity score
-    #     sc = self.calculate_average_similarity_score(len_p_neighbor, len_p_support, sim_dim=(-1))
-    #     return sc
+    def get_length_score(self, p_neighbor, p_support):
+        """
+        Compare the length of the neighbors and supports
+
+        It calculates the norm for all vectors in neighbors/supports first
+        and then calculates similarities between those norms
+        :param p_neighbor: Shape[num_nodes_in_this_degree, degree, dim]
+        :param p_support: Shape[num_kernels, num_nodes_in_this_degree,
+        degree, dim]
+        :return: a tensor. Shape[num_kernel, num_nodes_in_this_degree]
+        """
+        len_p_neighbor = torch.norm(p_neighbor, dim=-1)
+        len_p_support = torch.norm(p_support, dim=-1)
+
+
+
+        # Round the length of neighbors to 0.1. E.g., 1.512 becomes 1.5
+        # This eliminates the impact of small difference in lengths
+        len_p_neighbor = (len_p_neighbor * 10).round()/10
+
+        # Debug
+        # deg = p_neighbor.shape[-2]
+        # if deg == 4:
+        #     print(f'get_length():p_neighbor:{p_neighbor}')
+        #     print(f'get_length_score():p_neighbor:{p_neighbor.shape} p_support:'
+        #           f'{p_support.shape}')
+        #     print(f'get_length_score():\nlen_p_neighbor:\n'
+        #           f'{len_p_neighbor}\nlen_p_support:\n{len_p_support}')
+
+        # Get the similarity score
+        sc = self.calculate_average_similarity_score(len_p_neighbor, len_p_support, sim_dim=(-1))
+        return sc
 
     def get_the_permutation_with_best_alignment_id(self, input_tensor,
                                                    best_alignment_id):
@@ -634,14 +634,14 @@ class KernelConv(Module):
         # #     permuted_p_support.shape[3],
         # #     permuted_p_support.shape[4])
         # # best_p_support = torch.gather(permuted_p_support, 1, selected_index)
-        # angle_sc = self.get_angle_score(p_neighbor, best_p_support)
+        angle_sc = self.get_angle_score(p_neighbor, best_p_support)
         #
         # # print(f'best_p_support:{best_p_support}')
         #
         # # Calculate length score
         # best_p_support = best_p_support.squeeze(1)
-        # length_sc = self.get_length_score(p_neighbor,
-        #                                   best_p_support)
+        length_sc = self.get_length_score(p_neighbor,
+                                          best_p_support)
 
         # Calculate the center attribute score
         center_attr_sc = self.get_center_attribute_score(x_focal,
@@ -701,14 +701,14 @@ class KernelConv(Module):
 
         # Each score is of Shape[num_kernel, num_nodes_of_this_degree]
         sc = (
-                 # length_sc * self.length_sc_weight
-                 # + angle_sc * self.angle_sc_weight
-                 support_attr_sc * self.support_attr_sc_weight
+                 length_sc * self.length_sc_weight
+                 + angle_sc * self.angle_sc_weight
+                 + support_attr_sc * self.support_attr_sc_weight
                  + center_attr_sc * self.center_attr_sc_weight
                  + edge_attr_support_sc * self.edge_attr_support_sc_weight
                  # + position_sc * self.length_sc_weight
              ) / (self.support_attr_sc_weight+self.center_attr_sc_weight +
-                  self.edge_attr_support_sc_weight)
+                  self.edge_attr_support_sc_weight + self.length_sc_weight + self.angle_sc_weight)
         b = time.time()
         return sc
         # return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, \
