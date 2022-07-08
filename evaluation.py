@@ -54,10 +54,10 @@ def calculate_logAUC(true_y, predicted_score, FPR_range=(0.001, 0.1)):
     if (lower_bound >= upper_bound):
         raise Exception('FPR upper_bound must be greater than lower_bound')
 
-    # print(f'true_y:')
-    # print(true_y)
-    # print(f'predicted_score:')
-    # print(predicted_score)
+    print(f'true_y:')
+    print(true_y)
+    print(f'predicted_score:')
+    print(predicted_score)
 
     fpr, tpr, thresholds = roc_curve(true_y, predicted_score, pos_label=1)
     # print(f'ori_tpr:{tpr}')

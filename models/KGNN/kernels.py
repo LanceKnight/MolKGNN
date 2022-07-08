@@ -681,9 +681,11 @@ class KernelConv(Module):
 
 
         # Debug
-        # if (deg == 4):
-        #     # print(f'kernels.py::length:{length_sc}')
-        #     # print(f'kernels.py::angle:{angle_sc}')
+        if (deg == 4):
+            # print(f'kernels.py::length:{length_sc}')
+            torch.set_printoptions(profile="full")
+            print(f'kernels.py::angle:{angle_sc.shape}')
+            print(f'kernels.py::angle:{angle_sc}')
         #     print(f'==============')
         #     print(f'kernels.py::support_attr_sc:{support_attr_sc}')
         #     print(f'kernels.py::center_attr_sc:{center_attr_sc}')
