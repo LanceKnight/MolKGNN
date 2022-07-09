@@ -166,7 +166,8 @@ class KernelConv(Module):
         for combination in all_combination:
             t1 = all_vecotr[combination[0]]
             t2 = all_vecotr[combination[1]]
-            res_list.append(cos(t1, t2))
+            res_list.append(torch.clamp(cos(t1,t2), min=-1+1e-8, max=+1+1e+8)) # The clamp is needed so that acos(-1)
+            # will not be NaN. See https://github.com/pytorch/pytorch/issues/8069
         result = torch.stack(res_list)
         result = torch.acos(result) # Convert to angle in radian
         return result
@@ -177,57 +178,67 @@ class KernelConv(Module):
         # #         print(f'intra angle sc:{sc.shape}')
         # return sc
 
-    def calculate_average_similarity_score(self, tensor1, tensor2, sim_dim=None, avg_dim=None):
-        """
-        Calculate the similarity between two tensors.
+    def calculate_average_similarity_score(self, tensor1, tensor2, sim_dim=None, avg_dim=None, shall_print=False):
+        # """
+        # Calculate the similarity between two tensors.
+        #
+        # This similarity is both calculated using a CosineSimilarity and an
+        # average.
+        # E.g.
+        # t1 = torch.tensor([[[1, 2, 3], [3, 2, 1]], [[1, 2, 3], [3, 2, 1]]],
+        # dtype=torch.double) # 2*2*3 tensor
+        # t2 = torch.tensor([[[1, 2, 3], [3, 2, 1]], [[1, 2, 1], [1, 2, 1]]],
+        # dtype=torch.double) # 2*2*3 tensor
+        # if sim_dim=-1, avg_dim = -2,
+        # This will first calculate cos similarity along dim -1, and then
+        # average over dim -2 (original dim -2, not the dim after cos
+        # similarity).
+        # The result is tensor([1.000, 0.8729]) because the average of the two
+        # similarity scores are 1.000 and 0.9729 respectively
+        #
+        # :param tensor1: input1
+        # :param tensor2: input1
+        # :param sim_dim: the dimension along which similarity is calculated
+        # This dimension becomes 1 after calculation. The sim_dim has to be
+        # expressed as a negative interger (for the ease of implementation).
+        # :param avg_dim: the dimension along which an arithmetic average is
+        # calculated. The sim_dim has to be expressed as a negative integer (for
+        # the ease of implementation).
+        # :return: a tensor of average scores
+        # """
+        # if sim_dim >= 0 or (avg_dim is not None and avg_dim >= 0):
+        #     raise NotImplementedError("kernels.py::arctan_sc(). Currently "
+        #                               "this function is implemented assuming "
+        #                               "sim_dim and avg_dim both are negative. "
+        #                               "Change the implementation if using "
+        #                               "positive dimension")
+        #
+        # cos = CosineSimilarity(dim=sim_dim)
+        #
+        # sc = cos(tensor1, tensor2)
+        # if shall_print:
+        #     print(f'sim_dim = {sim_dim}\n t1:{tensor1}, \nt2:{tensor2}, \nsc:{sc}')
+        # if avg_dim is not None:
+        #     if sim_dim > avg_dim:  # The sim_dim disappear after Cos,
+        #         # so avg_dim
+        #         # changes as well
+        #         avg_dim = avg_dim - sim_dim
+        #     sc = torch.mean(sc, dim=avg_dim)
+        # return sc
 
-        This similarity is both calculated using a CosineSimilarity and an
-        average.
-        E.g.
-        t1 = torch.tensor([[[1, 2, 3], [3, 2, 1]], [[1, 2, 3], [3, 2, 1]]],
-        dtype=torch.double) # 2*2*3 tensor
-        t2 = torch.tensor([[[1, 2, 3], [3, 2, 1]], [[1, 2, 1], [1, 2, 1]]],
-        dtype=torch.double) # 2*2*3 tensor
-        if sim_dim=-1, avg_dim = -2,
-        This will first calculate cos similarity along dim -1, and then
-        average over dim -2 (original dim -2, not the dim after cos
-        similarity).
-        The result is tensor([1.000, 0.8729]) because the average of the two
-        similarity scores are 1.000 and 0.9729 respectively
-
-        :param tensor1: input1
-        :param tensor2: input1
-        :param sim_dim: the dimension along which similarity is calculated
-        This dimension becomes 1 after calculation. The sim_dim has to be
-        expressed as a negative interger (for the ease of implementation).
-        :param avg_dim: the dimension along which an arithmetic average is
-        calculated. The sim_dim has to be expressed as a negative integer (for
-        the ease of implementation).
-        :return: a tensor of average scores
-        """
-        if sim_dim >= 0 or (avg_dim is not None and avg_dim >= 0):
-            raise NotImplementedError("kernels.py::arctan_sc(). Currently "
-                                      "this function is implemented assuming "
-                                      "sim_dim and avg_dim both are negative. "
-                                      "Change the implementation if using "
-                                      "positive dimension")
-
-        cos = CosineSimilarity(dim=sim_dim)
-        sc = cos(tensor1, tensor2)
+        diff = torch.square(tensor1 - tensor2)
+        if sim_dim is not None:
+            sc = torch.sum(diff, dim=sim_dim)
+        else:
+            sc = torch.sum(diff)
+        sc = 1/(sc+1e-8)
+        sc = torch.atan(sc)
         if avg_dim is not None:
             if sim_dim > avg_dim:  # The sim_dim disappear after Cos,
                 # so avg_dim
                 # changes as well
                 avg_dim = avg_dim - sim_dim
             sc = torch.mean(sc, dim=avg_dim)
-        return sc
-
-        # diff = torch.square(tensor1 - tensor2)
-        # if dim is not None:
-        #     sc = torch.sum(diff, dim=dim)
-        # else:
-        #     sc = torch.sum(diff)
-        # sc = torch.atan(1 / (sc + 1e-8))
         return sc
 
     def get_angle_score(self, p_neighbor, p_support):
@@ -252,8 +263,8 @@ class KernelConv(Module):
         if ( deg == 1):
             num_kernel = p_support.shape[0]
             num_nodes_of_this_degree = p_neighbor.shape[0]
-            return torch.full((num_kernel, num_nodes_of_this_degree),
-                             1, device=p_neighbor.device)
+            return torch.full((num_kernel, num_nodes_of_this_degree), 1, device=p_neighbor.device)
+
 
         # # Debug
         # if deg == 2 or deg == 3 or deg == 4:
@@ -268,24 +279,25 @@ class KernelConv(Module):
         for p_support_each_kernel in p_support_for_all_kernel:
             p_support_for_all_node = p_support_each_kernel.unbind()
             res_list_for_all_node = []
-            for node_id, p_support_each_node in \
-                    enumerate(p_support_for_all_node):
+            for node_id, p_support_each_node in enumerate(p_support_for_all_node):
                 support_intra_angle = self.intra_angle(p_support_each_node)
                 # support_intra_angle = (support_intra_angle * 10).round() / 10
-                # print(f'support_intra_angle:{support_intra_angle}')
 
-                neighbor_intra_angle = self.intra_angle(
-                    p_neighbor_for_all_node[node_id])
+                neighbor_intra_angle = self.intra_angle(p_neighbor_for_all_node[node_id])
                 # neighbor_intra_angle = (neighbor_intra_angle * 10).round()/10
-                # print(f'neighbor_intra_angle:{neighbor_intra_angle}')
-                intra_angle_similarity = \
-                    self.calculate_average_similarity_score(
-                        support_intra_angle, neighbor_intra_angle, sim_dim
-                        =-1)
+
+                intra_angle_similarity = self.calculate_average_similarity_score(
+                    support_intra_angle, neighbor_intra_angle, sim_dim=-1)
+
+                if torch.any(torch.isnan(neighbor_intra_angle)):
+                    print('=====')
+                    print(f'p_neighbor_for_all_node[node_id]:\n{p_neighbor_for_all_node[node_id]}')
+                    print(f'support_intra_angle:{support_intra_angle}')
+                    print(f'neighbor_intra_angle:{neighbor_intra_angle}')
+                    print(f'intra_ang_simi:{intra_angle_similarity}')
                 res_list_for_all_node.append(intra_angle_similarity)
             res_list_for_all_kernel.append(res_list_for_all_node)
-        result = torch.tensor(res_list_for_all_kernel, device =
-        p_support.device)
+        result = torch.tensor(res_list_for_all_kernel, device = p_support.device)
 
         # # Debug
         # if deg == 2 or deg == 3 or deg == 4:
@@ -326,7 +338,7 @@ class KernelConv(Module):
 
         # Round the length of neighbors to 0.1. E.g., 1.512 becomes 1.5
         # This eliminates the impact of small difference in lengths
-        len_p_neighbor = (len_p_neighbor * 10).round()/10
+        # len_p_neighbor = (len_p_neighbor * 10).round()/10
 
         # Debug
         # deg = p_neighbor.shape[-2]
@@ -401,10 +413,7 @@ class KernelConv(Module):
         for x_support_permute in x_support_permute_list:
             x_support_permute = x_support_permute.unsqueeze(1).expand(
                 x_nei.shape)
-            sc = self.calculate_average_similarity_score(x_nei,
-                                                         x_support_permute,
-                                                         sim_dim=-1,
-                                                             avg_dim=-2)
+            sc = self.calculate_average_similarity_score(x_nei, x_support_permute, sim_dim=-1, avg_dim=-2)
             res_permute.append(sc)
         sc = torch.stack(res_permute, dim=1)
         return sc
@@ -432,13 +441,6 @@ class KernelConv(Module):
         #     res_kernel.append(res_permute)
         # sc = torch.tensor(res_kernel, device=x_nei.device)
         # return sc
-
-
-
-
-
-
-
 
         # # ====================
         # # Debugging
@@ -603,12 +605,10 @@ class KernelConv(Module):
 
         # Calculate the support attribute score
         permuted_x_support = self.permute(x_support)
-        support_attr_sc = self.get_support_attribute_score(x_neighbor,
-                                                           permuted_x_support)
+        support_attr_sc = self.get_support_attribute_score(x_neighbor, permuted_x_support)
 
         # Get the best support_attr_sc and its index
-        best_support_attr_sc, best_support_attr_sc_index = torch.max(
-            support_attr_sc, dim=1)
+        best_support_attr_sc, best_support_attr_sc_index = torch.max(support_attr_sc, dim=1)
 
         # # Debug
         # if deg==3:
@@ -620,8 +620,7 @@ class KernelConv(Module):
         # position_sc = self.get_position_score(p_neighbor, best_p_support)
 
         # # Calculate the angle score
-        best_p_support = self.get_the_permutation_with_best_alignment_id(
-            p_support, best_support_attr_sc_index)
+        best_p_support = self.get_the_permutation_with_best_alignment_id(p_support, best_support_attr_sc_index)
         # # permuted_p_support = self.permute(p_support)
         # # permuted_p_support = permuted_p_support.unsqueeze(2).expand(
         # #     permuted_p_support.shape[0], permuted_p_support.shape[1],
@@ -634,7 +633,10 @@ class KernelConv(Module):
         # #     permuted_p_support.shape[3],
         # #     permuted_p_support.shape[4])
         # # best_p_support = torch.gather(permuted_p_support, 1, selected_index)
-        angle_sc = self.get_angle_score(p_neighbor, best_p_support)
+        # a = time.time()
+        # angle_sc = self.get_angle_score(p_neighbor, best_p_support)
+        # b = time.time()
+        # print(f'angle time:{b-a}')
         #
         # # print(f'best_p_support:{best_p_support}')
         #
@@ -643,21 +645,17 @@ class KernelConv(Module):
         length_sc = self.get_length_score(p_neighbor, best_p_support)
 
         # Calculate the center attribute score
-        center_attr_sc = self.get_center_attribute_score(x_focal,
-                                                         x_center)
+        center_attr_sc = self.get_center_attribute_score(x_focal, x_center)
 
 
         # Calculate the edge attribute score
-        selected_index = best_support_attr_sc_index.unsqueeze(-1).unsqueeze(
-            -1).expand(
+        selected_index = best_support_attr_sc_index.unsqueeze(-1).unsqueeze(-1).expand(
             best_support_attr_sc_index.shape[0],
             best_support_attr_sc_index.shape[1], edge_attr_support.shape[-2],
             edge_attr_support.shape[-1])
         permuted_edge_attr_support = self.permute(edge_attr_support)
-        best_edge_attr_support = torch.gather(
-            permuted_edge_attr_support, 1, selected_index)
-        edge_attr_support_sc = self.get_edge_attribute_score(
-            edge_attr_neighbor, best_edge_attr_support)
+        best_edge_attr_support = torch.gather(permuted_edge_attr_support, 1, selected_index)
+        edge_attr_support_sc = self.get_edge_attribute_score(edge_attr_neighbor, best_edge_attr_support)
         support_attr_sc = best_support_attr_sc
 
         # Debug
@@ -681,11 +679,8 @@ class KernelConv(Module):
 
 
         # Debug
-        if (deg == 4):
+        # if (deg == 4):
             # print(f'kernels.py::length:{length_sc}')
-            torch.set_printoptions(profile="full")
-            print(f'kernels.py::angle:{angle_sc.shape}')
-            print(f'kernels.py::angle:{angle_sc}')
         #     print(f'==============')
         #     print(f'kernels.py::support_attr_sc:{support_attr_sc}')
         #     print(f'kernels.py::center_attr_sc:{center_attr_sc}')
@@ -703,13 +698,17 @@ class KernelConv(Module):
         # Each score is of Shape[num_kernel, num_nodes_of_this_degree]
         sc = (
                  # length_sc * self.length_sc_weight
-                 + angle_sc * self.angle_sc_weight
+                 # + angle_sc * self.angle_sc_weight
                  + support_attr_sc * self.support_attr_sc_weight
                  + center_attr_sc * self.center_attr_sc_weight
                  + edge_attr_support_sc * self.edge_attr_support_sc_weight
                  # + position_sc * self.length_sc_weight
-             ) / (self.support_attr_sc_weight+self.center_attr_sc_weight +
-                  self.edge_attr_support_sc_weight + self.angle_sc_weight)
+             ) / (self.support_attr_sc_weight
+                  +self.center_attr_sc_weight
+                  +self.edge_attr_support_sc_weight
+                  # + self.angle_sc_weight
+                  )
+
         b = time.time()
         return sc
         # return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, \
