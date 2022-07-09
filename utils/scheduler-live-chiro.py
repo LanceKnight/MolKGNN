@@ -103,8 +103,8 @@ if __name__ == '__main__':
     dataset_list = [ '1798']
     seed_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] # arg1
     warmup_list = [200] # arg2
-    epochs_list = [80] # arg3
-    peak_lr_list = [6.04e-3, 6.04e-4, 6.04e-5] # arg4
+    epochs_list = [100] # arg3
+    peak_lr_list = [6.04e-4] # arg4
     end_lr_list = [1e-9] # arg5
     
 
