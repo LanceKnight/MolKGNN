@@ -58,7 +58,7 @@ def copyanything(src, dst):
 
 def run(exp_id, *args):
     print(f'args1:{args}')
-    exp_name = f'exp{exp_id}_dataset{args[0]}_chiro_seed{args[1]}_peak{args[4]}' # Change this
+    exp_name = f'exp{exp_id}_dataset{args[0]}_dimenetpp_seed{args[1]}_peak{args[4]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
