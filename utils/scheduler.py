@@ -11,7 +11,7 @@ import math
 
 
 branch = 'distance-sim' # Change this
-task_comment = '\"Cannot be None Content\"' # Change this
+task_comment = '\"sim: sc = 1/(sc+1e-8)\n sc = torch.sigmoid(sc)\"' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()

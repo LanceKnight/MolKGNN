@@ -177,7 +177,7 @@ class KernelConv(Module):
         # #         print(f'intra angle sc:{sc.shape}')
         # return sc
 
-    def calculate_average_similarity_score(self, tensor1, tensor2, sim_dim=None, avg_dim=None):
+    def calculate_average_similarity_score(self, tensor1, tensor2, sim_dim=None, avg_dim=None, shall_print=False):
         # """
         # Calculate the similarity between two tensors.
         #
@@ -228,7 +228,7 @@ class KernelConv(Module):
         else:
             sc = torch.sum(diff)
         sc = 1/(sc+1e-8)
-        sc = torch.sigmoid(sc)
+        sc = torch.atan(sc)/(math.pi/2)
 
         if avg_dim is not None:
             if sim_dim > avg_dim:  # The sim_dim disappear after Cos,
@@ -288,8 +288,7 @@ class KernelConv(Module):
                 # print(f'neighbor_intra_angle:{neighbor_intra_angle}')
                 intra_angle_similarity = \
                     self.calculate_average_similarity_score(
-                        support_intra_angle, neighbor_intra_angle, sim_dim
-                        =-1)
+                        support_intra_angle, neighbor_intra_angle, sim_dim =-1)
                 res_list_for_all_node.append(intra_angle_similarity)
             res_list_for_all_kernel.append(res_list_for_all_node)
         result = torch.tensor(res_list_for_all_kernel, device =
