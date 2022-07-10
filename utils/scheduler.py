@@ -10,6 +10,7 @@ from datetime import datetime
 import math
 
 branch = 'main' # Change this
+task_comment = '' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -56,6 +57,7 @@ def run_command(exp_id, args):
         --edge_feature_dim 7 \
         --hidden_dim {args[11]}\
         --batch_size {args[12]}\
+        --task_comment {task_comment}
         ')\
 
 def copyanything(src, dst):
@@ -159,8 +161,9 @@ if __name__ == '__main__':
     # Change this
     # Hyperparms
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
-    dataset_list = [ '1798' ] # arg0
-    seed_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] # arg1
+    dataset_list = [ '9999' ] # arg0
+    seed_list = [1] # arg1
+    # seed_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] # arg1
     warmup_list = [200] # arg2
     epochs_list = [20] # arg3
     peak_lr_list = [5e-3] # arg4
