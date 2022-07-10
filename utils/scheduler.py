@@ -11,7 +11,7 @@ import math
 
 
 branch = 'distance-sim' # Change this
-task_comment = '\"sim: sc = 1/(sc+1e-8)\n sc = torch.sigmoid(sc)\"' # Change this
+task_comment = '\"sim: sc = 1/(sc+1e-8)\nsc = torch.atan(sc)/(pi/2)\nno length or angle\"' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()

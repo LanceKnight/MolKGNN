@@ -178,58 +178,42 @@ class KernelConv(Module):
         # return sc
 
     def calculate_average_similarity_score(self, tensor1, tensor2, sim_dim=None, avg_dim=None, shall_print=False):
-        # """
-        # Calculate the similarity between two tensors.
-        #
-        # This similarity is both calculated using a CosineSimilarity and an
-        # average.
-        # E.g.
-        # t1 = torch.tensor([[[1, 2, 3], [3, 2, 1]], [[1, 2, 3], [3, 2, 1]]],
-        # dtype=torch.double) # 2*2*3 tensor
-        # t2 = torch.tensor([[[1, 2, 3], [3, 2, 1]], [[1, 2, 1], [1, 2, 1]]],
-        # dtype=torch.double) # 2*2*3 tensor
-        # if sim_dim=-1, avg_dim = -2,
-        # This will first calculate cos similarity along dim -1, and then
-        # average over dim -2 (original dim -2, not the dim after cos
-        # similarity).
-        # The result is tensor([1.000, 0.8729]) because the average of the two
-        # similarity scores are 1.000 and 0.9729 respectively
-        #
-        # :param tensor1: input1
-        # :param tensor2: input1
-        # :param sim_dim: the dimension along which similarity is calculated
-        # This dimension becomes 1 after calculation. The sim_dim has to be
-        # expressed as a negative interger (for the ease of implementation).
-        # :param avg_dim: the dimension along which an arithmetic average is
-        # calculated. The sim_dim has to be expressed as a negative integer (for
-        # the ease of implementation).
-        # :return: a tensor of average scores
-        # """
-        # if sim_dim >= 0 or (avg_dim is not None and avg_dim >= 0):
-        #     raise NotImplementedError("kernels.py::arctan_sc(). Currently "
-        #                               "this function is implemented assuming "
-        #                               "sim_dim and avg_dim both are negative. "
-        #                               "Change the implementation if using "
-        #                               "positive dimension")
-        #
-        # cos = CosineSimilarity(dim=sim_dim)
-        # sc = cos(tensor1, tensor2)
-        # if avg_dim is not None:
-        #     if sim_dim > avg_dim:  # The sim_dim disappear after Cos,
-        #         # so avg_dim
-        #         # changes as well
-        #         avg_dim = avg_dim - sim_dim
-        #     sc = torch.mean(sc, dim=avg_dim)
-        # return sc
+        """
+        Calculate the similarity between two tensors.
 
-        diff = torch.square(tensor1 - tensor2)
-        if sim_dim is not None:
-            sc = torch.sum(diff, dim=sim_dim)
-        else:
-            sc = torch.sum(diff)
-        sc = 1/(sc+1e-8)
-        sc = torch.atan(sc)/(math.pi/2)
+        This similarity is both calculated using a CosineSimilarity and an
+        average.
+        E.g.
+        t1 = torch.tensor([[[1, 2, 3], [3, 2, 1]], [[1, 2, 3], [3, 2, 1]]],
+        dtype=torch.double) # 2*2*3 tensor
+        t2 = torch.tensor([[[1, 2, 3], [3, 2, 1]], [[1, 2, 1], [1, 2, 1]]],
+        dtype=torch.double) # 2*2*3 tensor
+        if sim_dim=-1, avg_dim = -2,
+        This will first calculate cos similarity along dim -1, and then
+        average over dim -2 (original dim -2, not the dim after cos
+        similarity).
+        The result is tensor([1.000, 0.8729]) because the average of the two
+        similarity scores are 1.000 and 0.9729 respectively
 
+        :param tensor1: input1
+        :param tensor2: input1
+        :param sim_dim: the dimension along which similarity is calculated
+        This dimension becomes 1 after calculation. The sim_dim has to be
+        expressed as a negative interger (for the ease of implementation).
+        :param avg_dim: the dimension along which an arithmetic average is
+        calculated. The sim_dim has to be expressed as a negative integer (for
+        the ease of implementation).
+        :return: a tensor of average scores
+        """
+        if sim_dim >= 0 or (avg_dim is not None and avg_dim >= 0):
+            raise NotImplementedError("kernels.py::arctan_sc(). Currently "
+                                      "this function is implemented assuming "
+                                      "sim_dim and avg_dim both are negative. "
+                                      "Change the implementation if using "
+                                      "positive dimension")
+
+        cos = CosineSimilarity(dim=sim_dim)
+        sc = cos(tensor1, tensor2)
         if avg_dim is not None:
             if sim_dim > avg_dim:  # The sim_dim disappear after Cos,
                 # so avg_dim
@@ -237,6 +221,22 @@ class KernelConv(Module):
                 avg_dim = avg_dim - sim_dim
             sc = torch.mean(sc, dim=avg_dim)
         return sc
+
+        # diff = torch.square(tensor1 - tensor2)
+        # if sim_dim is not None:
+        #     sc = torch.sum(diff, dim=sim_dim)
+        # else:
+        #     sc = torch.sum(diff)
+        # sc = 1/(sc+1e-8)
+        # sc = torch.atan(sc)/(math.pi/2)
+        #
+        # if avg_dim is not None:
+        #     if sim_dim > avg_dim:  # The sim_dim disappear after Cos,
+        #         # so avg_dim
+        #         # changes as well
+        #         avg_dim = avg_dim - sim_dim
+        #     sc = torch.mean(sc, dim=avg_dim)
+        # return sc
 
     def get_angle_score(self, p_neighbor, p_support):
         """
