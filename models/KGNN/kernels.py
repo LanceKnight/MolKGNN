@@ -228,7 +228,7 @@ class KernelConv(Module):
         else:
             sc = torch.sum(diff)
         sc = 1/(sc+1e-8)
-        # sc = torch.atan(sc)
+        sc = torch.sigmoid(sc)
 
         if avg_dim is not None:
             if sim_dim > avg_dim:  # The sim_dim disappear after Cos,
