@@ -245,12 +245,12 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
 
 
 
-    # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
-    if not args.test and not args.validate and os.path.exists(
-            f'{actual_training_checkpoint_dir}/last.ckpt'):
-        print('Resuming from actual training checkpoint')
-        args.resume_from_checkpoint = actual_training_checkpoint_dir + \
-            '/last.ckpt'
+    # # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
+    # if not args.test and not args.validate and os.path.exists(
+    #         f'{actual_training_checkpoint_dir}/last.ckpt'):
+    #     print('Resuming from actual training checkpoint')
+    #     args.resume_from_checkpoint = actual_training_checkpoint_dir + \
+    #         '/last.ckpt'
 
 
     prog_bar=TQDMProgressBar(refresh_rate=500)
@@ -436,7 +436,7 @@ if __name__ == '__main__':
     filename = 'logs/task_info.log'
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w') as out_file:
-        use_clearml = True
+        use_clearml = False
         if use_clearml:
             task = Task.init(project_name=f"HyperParams/kgnn",
                              task_name=f"{gnn_type}",
