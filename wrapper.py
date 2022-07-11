@@ -383,8 +383,8 @@ class D4DCHPDataset(InMemoryDataset):
         data_list = []
         data_df = pd.read_csv(self.data_file)
 
-        smiles_list = list(data_df['smiles'])[0:num_data]
-        labels_list = list(data_df[self.label_column_name])[0:num_data]
+        smiles_list = list(data_df['smiles'])#[0:num_data]
+        labels_list = list(data_df[self.label_column_name])#[0:num_data]
 
 
         for i, smi in tqdm(enumerate(smiles_list)):
@@ -430,10 +430,10 @@ class D4DCHPDataset(InMemoryDataset):
         split_dict['valid'] = val_indices
         split_dict['test'] = test_indices
 
-        # Delete if statement if using the full CHIRAL1 dataset
-        split_dict['train'] = [torch.tensor(x) for x in train_indices if x <  num_data]
-        split_dict['valid'] = [torch.tensor(x) for x in val_indices if x < num_data]
-        split_dict['test'] = [torch.tensor(x) for x in test_indices if x < num_data]
+        # # Delete if statement if using the full CHIRAL1 dataset
+        # split_dict['train'] = [torch.tensor(x) for x in train_indices if x <  num_data]
+        # split_dict['valid'] = [torch.tensor(x) for x in val_indices if x < num_data]
+        # split_dict['test'] = [torch.tensor(x) for x in test_indices if x < num_data]
 
         return split_dict
 
