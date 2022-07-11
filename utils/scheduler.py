@@ -11,7 +11,7 @@ import math
 
 
 branch = 'distance-sim' # Change this
-task_comment = '\"sim: sc = 1/(sc+1e-8)\nsc = torch.atan(sc)/(pi/2)\nno length or angle\"' # Change this
+task_comment = '\"switch back to use cos_sim\"' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -163,7 +163,7 @@ if __name__ == '__main__':
     # Hyperparms
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
     dataset_list = [ '1798' ] # arg0
-    seed_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] # arg1
+    seed_list = [1, 2, 3, 4, 10] # arg1
     warmup_list = [200] # arg2
     epochs_list = [20] # arg3
     peak_lr_list = [5e-3] # arg4
