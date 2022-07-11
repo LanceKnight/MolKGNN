@@ -29,6 +29,9 @@ dataset = None
 #         print(f'after convert:{data.y.dtype}')
 #         return data
 
+qsar_dataset_names= ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290', '9999']
+d4dchp_dataset_names = ['CHIRAL1', 'DIFF5', 'D4DCHP', "dummy"]
+
 def get_dataset(dataset_name='435034', gnn_type='kgnn',
                 dataset_path='../dataset/'):
     """
@@ -41,8 +44,7 @@ def get_dataset(dataset_name='435034', gnn_type='kgnn',
     else:
         pre_transform=None
 
-    if dataset_name in ['435008', '1798', '435034', '1843', '2258',
-                                '463087', '488997','2689', '485290', '9999']:
+    if dataset_name in qsar_dataset_names:
         qsar_dataset = QSARDataset(
             root=dataset_path+'qsar/clean_sdf',
             dataset=dataset_name,
@@ -59,7 +61,7 @@ def get_dataset(dataset_name='435034', gnn_type='kgnn',
         }
 
 
-    elif dataset_name in ['CHIRAL1', 'DIFF5', 'D4DCHP', "dummy"]:
+    elif dataset_name in d4dchp_dataset_names:
         if dataset_name == 'CHIRAL1':
             data_file =  '../dataset/d4_docking/d4_docking_rs.csv'
             label_column_name = 'labels'
@@ -144,6 +146,8 @@ class DataLoaderModule(LightningDataModule):
         self.dataset_path = dataset_path
 
         split_idx = self.dataset['dataset'].get_idx_split(seed=self.seed)
+        print(f'split:\n')
+        print(split_idx)
 
         self.dataset_train = self.dataset['dataset'][split_idx["train"]]
         print(f'training # samples:{len(self.dataset_train)})')
@@ -158,39 +162,51 @@ class DataLoaderModule(LightningDataModule):
         pass
 
     def train_dataloader(self):
-        # Calculate the number of samples in minority/majority class
-        num_train_active = len(torch.nonzero(
-            torch.tensor([data.y for data in self.dataset_train])))
-        num_train_inactive = len(self.dataset_train) - num_train_active
-        print(f'training # of molecules: {len(self.dataset_train)}, actives: {num_train_active}')
+        if self.dataset_name in qsar_dataset_names:
+            # Calculate the number of samples in minority/majority class
+            num_train_active = len(torch.nonzero(
+                torch.tensor([data.y for data in self.dataset_train])))
+            num_train_inactive = len(self.dataset_train) - num_train_active
+            print(f'training # of molecules: {len(self.dataset_train)}, actives: {num_train_active}')
 
-        if self.enable_oversampling_with_replacement:
-            print('data.py::with resampling')
-            # Sample weights equal the inverse of number of samples
-            train_sampler_weight = torch.tensor([(1. / num_train_inactive)
-                                                 if data.y == 0
-                                                 else (1. / num_train_active)
-                                                 for data in
-                                                 self.dataset_train])
-            # print(f'data.py::train_sampler weight:{train_sampler_weight}')
+            if self.enable_oversampling_with_replacement:
+                print('data.py::with resampling')
+                # Sample weights equal the inverse of number of samples
+                train_sampler_weight = torch.tensor([(1. / num_train_inactive)
+                                                     if data.y == 0
+                                                     else (1. / num_train_active)
+                                                     for data in
+                                                     self.dataset_train])
+                # print(f'data.py::train_sampler weight:{train_sampler_weight}')
 
-            generator = torch.Generator()
-            generator.manual_seed(self.seed)
+                generator = torch.Generator()
+                generator.manual_seed(self.seed)
 
-            train_sampler = WeightedRandomSampler(weights=train_sampler_weight,
-                                                  num_samples=len(
-                                                      train_sampler_weight),
-                                                  generator=generator)
+                train_sampler = WeightedRandomSampler(weights=train_sampler_weight,
+                                                      num_samples=len(
+                                                          train_sampler_weight),
+                                                      generator=generator)
 
-            train_loader = DataLoader(
-                self.dataset_train,
-                batch_size=self.batch_size,
-                sampler=train_sampler,
-                num_workers=self.num_workers,
-            )
-        else:  # Regular sampling without oversampling
+                train_loader = DataLoader(
+                    self.dataset_train,
+                    batch_size=self.batch_size,
+                    sampler=train_sampler,
+                    num_workers=self.num_workers,
+                )
+            else:  # Regular sampling without oversampling
+                print('data.py::no resampling')
+                # print(f'dataset_train:{self.dataset_train[0]}')
+                train_loader = DataLoader(
+                    self.dataset_train,
+                    batch_size=self.batch_size,
+                    shuffle=True,
+                    num_workers=self.num_workers,
+                )
+
+            print('len(train_dataloader)', len(train_loader))
+        elif self.dataset_name in d4dchp_dataset_names:
             print('data.py::no resampling')
-            # print(f'dataset_train:{self.dataset_train[0]}')
+            print(f'dataset_train:{self.dataset_train[0]}')
             train_loader = DataLoader(
                 self.dataset_train,
                 batch_size=self.batch_size,
@@ -203,6 +219,7 @@ class DataLoaderModule(LightningDataModule):
         return train_loader
 
     def val_dataloader(self):
+
         # Validation laader
         # print(f'dataset_valid:{self.dataset_val[0]}')
         num_valid_active = len(torch.nonzero(
@@ -254,6 +271,7 @@ class DataLoaderModule(LightningDataModule):
             shuffle=False,
             num_workers=self.num_workers,
         )
+
         return val_loader, train_loader
 
     def test_dataloader(self):

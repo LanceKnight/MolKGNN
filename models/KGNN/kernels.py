@@ -228,7 +228,7 @@ class KernelConv(Module):
         # else:
         #     sc = torch.sum(diff)
         # sc = torch.atan(1 / (sc + 1e-8))
-        return sc
+        # return sc
 
     def get_angle_score(self, p_neighbor, p_support):
         """
@@ -668,17 +668,17 @@ class KernelConv(Module):
         #     #       f'\n ')
         #     print(f'best_position_sc:{position_sc}')
 
-        # if deg == 4:
-        #     start_chirality = time.time()
-        #     chirality_sign = self.get_chirality_sign(p_neighbor,
-        #                                              x_neighbor,
-        #                                              best_p_support
-        #                                              )
-        #     # print(f'chirality sign: support_attr_sc:{support_attr_sc.shape}')
-        #     # print(f'chirality sign: chirality_sign:{chirality_sign.shape}')
-        #     support_attr_sc = support_attr_sc * chirality_sign
-        #     end_chirality = time.time()
-        #     print(f'=====kernels.py::chirality:{end_chirality-start_chirality}')
+        if deg == 4:
+            start_chirality = time.time()
+            chirality_sign = self.get_chirality_sign(p_neighbor,
+                                                     x_neighbor,
+                                                     best_p_support
+                                                     )
+            # print(f'chirality sign: support_attr_sc:{support_attr_sc.shape}')
+            # print(f'chirality sign: chirality_sign:{chirality_sign.shape}')
+            support_attr_sc = support_attr_sc * chirality_sign
+            end_chirality = time.time()
+            # print(f'=====kernels.py::chirality:{end_chirality-start_chirality}')
 
 
         # Debug

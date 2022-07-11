@@ -198,7 +198,7 @@ def testing_procedure(trainer, data_module, args):
 
 def actual_training(model, data_module, use_clearml, gnn_type, args):
     # Add checkpoint
-    monitoring_metric = 'logAUC_0.001_0.1'
+    monitoring_metric = 'accuracy'
     actual_training_checkpoint_dir = args.default_root_dir
     actual_training_checkpoint_callback = ModelCheckpoint(
         monitor=monitoring_metric,
@@ -210,28 +210,28 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         save_last=True,
         save_on_train_epoch_end=False
     )
-
-    best_AUC_callback = ModelCheckpoint(
-        monitor='AUC',
-        dirpath=actual_training_checkpoint_dir,
-        filename='best_model_metric_{epoch}_{AUC}',
-        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
-        save_top_k=1,
-        mode='max',
-        save_last=True,
-        save_on_train_epoch_end=False
-    )
-
-    best_AUC_0_001_0_1_callback = ModelCheckpoint(
-        monitor=monitoring_metric,
-        dirpath=actual_training_checkpoint_dir,
-        filename='best_model_metric_{epoch}_{logAUC_0.001_1}',
-        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
-        save_top_k=1,
-        mode='max',
-        save_last=True,
-        save_on_train_epoch_end=False
-    )
+    #
+    # best_AUC_callback = ModelCheckpoint(
+    #     monitor='AUC',
+    #     dirpath=actual_training_checkpoint_dir,
+    #     filename='best_model_metric_{epoch}_{AUC}',
+    #     #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+    #     save_top_k=1,
+    #     mode='max',
+    #     save_last=True,
+    #     save_on_train_epoch_end=False
+    # )
+    #
+    # best_AUC_0_001_0_1_callback = ModelCheckpoint(
+    #     monitor=monitoring_metric,
+    #     dirpath=actual_training_checkpoint_dir,
+    #     filename='best_model_metric_{epoch}_{logAUC_0.001_1}',
+    #     #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
+    #     save_top_k=1,
+    #     mode='max',
+    #     save_last=True,
+    #     save_on_train_epoch_end=False
+    # )
 
     best_loss_callback = ModelCheckpoint(
         monitor='loss',
@@ -243,8 +243,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         save_last=True,
         save_on_train_epoch_end=False
     )
-
-
 
 
 
@@ -261,9 +259,10 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks=[prog_bar]
     trainer.callbacks.append(actual_training_checkpoint_callback)
-    trainer.callbacks.append(best_AUC_callback)
-    trainer.callbacks.append(best_AUC_0_001_0_1_callback)
-    trainer.callbacks.append(best_loss_callback)
+
+    # trainer.callbacks.append(best_AUC_callback)
+    # trainer.callbacks.append(best_AUC_0_001_0_1_callback)
+    # trainer.callbacks.append(best_loss_callback)
 
     if use_clearml:
         # Loss monitors
@@ -437,7 +436,7 @@ if __name__ == '__main__':
     filename = 'logs/task_info.log'
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w') as out_file:
-        use_clearml = True
+        use_clearml = False
         if use_clearml:
             task = Task.init(project_name=f"HyperParams",
                              task_name=f"{gnn_type}",
