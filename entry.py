@@ -248,12 +248,12 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
 
 
 
-    # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
-    if not args.test and not args.validate and os.path.exists(
-            f'{actual_training_checkpoint_dir}/last.ckpt'):
-        print('Resuming from actual training checkpoint')
-        args.resume_from_checkpoint = actual_training_checkpoint_dir + \
-            '/last.ckpt'
+    # # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
+    # if not args.test and not args.validate and os.path.exists(
+    #         f'{actual_training_checkpoint_dir}/last.ckpt'):
+    #     print('Resuming from actual training checkpoint')
+    #     args.resume_from_checkpoint = actual_training_checkpoint_dir + \
+    #         '/last.ckpt'
 
 
     prog_bar=TQDMProgressBar(refresh_rate=500)
