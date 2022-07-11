@@ -11,7 +11,7 @@ import math
 
 
 branch = 'distance-sim' # Change this
-task_comment = '\"switch back to use cos_sim\"' # Change this
+task_comment = '\"sc= sqrt(sum((t1-t2)^2))\nsc=5/sc\nsc=atan(sc)\"' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
