@@ -6,7 +6,7 @@ This repo does NOT include the dataset. Please download the dataset from https:/
 
 # how to process datasets
 
-'python dataset_multigenerator.py'
+`python dataset_multigenerator.py`
 
 # how to run
 uncompress the 9999.tar.gz file and you will get a folder named kgnn-based-9999-3D. Put the folder and the other two files in this structure.
