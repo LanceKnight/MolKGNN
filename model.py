@@ -1,18 +1,25 @@
 from data import get_dataset
 from models.GCNNet.GCNNet import GCNNet
 from models.KGNN.KGNNNet import KGNNNet
-from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy
+from models.DimeNetPP.DimeNetPP import DimeNetPP
+from models.ChebNet.ChebNet import ChebNet
+from models.ChIRoNet.ChIRoNet import ChIRoNet
+from models.ChIRoNet.params_interpreter import string_to_object
+from models.SphereNet.SphereNet import SphereNet
+from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy, \
+    calculate_f1_score, calculate_auc
 from lr import PolynomialDecayLR
+
 # Public libraries
+from copy import deepcopy
 import os
 import pytorch_lightning as pl
 from sklearn.metrics import mean_squared_error
-from torch.nn import Linear, Sigmoid, ReLU, Embedding
+from torch.nn import Linear, Sigmoid, ReLU, Embedding, Dropout
 from torch_geometric.data import Data
 import torch
 from torch.optim import Adam
-
-
+import time
 
 class GNNModel(pl.LightningModule):
     """
@@ -26,39 +33,107 @@ class GNNModel(pl.LightningModule):
 
     def __init__(self,
                  gnn_type,
-                 dataset_name,
-                 num_layers,
-                 input_dim,
-                 hidden_dim,
-                 output_dim,
-                 warmup_iterations,
-                 tot_iterations,
-                 peak_lr,
-                 end_lr,
                  args=None
                  ):
         super(GNNModel, self).__init__()
-        print(f'kwargs:{args}')
-
         if gnn_type == 'gcn':
-            self.gnn_model = GCNNet(input_dim, hidden_dim)
-        if gnn_type == 'kgnn':
-            self.gnn_model = KGNNNet(num_layers=num_layers,
-                                     # num_kernel1_1hop=kwargs['num_kernel1_1hop'],
-                                     # num_kernel2_1hop=kwargs[
-                                     #     'num_kernel2_1hop'],
-                                     # num_kernel3_1hop=kwargs[
-                                     #     'num_kernel3_1hop'],
-                                     # num_kernel4_1hop=kwargs[
-                                     #     'num_kernel4_1hop'],
-                                     # num_kernel1_Nhop=kwargs[
-                                     #     'num_kernel1_Nhop'],
-                                     # num_kernel2_Nhop=kwargs[
-                                     #     'num_kernel2_Nhop'],
-                                     # num_kernel3_Nhop=kwargs[
-                                     #     'num_kernel3_Nhop'],
-                                     # num_kernel4_Nhop=kwargs[
-                                     #     'num_kernel4_Nhop'],
+            self.gnn_model = GCNNet(args.node_feature_dim, args.hidden_dim,
+                                    args.num_layers)
+        elif gnn_type == 'chebnet':
+            self.gnn_model = ChebNet(args.node_feature_dim, args.hidden_dim, args.num_layers, args.K)
+        # elif gnn_type == 'dimenet':
+        #     self.gnn_model = DimeNet(emb_size=args.hidden_dim,
+        #                              num_blocks=args.num_layers,
+        #                              num_bilinear=1, num_spherical=7,
+        #     num_radial=6, cutoff=5.0, envelope_exponent=5, num_before_skip=1,
+        #     num_after_skip=2, num_dense_output=3, num_targets=12,
+        #     output_init='zeros', name='dimenet')
+        elif gnn_type == 'chironet':
+
+            layers_dict = deepcopy(args.layers_dict)
+
+            activation_dict = deepcopy(args.activation_dict)
+
+            for key, value in args.activation_dict.items():
+                activation_dict[key] = string_to_object[
+                    value]  # convert strings to actual python
+                # objects/functions using pre-defined mapping
+            print(
+                f'model.py::chironet argument:'
+                f'{type(args.activation_dict["EConv_mlp_hidden_activation"])}')
+            self.gnn_model = ChIRoNet(
+                F_z_list=args.F_z_list,  # dimension of latent space
+                F_H=args.F_H,
+                # dimension of final node embeddings, after EConv and GAT layers
+                F_H_embed=args.F_H_embed,
+                # dimension of initial node feature vector, currently 41
+                F_E_embed=args.F_E_embed,
+                # dimension of initial edge feature vector, currently 12
+                F_H_EConv=args.F_H_EConv,
+                # dimension of node embedding after EConv layer
+                layers_dict=args.layers_dict,
+                activation_dict= activation_dict,
+                GAT_N_heads=args.GAT_N_heads,
+                chiral_message_passing=args.use_chiral_message_passing,
+                CMP_EConv_MLP_hidden_sizes=args.CMP_EConv_MLP_hidden_sizes,
+                CMP_GAT_N_layers=args.CMP_GAT_N_layers,
+                CMP_GAT_N_heads=args.CMP_GAT_N_heads,
+                c_coefficient_normalization=args.c_coefficient_normalization,
+                encoder_reduction=args.encoder_reduction,
+                output_concatenation_mode=args.output_concatenation_mode,
+                EConv_bias=args.EConv_bias,
+                GAT_bias=args.GAT_bias,
+                encoder_biases=args.encoder_biases,
+                dropout=args.dropout,
+            )
+            out_dim = args.F_H
+        elif gnn_type == 'dimenet_pp':
+            print(f'model.py::running dimenet_pp')
+            self.gnn_model = DimeNetPP(
+                hidden_channels=args.hidden_channels,
+                out_channels=args.out_channels,
+                num_blocks=args.num_blocks,
+                int_emb_size=args.int_emb_size,
+                basis_emb_size=args.basis_emb_size,
+                out_emb_channels=args.out_emb_channels,
+                num_spherical=args.num_spherical,
+                num_radial=args.num_radial,
+                cutoff=args.cutoff,
+                envelope_exponent=args.envelope_exponent,
+                num_before_skip=args.num_before_skip,
+                num_after_skip=args.num_after_skip,
+                num_output_layers=args.num_output_layers,
+                act_name='swish',
+                MLP_hidden_sizes=[],  # [] for contrastive)
+            )
+            out_dim = args.out_channels
+        elif gnn_type == 'spherenet':
+            self.gnn_model = SphereNet(
+                energy_and_force=False,  # False
+                cutoff=args.cutoff,  # 5.0
+                num_layers=args.num_layers,  # 4
+                hidden_channels=args.hidden_channels,  # 128
+                out_channels=args.out_channels,  # 1
+                int_emb_size=args.int_emb_size,  # 64
+                basis_emb_size_dist=args.basis_emb_size_dist,  # 8
+                basis_emb_size_angle=args.basis_emb_size_angle,  # 8
+                basis_emb_size_torsion=args.basis_emb_size_torsion,  # 8
+                out_emb_channels=args.out_emb_channels,  # 256
+                num_spherical=args.num_spherical,  # 7
+                num_radial=args.num_radial,  # 6
+                envelope_exponent=args.envelope_exponent,  # 5
+                num_before_skip=args.num_before_skip,  # 1
+                num_after_skip=args.num_after_skip,  # 2
+                num_output_layers=args.num_output_layers,  # 3
+                act_name='swish',
+                output_init='GlorotOrthogonal',
+                use_node_features=True,
+                MLP_hidden_sizes=args.MLP_hidden_sizes,
+                # [] for contrastive
+
+            )
+        elif gnn_type == 'kgnn':
+            self.gnn_model = KGNNNet(num_layers=args.num_layers,
                                      num_kernel1_1hop = args.num_kernel1_1hop,
                                      num_kernel2_1hop = args.num_kernel2_1hop,
                                      num_kernel3_1hop = args.num_kernel3_1hop,
@@ -67,34 +142,37 @@ class GNNModel(pl.LightningModule):
                                      num_kernel2_Nhop = args.num_kernel2_Nhop,
                                      num_kernel3_Nhop = args.num_kernel3_Nhop,
                                      num_kernel4_Nhop = args.num_kernel4_Nhop,
-                                     x_dim = input_dim,
-                                     graph_embedding_dim = hidden_dim,
+                                     x_dim = args.node_feature_dim,
+                                     edge_attr_dim=args.edge_feature_dim,
+                                     graph_embedding_dim = args.hidden_dim,
                                      predefined_kernelsets=False
-                                     )
+            )
+            out_dim = args.hidden_dim
         else:
-            raise ValueError("model.py::GNNModel: GNN model type is not "
-                             "defined.")
-        self.atom_encoder = Embedding(118, hidden_dim)
-        self.lin1 = Linear(hidden_dim, hidden_dim)
-        self.lin2 = Linear(hidden_dim, output_dim)
-        self.ffn = Linear(hidden_dim, output_dim)
+            raise ValueError(f"model.py::GNNModel: GNN model type is not "
+                             f"defined. gnn_type={gnn_type}")
+        # self.atom_encoder = Embedding(118, hidden_dim)
+        self.lin1 = Linear(args.ffn_hidden_dim, args.ffn_hidden_dim)
+        self.lin2 = Linear(args.ffn_hidden_dim, args.task_dim)
+        self.ffn = Linear(out_dim, args.task_dim)
+        self.dropout = Dropout(p= args.ffn_dropout_rate)
         self.activate_func = ReLU()
-        self.warmup_iterations = warmup_iterations
-        self.tot_iterations = tot_iterations
-        self.peak_lr = peak_lr
-        self.end_lr = end_lr
-        self.loss_func = get_dataset(dataset_name=dataset_name)['loss_func']
+        self.warmup_iterations = args.warmup_iterations
+        self.tot_iterations = args.tot_iterations
+        self.peak_lr = args.peak_lr
+        self.end_lr = args.end_lr
+        self.loss_func = args.loss_func
         self.graph_embedding = None
         self.smiles_list = None
-        self.metrics = get_dataset(dataset_name=dataset_name)['metrics']
-
+        self.metrics = args.metrics
+        self.valid_epoch_outputs = {}
+        self.record_valid_pred = args.record_valid_pred
+        self.train_metric = args.train_metric
 
     def forward(self, data):
 
-        data.x = self.atom_encoder(data.atomic_num)
-
         graph_embedding = self.gnn_model(data)
-        # print(f'emb:{graph_embedding}')
+        graph_embedding = self.dropout(graph_embedding)
         prediction = self.ffn(graph_embedding)
 
         # # Debug
@@ -105,7 +183,6 @@ class GNNModel(pl.LightningModule):
         self.graph_embedding = graph_embedding
         self.smiles_list = data.smiles
         return prediction, graph_embedding
-
 
     def training_step(self, batch_data, batch_idx):
         """
@@ -121,24 +198,27 @@ class GNNModel(pl.LightningModule):
         """
 
         # Get prediction and ground truth
+        # print(batch_data.edge_index)
+
+        # start = time.time()
         pred_y, _ = self(batch_data)
+        # end = time.time()
+        # print(f'=model.py::training time:{end-start}')
         pred_y = pred_y.view(-1)
         true_y = batch_data.y.view(-1)
-        # print(f"models.py::true_y:{true_y}")
+
+        # print(f'pred_y')
+        # print(f'{pred_y}')
+        # print(f'true_y')
+        # print(f'{true_y}')
+
         # Get metrics
         results = {}
         loss = self.loss_func(pred_y, true_y.float())
         results['loss'] = loss
-        numpy_prediction = pred_y.detach().cpu().numpy()
-        numpy_y = true_y.cpu().numpy()
-        print(f'prediction:\n{numpy_prediction}')
-        print(f'true:\n{numpy_y}')
-        # logAUC = calculate_logAUC(numpy_y, numpy_prediction)
-        # results['logAUC'] = logAUC
-        # ppv = calculate_ppv(numpy_y, numpy_prediction)
-        # results['ppv'] = ppv
-        results = self.get_evaluations(results, numpy_y, numpy_prediction)
-        print(results)
+        # results = self.get_evaluations(results, true_y, pred_y)
+
+        # self.log(f"train performance by step", results, on_step=True, prog_bar=True, logger=True)
         return results
 
     def training_epoch_end(self, train_step_outputs):
@@ -155,10 +235,14 @@ class GNNModel(pl.LightningModule):
             # the first dictionary. See return function description from
             # function training_step() above
             mean_output = sum(output[key] for output in train_step_outputs) \
-                          / len(train_step_outputs)
+                / len(train_step_outputs)
             train_epoch_outputs[key] = mean_output
+            self.log(key, mean_output)
 
         self.train_epoch_outputs = train_epoch_outputs
+
+        # self.log(f"train performance by epoch", train_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
+
 
     def validation_step(self, batch_data, batch_idx, dataloader_idx):
         """
@@ -172,66 +256,165 @@ class GNNModel(pl.LightningModule):
         which each item being the dictionary from each step.
         """
 
+        # Only run validation dataset if train_metric is not set
+        if ((not self.train_metric) and (dataloader_idx == 0)) or (self.train_metric):
+            output = self(batch_data)
+            pred_y = output[0].view(-1)
+            true_y = batch_data.y.view(-1)
+
+            # Get numpy_prediction and numpy_y and concate those from all batches
+            valid_step_output = {}
+            valid_step_output['pred_y'] = pred_y
+            valid_step_output['true_y'] = true_y
+            return valid_step_output
+
+    def validation_epoch_end(self, valid_step_outputs):
+        # Only run validation dataset if train_metric is not set
+        if self.train_metric:
+            for i, outputs_each_dataloader in enumerate(valid_step_outputs):
+                results = {}
+                all_pred = [output['pred_y'] for output in outputs_each_dataloader]
+                all_true = [output['true_y'] for output in outputs_each_dataloader]
+                results = self.get_evaluations(results, torch.cat(all_true), torch.cat(all_pred))
+                if i == 0:
+                    self.valid_epoch_outputs = results
+                    # Only log validation dataloader b/c this log is used for
+                    # monitoring metric and saving the best model. The actual logging happends within
+                    # clearml. See Monitor.py
+                    for key in results.keys():
+                        self.log(key, results[key])
+
+                    # Store prediciton and labels if needed
+                    if self.record_valid_pred:
+                        filename = f'logs/valid_predictions/epoch_{self.current_epoch}'
+                        os.makedirs(os.path.dirname(filename), exist_ok=True)
+                        with open(filename, 'w+') as out_file:
+                            for i, pred in enumerate(all_pred):
+                                true = all_true[i]
+                                out_file.write(f'{pred},{true}\n')
+                else:
+                    for key in results.keys():
+                        new_key = key + "_no_dropout"
+                        self.valid_epoch_outputs[new_key] = results[key]
+        else: # Only run validation dataset if train_metric is not set
+            valid_step_outputs = valid_step_outputs[0]
+            results = {}
+            all_pred = [output['pred_y'] for output in valid_step_outputs]
+            all_true = [output['true_y'] for output in valid_step_outputs]
+
+            # Store prediciton and labels if needed
+            if self.record_valid_pred:
+                filename = f'logs/valid_predictions/epoch_{self.current_epoch}'
+                os.makedirs(os.path.dirname(filename), exist_ok=True)
+                with open(filename, 'w+') as out_file:
+                    for i, pred in enumerate(all_pred):
+                        true = all_true[i]
+                        out_file.write(f'{pred},{true}\n')
+
+            results = self.get_evaluations(
+                results, torch.cat(all_true),
+                torch.cat(all_pred))
+
+            self.valid_epoch_outputs = results
+            # This log is used for monitoring metric and saving the best model. The actual logging happends within
+            # clearml. See Monitor.py
+            for key in results.keys():
+                self.log(key, results[key])
+
+
+
+        # results = {}
+        # all_pred = [output['pred_y'] for output in valid_step_outputs]
+        # all_true = [output['true_y'] for output in valid_step_outputs]
+        #
+        # # Store prediciton and labels if needed
+        # if self.record_valid_pred:
+        #     filename = f'logs/valid_predictions/epoch_{self.current_epoch}'
+        #     os.makedirs(os.path.dirname(filename), exist_ok=True)
+        #     with open(filename, 'w+') as out_file:
+        #         for i, pred in enumerate(all_pred):
+        #             true = all_true[i]
+        #             out_file.write(f'{pred},{true}\n')
+        #
+        # results = self.get_evaluations(
+        #     results, torch.cat(all_true),
+        #     torch.cat(all_pred))
+        #
+        # self.valid_epoch_outputs = results
+        # # This log is used for monitoring metric and saving the best model. The actual logging happends within
+        # # clearml. See Monitor.py
+        # for key in results.keys():
+        #     self.log(key, results[key])
+            
+        # Logging
+        # self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
+
+    def test_step(self, batch_data, batch_idx):
+        """
+        Process the data in validation dataloader in test mode
+        :param batch_data:
+        :param batch_idx:
+        :return: It returns a list. The list is the outputs (a list) from
+        the testing datasets. The item in the list is a dictionary
+        from each step.
+        """
+
         output = self(batch_data)
         pred_y = output[0].view(-1)
         true_y = batch_data.y.view(-1)
         # print(f'y_pred.shape:{y_pred.shape} y_true:{y_true.shape}')
 
-        # Get metrics
-        results = {}
-        loss = self.loss_func(pred_y, true_y.float())
-        results['loss'] = loss
-        numpy_prediction = pred_y.detach().cpu().numpy()
-        numpy_y = true_y.cpu().numpy()
-        # logAUC = calculate_logAUC(numpy_y, numpy_prediction)
-        # results['logAUC'] = logAUC
-        # ppv = calculate_ppv(numpy_y, numpy_prediction)
-        # results['ppv'] = ppv
-        results = self.get_evaluations(results, numpy_y, numpy_prediction)
-        return results
-        # return {
-        #     'loss': loss,
-        #     'logAUC': logAUC,
-        #     'ppv': ppv,
-        #     'accuracy':accuracy
-        # }
+        # Get numpy_prediction and numpy_y and concate those from all batches
+        test_step_output = {}
+        test_step_output['pred_y'] = pred_y
+        test_step_output['true_y'] = true_y
+        return test_step_output
 
-    def validation_epoch_end(self, valid_step_outputs):
+    def test_epoch_end(self, test_step_outputs):
         """
         Evaluate on both the validation and training datasets. Besides in the
         training loop, the training dataset is included again because the
         model is set to evaluation mode (see
         https://stackoverflow.com/questions/60018578/what-does-model-eval-do
         -in-pytorch for a introduction of evaluation mode).
-        :param valid_step_outputs: a list of outputs from two dataloader.
+        :param test_step_outputs: a list of outputs from two dataloader.
         See the return description from function validation_step() above.
         set dataloader
-        :return: None. However, set self.valid_epoch_outputs to be a
-        dictionary of mean metrics from each validation step, with metrics
+        :return: None. However, set self.test_epoch_outputs to be a
+        dictionary of metrics from each validation step, with metrics
         from training dataset with "_no_dropout" suffix, such as
         "loss_no_dropout". The self.valid_epoch_outputs is used for monitoring.
         """
-        self.valid_epoch_outputs = {}
+        self.test_epoch_outputs = {}
 
-        # There are outputs from both validation and training datasets
-        # resulting from each validation iteration. Here we get the mean and
-        # then store them in self.valid_epoch_outputs
-        for i, outputs_each_dataloader in enumerate(valid_step_outputs):
-            for key in outputs_each_dataloader[0].keys():
-                mean_output = sum(output[key] for output in
-                                  outputs_each_dataloader) \
-                              / len(outputs_each_dataloader)
+        # There are true_y and pred_y from both validation and training
+        # datasets from each validation iteration. Here we get the
+        # concatenate them and calculate the metrics for all of them
+        results = {}
+        all_pred = torch.cat([output['pred_y'] for output in test_step_outputs])
+        all_true = torch.cat([output['true_y'] for output in test_step_outputs])
 
-                if i ==0:
-                    # For validation dataloader, output keys are "loss",
-                    # "logAUC", "ppv"
-                    pass
-                else:
-                    # For training dataloader, output keys are "loss_no_dropout",
-                    # "logAUC_no_dropout", "ppv_no_dropout"
-                    key = key + "_no_dropout"
-                self.valid_epoch_outputs[key] = mean_output
+        # Save pred and true in a file
+        filename = 'logs/test_sample_scores.log'
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        with open(filename, 'w') as out_file:
+            for i, pred in enumerate(all_pred):
+                true = all_true[i]
+                out_file.write(f'{pred},{true}\n')
 
+
+        results = self.get_evaluations(
+            results, all_true, all_pred)
+
+        # Logging
+        for key in results.keys():
+            self.log(key, results[key])
+
+        self.test_epoch_outputs = results
+
+        # Logging
+        # self.log(f"valid performance by epoch", self.valid_epoch_outputs,
+        # on_epoch=True, prog_bar=True, logger=True)
 
     def configure_optimizers(self):
         """
@@ -256,7 +439,6 @@ class GNNModel(pl.LightningModule):
         }
         # return optimizer, scheduler
 
-
         # optimizer, scheduler = self.gnn_model.configure_optimizers(
         #     self.warmup_iterations, self.tot_iterations, self.peak_lr,
         #     self.end_lr)
@@ -265,7 +447,7 @@ class GNNModel(pl.LightningModule):
     def save_atom_encoder(self, dir, file_name):
         if not os.path.exists(dir):
             os.mkdir(dir)
-        torch.save(self.atom_encoder.state_dict(), dir+file_name)
+        torch.save(self.gnn_model.atom_encoder.state_dict(), dir + file_name)
 
     def save_graph_embedding(self, dir):
         if not os.path.exists(dir):
@@ -273,7 +455,7 @@ class GNNModel(pl.LightningModule):
         torch.save(self.graph_embedding, f'{dir}/graph_embedding.pt')
         with open(f'{dir}/smiles_for_graph_embedding.txt', 'w+') as f:
             for smiles in self.smiles_list:
-                f.write(smiles+ "\n")
+                f.write(smiles + "\n")
 
     def save_kernels(self, dir, file_name):
         """
@@ -285,14 +467,14 @@ class GNNModel(pl.LightningModule):
             if not os.path.exists(dir):
                 os.mkdir(dir)
             torch.save(self.gnn_model.gnn.layers[
-                           0].trainable_kernelconv_set.state_dict(),
-                       dir+file_name)
+                0].trainable_kernelconv_set.state_dict(),
+                dir + file_name)
         else:
             raise Exception("model.py::GNNModel.sve_kernels(): only "
                             "implemented for Kernel GNN")
-    def print_graph_embedding(self):
-        print(self.graph_embedding)
 
+    def print_graph_embedding(self):
+        print(f'model.py::graph_embedding:\n{self.graph_embedding}')
 
     @staticmethod
     def add_model_args(gnn_type, parent_parser):
@@ -308,31 +490,77 @@ class GNNModel(pl.LightningModule):
         # E.g., parser.add_argument('--general_model_args', type=int,
         # default=12)
         parser.add_argument('--seed', type=int, default=42)
-        parser.add_argument('--input_dim', type=int, default=32)
-        parser.add_argument('--hidden_dim', type=int, default=32)
-        parser.add_argument('--output_dim', type=int, default=32)
         parser.add_argument('--validate', action='store_true', default=False)
         parser.add_argument('--test', action='store_true', default=False)
+        parser.add_argument('--record_valid_pred', action='store_true',
+                            default=False)
+        parser.add_argument(f'--train_metric', action = 'store_true',
+                            default=False)
         parser.add_argument('--warmup_iterations', type=int, default=60000)
-        parser.add_argument('--tot_iterations', type=int, default=1000000)
-        parser.add_argument('--peak_lr', type=float, default=2e-4)
+        parser.add_argument('--peak_lr', type=float, default=5e-2)
         parser.add_argument('--end_lr', type=float, default=1e-9)
+
+        # For linear layer
+        parser.add_argument('--ffn_dropout_rate', type=float, default=0.25)
+        parser.add_argument('--ffn_hidden_dim', type=int, default=64)
+        parser.add_argument('--task_dim', type=int, default=1)
 
         if gnn_type == 'gcn':
             GCNNet.add_model_specific_args(parent_parser)
+        elif gnn_type == 'chebnet':
+            ChebNet.add_model_specific_args(parent_parser)
         elif gnn_type == 'kgnn':
             KGNNNet.add_model_specific_args(parent_parser)
+        elif gnn_type == 'dimenet_pp':
+            DimeNetPP.add_model_specific_args(parent_parser)
+        elif gnn_type == 'chironet':
+            ChIRoNet.add_model_specific_args(parent_parser)
+        elif gnn_type == 'spherenet':
+            SphereNet.add_model_specific_args(parent_parser)
+        else:
+            NotImplementedError('model.py::GNNModel::add_model_args(): '
+                                'gnn_type is not defined for args groups')
+
         return parent_parser
 
-    def get_evaluations(self, results, numpy_y, numpy_prediction):
+    def get_evaluations(self, results, true_y, pred_y):
+        '''
+        :param results: a dictionary to store the result. Results will be
+        appended to the existing dictionary.
+        :param true_y: Tensor
+        :param pred_y: Tensor
+        :return:
+        '''
+        # Calculate loss using tensor
+        loss = self.loss_func(pred_y, true_y.float())
+        results['loss'] = loss
+
+        # Convert tensor to numpy
+        numpy_prediction = pred_y.detach().cpu().numpy()
+        numpy_y = true_y.cpu().numpy()
+
         for metric in self.metrics:
             if metric == 'accuracy':
                 accuracy = calculate_accuracy(numpy_y, numpy_prediction)
                 results['accuracy'] = accuracy
                 continue
             if metric == 'RMSE':
-                rmse = mean_squared_error(numpy_y, numpy_prediction,
-                                          squared=False) # Setting
+                rmse = mean_squared_error(numpy_y, numpy_prediction, squared=False)  # Setting
                 # squared=False returns RMSE
                 results['RMSE'] = rmse
+            if metric == 'logAUC_0.001_0.1':
+                logAUC = calculate_logAUC(numpy_y, numpy_prediction)
+                results['logAUC_0.001_0.1'] = logAUC
+            if metric == 'logAUC_0.001_1':
+                logAUC = calculate_logAUC(numpy_y, numpy_prediction, FPR_range=(0.001, 1))
+                results['logAUC_0.001_1'] = logAUC
+            if metric == 'ppv':
+                ppv = calculate_ppv(numpy_y, numpy_prediction)
+                results['ppv'] = ppv
+            if metric == 'f1_score':
+                f1_sc = calculate_f1_score(numpy_y, numpy_prediction)
+                results['f1_score'] = f1_sc
+            if metric == 'AUC':
+                AUC = calculate_auc(numpy_y, numpy_prediction)
+                results['AUC'] = AUC
         return results

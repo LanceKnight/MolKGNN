@@ -6,6 +6,23 @@ __pycache__/
 # Checkpoints
 actual_training_checkpoints/
 temp_training_checkpoints/
-utils/atom_encoder/graph_embedding/*.pt
-utils/atom_encoder/graph_embedding/*.txt
-utils/atom_encoder/*.pt
+
+# temporary scripts
+temp/
+
+# Results
+test_result.txt
+analyses/atom_encoder/graph_embedding/*.pt
+analyses/atom_encoder/graph_embedding/*.txt
+analyses/atom_encoder/*.pt
+
+# Logs
+logs/
+scheduler.log
+task_info
+
+# Data & plots
+*.data
+*.png
+*.gnuplot
+table.txt

@@ -577,9 +577,7 @@ class KernelConv(Module):
         return result
 
 
-    def calculate_total_score(self, x_focal, p_focal, x_neighbor, p_neighbor,
-                              edge_attr_neighbor):
-        a = time.time()
+    def calculate_total_score(self, x_focal, p_focal, x_neighbor, p_neighbor, edge_attr_neighbor, is_last_layer=False):
         # Calibrate neighbor coordinates
         # Calibrated coordinates = original coordinates - center coordinates
         p_neighbor = p_neighbor - p_focal.unsqueeze(1)
@@ -608,8 +606,7 @@ class KernelConv(Module):
                                                            permuted_x_support)
 
         # Get the best support_attr_sc and its index
-        best_support_attr_sc, best_support_attr_sc_index = torch.max(
-            support_attr_sc, dim=1)
+        best_support_attr_sc, best_support_attr_sc_index = torch.max(support_attr_sc, dim=1)
 
         # # Debug
         # if deg==3:
@@ -621,8 +618,7 @@ class KernelConv(Module):
         # position_sc = self.get_position_score(p_neighbor, best_p_support)
 
         # # Calculate the angle score
-        best_p_support = self.get_the_permutation_with_best_alignment_id(
-            p_support, best_support_attr_sc_index)
+        best_p_support = self.get_the_permutation_with_best_alignment_id(p_support, best_support_attr_sc_index)
         # # permuted_p_support = self.permute(p_support)
         # # permuted_p_support = permuted_p_support.unsqueeze(2).expand(
         # #     permuted_p_support.shape[0], permuted_p_support.shape[1],
@@ -645,13 +641,11 @@ class KernelConv(Module):
         #                                   best_p_support)
 
         # Calculate the center attribute score
-        center_attr_sc = self.get_center_attribute_score(x_focal,
-                                                         x_center)
+        center_attr_sc = self.get_center_attribute_score(x_focal, x_center)
 
 
         # Calculate the edge attribute score
-        selected_index = best_support_attr_sc_index.unsqueeze(-1).unsqueeze(
-            -1).expand(
+        selected_index = best_support_attr_sc_index.unsqueeze(-1).unsqueeze(-1).expand(
             best_support_attr_sc_index.shape[0],
             best_support_attr_sc_index.shape[1], edge_attr_support.shape[-2],
             edge_attr_support.shape[-1])
@@ -668,15 +662,18 @@ class KernelConv(Module):
         #     #       f'best_support_attr_sc_index:{best_support_attr_sc_index}'
         #     #       f'\n ')
         #     print(f'best_position_sc:{position_sc}')
-
-        if deg == 4:
+        chirality_sign = 1
+        if (deg == 4) and (is_last_layer):
+        #     start_chirality = time.time()
             chirality_sign = self.get_chirality_sign(p_neighbor,
                                                      x_neighbor,
                                                      best_p_support
                                                      )
             # print(f'chirality sign: support_attr_sc:{support_attr_sc.shape}')
             # print(f'chirality sign: chirality_sign:{chirality_sign.shape}')
-            support_attr_sc = support_attr_sc * chirality_sign
+            # support_attr_sc = support_attr_sc * chirality_sign
+            # end_chirality = time.time()
+            # print(f'=====kernels.py::chirality:{end_chirality-start_chirality}')
 
 
         # Debug
@@ -699,7 +696,7 @@ class KernelConv(Module):
 
         # Each score is of Shape[num_kernel, num_nodes_of_this_degree]
         sc = (
-                 # length_sc * self.length_sc_weight
+                 # length_sc * self.length_sc_weight,
                  # + angle_sc * self.angle_sc_weight
                  support_attr_sc * self.support_attr_sc_weight
                  + center_attr_sc * self.center_attr_sc_weight
@@ -707,12 +704,14 @@ class KernelConv(Module):
                  # + position_sc * self.length_sc_weight
              ) / (self.support_attr_sc_weight+self.center_attr_sc_weight +
                   self.edge_attr_support_sc_weight)
+        if deg ==4:
+            sc = sc * chirality_sign
         b = time.time()
         return sc
         # return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, \
         #        edge_attr_support_sc
 
-    def forward(self, *argv, **kwargv):
+    def forward(self, is_last_layer, *argv, **kwargv):
         if len(kwargv) == 1:
             x_focal = kwargv['data'].x_focal
             p_focal = kwargv['data'].p_focal
@@ -736,7 +735,7 @@ class KernelConv(Module):
         # sc, length_sc, angle_sc, supp_attr_sc, center_attr_sc, \
         # edge_attr_support_sc
         sc = self.calculate_total_score(
-            x_focal, p_focal, x_neighbor, p_neighbor, edge_attr_neighbor)
+            x_focal, p_focal, x_neighbor, p_neighbor, edge_attr_neighbor, is_last_layer)
 
         # print('\n')
         # print(f'len sc:{length_sc}')
@@ -835,7 +834,7 @@ class BaseKernelSetConv(Module):
                 num += self.num_trainable_kernel_list[i]
             self.num_kernel_list.append(num)
 
-        print(f'self.num_kernel_list:{self.num_kernel_list}')
+        # print(f'self.num_kernel_list:{self.num_kernel_list}')
 
     #         kernel_set = ModuleList(
     #             [KernelConv(D=D, num_supports=1, node_attr_dim =
@@ -856,8 +855,10 @@ class BaseKernelSetConv(Module):
         ori_p: a position matrix that only contains rows (i.e. the center
         node) having certain degree
         '''
-
+        start = time.time()
         x_focal = torch.index_select(input=x, dim=0, index=selected_index)
+        end = time.time()
+        # print(f'=====kernels.py::x_focal index_select:{end-start}')
         # p_focal = torch.index_select(input=p, dim=0, index=selected_index)
 
         return x_focal  # , p_focal
@@ -885,7 +886,11 @@ class BaseKernelSetConv(Module):
         # 		print(f'nei_index:{torch.squeeze(nei_index.T)}')
         # print(f'nei_index:{nei_index.shape}')
         # nei_x = torch.index_select(x, 0, torch.squeeze(nei_index.T))
+
+        start = time.time()
         nei_x = torch.index_select(x, 0, nei_index)
+        end = time.time()
+        # print(f'=====kernels.py::nei index_select:{end-start}')
         nei_x = nei_x.reshape(-1, deg, nei_x.shape[-1])
         # print(f'nei_x:{nei_x.shape}')
 
@@ -965,7 +970,7 @@ class BaseKernelSetConv(Module):
         sc_df = sc_df.transpose()
         sc_df.to_csv('scores.csv')
 
-    def forward(self, *argv, **kwargv):
+    def forward(self, is_last_layer, *argv, **kwargv):
         '''
         inputs:
         data: graph data containing feature matrix, adjacency matrix,
@@ -1046,7 +1051,7 @@ class BaseKernelSetConv(Module):
         start_col_id = 0
         for deg in range(1, 5):
             # print(f'deg:{deg}')
-
+            start_deg = time.time()
             # x_focal = x_focal_list[deg-1]
             # p_focal = p_focal_list[deg-1]
             # x_neighbor = nei_x_list[deg-1]
@@ -1062,10 +1067,13 @@ class BaseKernelSetConv(Module):
             # 	data = Data(x_focal=x_focal, p_focal=p_focal,
             # 	x_neighbor=x_neighbor, p_neighbor=p_neighbor,
             # 	edge_attr_neighbor=edge_attr_neighbor)
+            start_convert = time.time()
             receptive_field = self.convert_graph_to_receptive_field(
                 deg, x, p, edge_index, edge_attr,
                 selected_index, nei_index
             )
+            end_convert = time.time()
+            # print(f'=====kernels.py::convert:{end_convert-start_convert}')
             # #             print('receptive_field')
             # #             print(receptive_field)
             if receptive_field is not None:
@@ -1088,15 +1096,16 @@ class BaseKernelSetConv(Module):
                 # print('edge_attr_neighbor')
                 # print(edge_attr_neighbor.shape)
 
+
+                start_cal_sc = time.time()
                 # Depanding on whether fixed kernels are used, choose the
                 # correct KernelConv to use (either fixed_kernelConv,
                 # trainable_kernel_conv, or both)
                 if self.fixed_kernelconv_set[deg - 1] is not None:
-                    fixed_degree_sc = self.fixed_kernelconv_set[deg - 1](
-                        data=data)
+                    fixed_degree_sc = self.fixed_kernelconv_set[deg - 1](is_last_layer = is_last_layer, data=data )
                     if self.trainable_kernelconv_set[deg - 1] is not None:
-                        trainable_degree_sc = self.trainable_kernelconv_set[
-                            deg - 1](data=data)
+                        trainable_degree_sc = self.trainable_kernelconv_set[deg - 1](is_last_layer = is_last_layer,
+                                                                                     data=data)
                         degree_sc = torch.cat(
                             [fixed_degree_sc, trainable_degree_sc])
                     else:
@@ -1104,7 +1113,7 @@ class BaseKernelSetConv(Module):
                 else:
                     if self.trainable_kernelconv_set[deg - 1] is not None:
                         trainable_degree_sc = self.trainable_kernelconv_set[
-                            deg - 1](data=data)
+                            deg - 1](is_last_layer = is_last_layer, data=data)
                         degree_sc = trainable_degree_sc
 
                     else:
@@ -1112,6 +1121,8 @@ class BaseKernelSetConv(Module):
                             f'kernels.py::BaseKernelSet:both fixed and '
                             f'trainable kernelconv_set are '
                             f'None for degree {deg}')
+                # end_cal_sc = time.time()
+                # print(f'====kernels.py::calc:{end_cal_sc-start_cal_sc}')
 
                 # Fill a zero tensor will score for each degree in
                 # corresponding positions
@@ -1131,6 +1142,8 @@ class BaseKernelSetConv(Module):
                 #     print(f'kernels.py::shape:{zeros.shape} zeros:{zeros}')
             else:
                 start_row_id += self.num_kernel_list[deg - 1]
+            # end_deg = time.time()
+            # print(f'===kernels.py::deg_time:{end_deg-start_deg}')
 
         # Reorder the output score tensor so that its rows correspond to the
         # original index in the feature matrix x. Score tensor has shape
@@ -1143,6 +1156,8 @@ class BaseKernelSetConv(Module):
 
         if (save_score == True):
             self.save_score(sc)  # save scores for analysis
+        # end = time.time()
+        # print(f'==kernels.py::kernelset:{end-start}')
         return sc
 
 
