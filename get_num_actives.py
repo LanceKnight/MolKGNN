@@ -50,9 +50,10 @@ def get_info(dataset, batch_size=16):
 
 
 if __name__  == '__main__':
-    dataset_list = [ '9999','485290', '1843', '2258', '488997','2689', '435008', '435034', '463087', '1798'] # arg0
+    # dataset_list = [ '9999','485290', '1843', '2258', '488997','2689', '435008', '435034', '463087', '1798'] # arg0
     # dataset_list = ['435008', '435034', '463087', '1798'] # arg0
-    # dataset_list = ['9999']
+    dataset_list = ['463087']
+
 
     for dataset in dataset_list:
         get_info(dataset, batch_size =16)

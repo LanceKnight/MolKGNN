@@ -65,22 +65,26 @@ def get_split(num_active, num_inactive, seed, dataset_name, shrink=False):
 
 if __name__ == '__main__':
     dataset_info = {
-        '435008':{'num_active':233, 'num_inactive':217925},
-        '1798':{'num_active':187, 'num_inactive':61645},
-        '435034': {'num_active':362, 'num_inactive':61394},
-        '1843': {'num_active':172, 'num_inactive':301321},
-        '2258': {'num_active':213, 'num_inactive':302192},
-        '463087': {'num_active':703, 'num_inactive':100172},
-        '488997': {'num_active':252, 'num_inactive':302054},
-        '2689': {'num_active':172, 'num_inactive':319620},
-        '485290': {'num_active':281, 'num_inactive':341084},
+        '435008':{'num_active':233, 'num_inactive':217923},#{'num_active':233, 'num_inactive':217925},
+        '1798':{'num_active':187, 'num_inactive':61645},#{'num_active':187, 'num_inactive':61645},
+        '435034': {'num_active':362, 'num_inactive':61393},#{'num_active':362, 'num_inactive':61394},
+        '1843': {'num_active':172, 'num_inactive':301318},#{'num_active':172, 'num_inactive':301321},
+        '2258': {'num_active':213, 'num_inactive':302189},#{'num_active':213, 'num_inactive':302192},
+        '463087': {'num_active':703, 'num_inactive':100171},#{'num_active':703, 'num_inactive':100172},
+        '488997': {'num_active':252, 'num_inactive':302051},#{'num_active':252, 'num_inactive':302054},
+        '2689': {'num_active':172, 'num_inactive':319617},#{'num_active':172, 'num_inactive':319620},
+        '485290': {'num_active':278, 'num_inactive':341026},#{'num_active':281, 'num_inactive':341084},
         '9999':{'num_active':37, 'num_inactive':226},
     }
-    seed_list = list(range(1,6))
-    # dataset_name_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290', '9999']
-    dataset_name_list = ['1798']
+<<<<<<< HEAD
+    seed_list = [1,2,3]
+=======
+    seed_list = [2]
+>>>>>>> chiro
+    dataset_name_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290', '9999']
+    # dataset_name_list = ['1798']
     for dataset_name in dataset_name_list:
         for seed in seed_list:
             num_active = dataset_info[dataset_name]['num_active']
             num_inactive = dataset_info[dataset_name]['num_inactive']
-            get_split(num_active, num_inactive, seed, dataset_name, shrink=False)
+            get_split(num_active, num_inactive, seed, dataset_name, shrink=True)

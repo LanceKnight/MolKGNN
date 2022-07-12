@@ -425,9 +425,9 @@ if __name__ == '__main__':
     # gnn_type = 'dimenet' # Not implemented
     # gnn_type = 'chironet'
     # gnn_type = 'dimenet_pp'
-
-
     # gnn_type = 'spherenet'
+
+
     print(f'========================')
     print(f'Runing model: {gnn_type}')
     print(f'========================')
@@ -438,7 +438,7 @@ if __name__ == '__main__':
     with open(filename, 'w') as out_file:
         use_clearml = False
         if use_clearml:
-            task = Task.init(project_name=f"HyperParams",
+            task = Task.init(project_name=f"HyperParams/kgnn",
                              task_name=f"{gnn_type}",
                              tags=[],
                              reuse_last_task_id=False

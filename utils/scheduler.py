@@ -10,7 +10,7 @@ from datetime import datetime
 import math
 
 branch = 'main' # Change this
-task_comment = '\"Cannot be None Content\"' # Change this
+task_comment = '\"test of 1798\nadd-back chirality\nchirality_sign is for tot_sc\"' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -161,6 +161,7 @@ if __name__ == '__main__':
     # Change this
     # Hyperparms
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
+    # dataset_list = ['463087','488997','2689', '485290', '1798']
     dataset_list = [ '1798' ] # arg0
     seed_list = [1, 2, 3, 4, 10] # arg1
     warmup_list = [200] # arg2
