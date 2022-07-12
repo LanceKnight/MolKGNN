@@ -491,20 +491,20 @@ class QSARDataset(InMemoryDataset):
         # # single raw file
         return file_name_list
 
-    @property
-    def processed_dir(self):
-        folder_name = ''
-        if self.gnn_type in ['kgnn']:
-            folder_name = f'kgnn-based-{self.dataset}-{self.D}D'
-        elif self.gnn_type in ['chironet']:
-            folder_name = f'chironet-based-{self.dataset}-{self.D}D'
-        elif self.gnn_type in ['dimenet_pp', 'schnet',
-                               'spherenet']:
-            folder_name = f'dimenetpp-based-{self.dataset}-{self.D}D'
-        else:
-            NotImplementedError('wrapper.py gnn_type is not defined for '
-                                'processed dataset')
-        return osp.join(self.root, f'processed/{folder_name}')
+    # @property
+    # def processed_dir(self):
+    #     folder_name = ''
+    #     if self.gnn_type in ['kgnn']:
+    #         folder_name = f'kgnn-based-{self.dataset}-{self.D}D'
+    #     elif self.gnn_type in ['chironet']:
+    #         folder_name = f'chironet-based-{self.dataset}-{self.D}D'
+    #     elif self.gnn_type in ['dimenet_pp', 'schnet',
+    #                            'spherenet']:
+    #         folder_name = f'dimenetpp-based-{self.dataset}-{self.D}D'
+    #     else:
+    #         NotImplementedError('wrapper.py gnn_type is not defined for '
+    #                             'processed dataset')
+    #     return osp.join(self.root, f'processed/{folder_name}')
 
 
     @property
@@ -645,9 +645,18 @@ class QSARDataset(InMemoryDataset):
         split_dict = torch.load(f'data_split/shrink_{self.dataset}_seed2.pt')
         return split_dict
 
-    def get(self, idx):
-        data = torch.load(osp.join(self.processed_dir, f'data_{idx}.pt'))
-        return data
+    # For non-InMemDataset
+    # def get(self, idx):
+    #     data = torch.load(osp.join(self.processed_dir, f'data_{idx}.pt'))
+    #     return data
+
+    def __getitem__(self, idx):
+        if isinstance(idx, int):
+            item = self.get(self.indices()[idx])
+            item.idx = idx
+            return item
+        else:
+            return self.index_select(idx)
 
     # def len(self):
     #     return len(self.processed_file_names)
