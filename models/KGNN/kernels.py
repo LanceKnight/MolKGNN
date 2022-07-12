@@ -228,7 +228,7 @@ class KernelConv(Module):
         # else:
         #     sc = torch.sum(diff)
         # sc = torch.atan(1 / (sc + 1e-8))
-        return sc
+        # return sc
 
     def get_angle_score(self, p_neighbor, p_support):
         """
@@ -662,6 +662,7 @@ class KernelConv(Module):
         #     #       f'best_support_attr_sc_index:{best_support_attr_sc_index}'
         #     #       f'\n ')
         #     print(f'best_position_sc:{position_sc}')
+
         chirality_sign = 1
         if (deg == 4) and (is_last_layer):
         #     start_chirality = time.time()
