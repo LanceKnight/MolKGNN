@@ -5,9 +5,11 @@ from tqdm import tqdm
 import shutil, errno
 import itertools
 import time
+from datetime import datetime
 import torch
 
 branch = 'chiro' # Change this
+task_comment = '\"10K for mini-set of datasets\"' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -29,7 +31,7 @@ def run_command(exp_id, args): # Change this
     print(f'args:{args}')
     # Model=kgnn
     os.system(f'python -W ignore entry.py \
-        --task_name experiments{exp_id}\
+        --task_name id{exp_id}_lr{args[4]}_seed{args[1]}\
         --dataset_name {args[0]} \
         --seed {args[1]}\
         --num_workers 11 \
@@ -42,6 +44,7 @@ def run_command(exp_id, args): # Change this
         --batch_size 32 \
         --default_root_dir actual_training_checkpoints \
         --gpus 1 \
+        --task_comment {task_comment}\
         ')\
 
 def copyanything(src, dst):
@@ -57,7 +60,7 @@ def copyanything(src, dst):
 
 def run(exp_id, *args):
     print(f'args1:{args}')
-    exp_name = f'exp{exp_id}_dataset{args[0]}_chiro' # Change this
+    exp_name = f'exp{exp_id}_dataset{args[0]}_chiro_seed{args[1]}_peak{args[4]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -93,14 +96,18 @@ github_repo_dir = f'../experiments/template_dataset_layers'
 if __name__ == '__main__':
     mp.set_start_method('spawn')
     torch.multiprocessing.set_sharing_strategy('file_system')
+    start_time = time.time()
+    now = datetime.now()
+    print(f'scheduler start time:{now}')
 
 
     # dataset_list = [ '485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087'] # arg0
-    dataset_list = [ '1798']
-    seed_list = [42] # arg1
+    dataset_list = ['463087', '488997', '2689', '485290']
+    # dataset_list = [ '463087']
+    seed_list = [1, 10, 2, 3, 4] # arg1
     warmup_list = [200] # arg2
-    epochs_list = [20] # arg3
-    peak_lr_list = [6.04e-3, 6.04e-4, 6.04e-5] # arg4
+    epochs_list = [100] # arg3
+    peak_lr_list = [6.04e-4] # arg4
     end_lr_list = [1e-9] # arg5
     
 
@@ -110,7 +117,7 @@ if __name__ == '__main__':
     print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
     with open('logs/scheduler.log', "w+") as out_file:
         out_file.write(f'num data_pair:{len(data_pair)}\n\n')
-        out_file.write(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
+        out_file.write(f'data_pair_with_exp_id:{data_pair_with_exp_id}\n')
 
 
     # Clone once from github
@@ -123,8 +130,13 @@ if __name__ == '__main__':
     
     with Pool(processes = 9) as pool: # Change this
         pool.starmap(run, data_pair_with_exp_id)
-
+    end_time=time.time()
+    run_time = end_time-start_time
+    print(f'scheduler running time: {run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}')
+    now = datetime.now()
+    print(f'scheduler finsh time:{now}')
    
-    
+    with open('logs/scheduler.log', "a") as out_file:
+        out_file.write(f'run time:{run_time}\n')
     print(f'finish')
 
