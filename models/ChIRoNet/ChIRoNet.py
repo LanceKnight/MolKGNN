@@ -88,7 +88,7 @@ class ChIRoNet(torch.nn.Module):
                                                                    '"encoder_hidden_sizes_phi": [64, 64],'
                                                                    '"encoder_hidden_sizes_c": [64, 64],'
                                                                    '"encoder_hidden_sizes_alpha": [64, 64],'
-                                                                   '"encoder_hidden_sizes_sinusoidal_shift": [64, 64],'
+                                                                   '"encoder_hidden_sizes_sinusoidal_shift": [256, 256],'
                                                                    '"output_mlp_hidden_sizes": [128, 128]'
                                                                    '}',
                             help='')
