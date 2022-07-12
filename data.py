@@ -146,8 +146,8 @@ class DataLoaderModule(LightningDataModule):
         self.dataset_path = dataset_path
 
         split_idx = self.dataset['dataset'].get_idx_split(seed=self.seed)
-        print(f'split:\n')
-        print(split_idx)
+        #print(f'split:\n')
+        #print(split_idx)
 
         self.dataset_train = self.dataset['dataset'][split_idx["train"]]
         print(f'training # samples:{len(self.dataset_train)})')
