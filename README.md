@@ -4,6 +4,10 @@ A kernel-base 3D GNN for molecular representation learning
 <!-- # dataset
 This repo does NOT include the dataset. Please download the dataset from https://github.com/PattanaikL/chiral_gnn/tree/cda134523996d26f94f4c92ffad8c373d79731a0/data/d4_docking -->
 
+# how to process datasets
+
+'python dataset_multigenerator.py'
+
 # how to run
 uncompress the 9999.tar.gz file and you will get a folder named kgnn-based-9999-3D. Put the folder and the other two files in this structure.
 
