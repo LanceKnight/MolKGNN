@@ -9,6 +9,7 @@ from datetime import datetime
 import torch
 
 branch = 'chiro' # Change this
+task_comment = '\"10K for mini-set of datasets\"' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -43,6 +44,7 @@ def run_command(exp_id, args): # Change this
         --batch_size 32 \
         --default_root_dir actual_training_checkpoints \
         --gpus 1 \
+        --task_comment {task_comment}\
         ')\
 
 def copyanything(src, dst):
