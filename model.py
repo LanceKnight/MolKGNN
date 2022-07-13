@@ -58,9 +58,6 @@ class GNNModel(pl.LightningModule):
                 activation_dict[key] = string_to_object[
                     value]  # convert strings to actual python
                 # objects/functions using pre-defined mapping
-            print(
-                f'model.py::chironet argument:'
-                f'{type(args.activation_dict["EConv_mlp_hidden_activation"])}')
             self.gnn_model = ChIRoNet(
                 F_z_list=args.F_z_list,  # dimension of latent space
                 F_H=args.F_H,

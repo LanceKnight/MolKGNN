@@ -523,7 +523,7 @@ class QSARDataset(InMemoryDataset):
         #     else:
         #         self.num_inactives = len(sdf_supplier)
         # return data_list
-        return f'{self.dataset}-{self.D}D.pt'
+        return f'{self.gnn_type}-{self.dataset}-{self.D}D.pt'
 
     def download(self):
         raise NotImplementedError('Must indicate valid location of raw data. '
@@ -541,6 +541,7 @@ class QSARDataset(InMemoryDataset):
         data_smiles_list = []
         data_list = []
         counter = -1
+        invalid_id_list = []
         for file_name, label in [(f'{self.dataset}_actives_new.sdf', 1),
                                  (f'{self.dataset}_inactives_new.sdf', 0)]:
             sdf_path = os.path.join(self.root, 'raw', file_name)
@@ -554,6 +555,9 @@ class QSARDataset(InMemoryDataset):
                 else:
                     data = self.regular_process(mol)
 
+                if data is None:
+                    invalid_id_list.append([counter, label])
+                    continue
                 data.idx = counter
                 data.y = torch.tensor([label], dtype=torch.int)
 
@@ -576,9 +580,12 @@ class QSARDataset(InMemoryDataset):
 
         # Write data_smiles_list in processed paths
         data_smiles_series = pd.Series(data_smiles_list)
-        data_smiles_series.to_csv(os.path.join(
-            self.processed_dir, f'{self.dataset}-smiles.csv'), index=False,
-            header=False)
+        data_smiles_series.to_csv(os.path.join(self.processed_dir, f'{self.gnn_type}-{self.dataset}-smiles.csv'),
+                                  index=False, header=False)
+        invalid_id_series = pd.DataFrame(invalid_id_list)
+        invalid_id_series.to_csv(os.path.join(self.processed_dir, f'{self.gnn_type}-{self.dataset}-invalid_id.csv'),
+                                 index=False,
+                                              header=False)
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 
@@ -611,11 +618,15 @@ class QSARDataset(InMemoryDataset):
         return data
 
     def chiro_process(self, mol):
-        atom_symbols, edge_index, edge_features, node_features, \
-        bond_distances, bond_distance_index, bond_angles, \
-        bond_angle_index, dihedral_angles, dihedral_angle_index = \
-            embedConformerWithAllPaths(
-            mol, repeats=False)
+
+        return_values = embedConformerWithAllPaths(mol, repeats=False)
+        if return_values is not None:
+            atom_symbols, edge_index, edge_features, node_features, \
+            bond_distances, bond_distance_index, bond_angles, \
+            bond_angle_index, dihedral_angles, dihedral_angle_index = return_values
+        else:
+            return
+
 
         bond_angles = bond_angles % (2 * np.pi)
         dihedral_angles = dihedral_angles % (2 * np.pi)
@@ -643,6 +654,22 @@ class QSARDataset(InMemoryDataset):
 
     def get_idx_split(self, seed):
         split_dict = torch.load(f'data_split/shrink_{self.dataset}_seed2.pt')
+        invalid_id_list = pd.read_csv(os.path.join(self.processed_dir, f'{self.gnn_type}-'
+                                                                       f'{self.dataset}-invalid_id.csv')
+                                      , header=None).values.tolist()
+        for id, label in invalid_id_list:
+            print(f'checking invalid id {id}')
+            if label == 1:
+                print('====warning: a positive label is removed====')
+            if id in split_dict['train']:
+                split_dict['train'].remove(id)
+                print(f'found in train and removed')
+            if id in split_dict['valid']:
+                split_dict['valid'].remove(id)
+                print(f'found in valid and removed')
+            if id in split_dict['test']:
+                split_dict['test'].remove(id)
+                print(f'found in test and removed')
         return split_dict
 
     # For non-InMemDataset
@@ -865,6 +892,7 @@ if __name__ == "__main__":
     if use_clearml:
         print(f'change_task_name...')
         task.set_name(args.task_name)
+    print(f'===={gnn_type}====')
 
     if gnn_type== 'kgnn':
         transform = ToXAndPAndEdgeAttrForDeg()
