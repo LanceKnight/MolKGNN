@@ -3,7 +3,7 @@ from ..ChIRoNet.train_functions import get_local_structure_map
 from ..ChIRoNet.gnn_3D.spherenet import SphereNet as Encoder
 
 import torch
-from torch_geometric.nn.acts import swish
+from torch_geometric.nn.resolver import activation_resolver
 
 class SphereNet(torch.nn.Module):
     r"""
@@ -49,7 +49,7 @@ class SphereNet(torch.nn.Module):
             :obj:`2`)
             num_output_layers (int, optional): Number of linear layers
             for the output blocks. (default: :obj:`3`)
-            act: (function, optional): The activation funtion. (default:
+            act_name: (function, optional): The activation funtion. (default:
             :obj:`swish`)
             output_init: (str, optional): The initialization fot the
             output. It could be :obj:`GlorotOrthogonal` and
@@ -63,7 +63,7 @@ class SphereNet(torch.nn.Module):
             basis_emb_size_torsion=8, out_emb_channels=256,
             num_spherical=7, num_radial=6, envelope_exponent=5,
             num_before_skip=1, num_after_skip=2, num_output_layers=3,
-            act=swish, output_init='GlorotOrthogonal', use_node_features=True,
+            act_name='swish', output_init='GlorotOrthogonal', use_node_features=True,
             MLP_hidden_sizes=[]):
         super(SphereNet, self).__init__()
         self.encoder = Encoder(
@@ -83,7 +83,7 @@ class SphereNet(torch.nn.Module):
                                 num_before_skip=num_before_skip,  # 1
                                 num_after_skip=num_after_skip,  # 2
                                 num_output_layers=num_output_layers,  # 3
-                                act=swish,
+                                act_name='swish',
                                 output_init=output_init,
                                 use_node_features=use_node_features,
                                 MLP_hidden_sizes=MLP_hidden_sizes,  # [] for contrastive

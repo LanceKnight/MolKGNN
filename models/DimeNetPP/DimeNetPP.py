@@ -6,7 +6,7 @@ import json
 import torch
 from torch.nn import ModuleList
 from torch.optim import Adam
-from torch_geometric.nn.acts import swish
+from torch_geometric.nn.resolver import activation_resolver
 import pytorch_lightning as pl
 # from lr import PolynomialDecayLR
 # import pytorch_warmup as warmup
@@ -36,25 +36,25 @@ class DimeNetPP(torch.nn.Module):
             interaction blocks after the skip connection. (default: :obj:`2`)
         num_output_layers: (int, optional): Number of linear layers for the
             output blocks. (default: :obj:`3`)
-        act: (function, optional): The activation funtion.
+        act_name: (function, optional): The activation funtion.
             (default: :obj:`swish`)
     """
     def __init__(self,
-            hidden_channels,
-            out_channels,
-            num_blocks,
-            int_emb_size,
-            basis_emb_size,
-            out_emb_channels,
-            num_spherical,
-            num_radial,
-            cutoff=5.0,
-            envelope_exponent=5,
-            num_before_skip=1,
-            num_after_skip=2,
-            num_output_layers=3,
-            act=swish,
-            MLP_hidden_sizes = [],):
+                 hidden_channels,
+                 out_channels,
+                 num_blocks,
+                 int_emb_size,
+                 basis_emb_size,
+                 out_emb_channels,
+                 num_spherical,
+                 num_radial,
+                 cutoff=5.0,
+                 envelope_exponent=5,
+                 num_before_skip=1,
+                 num_after_skip=2,
+                 num_output_layers=3,
+                 act_name='swish',
+                 MLP_hidden_sizes = [], ):
         super(DimeNetPP, self).__init__()
         self.encoder = DimeNetPlusPlus(
             hidden_channels=hidden_channels,  # 128
@@ -70,7 +70,7 @@ class DimeNetPP(torch.nn.Module):
             num_before_skip=num_before_skip,  # 1
             num_after_skip=num_after_skip,  # 2
             num_output_layers=num_output_layers,  # 3
-            act=act,
+            act_name=act_name,
             MLP_hidden_sizes=MLP_hidden_sizes,  # [] for contrastive
         )
 
