@@ -1,9 +1,20 @@
 
 from ..ChIRoNet.train_functions import get_local_structure_map
-from ..ChIRoNet.gnn_3D.spherenet import SphereNet as Encoder
-
+# from ..ChIRoNet.gnn_3D.spherenet import SphereNet as Encoder
+from dig.threedgraph.method import SphereNet as Encoder
 import torch
 from torch_geometric.nn.resolver import activation_resolver
+
+# class SphereNet(torch.nn.Module):
+#     def __init__(energy_and_force=False, cutoff=5.0, num_layers=4,
+#     hidden_channels=128, out_channels=1, int_emb_size=64,
+#     basis_emb_size_dist=8, basis_emb_size_angle=8, basis_emb_size_torsion=8, out_emb_channels=256,
+#     num_spherical=3, num_radial=6, envelope_exponent=5,
+#     num_before_skip=1, num_after_skip=2, num_output_layers=3):
+#         super(SphereNet, self).__init__()
+#         self.encoder = Encoder(
+
+
 
 class SphereNet(torch.nn.Module):
     r"""
@@ -61,7 +72,7 @@ class SphereNet(torch.nn.Module):
             hidden_channels=128, out_channels=1, int_emb_size=64,
             basis_emb_size_dist=8, basis_emb_size_angle=8,
             basis_emb_size_torsion=8, out_emb_channels=256,
-            num_spherical=7, num_radial=6, envelope_exponent=5,
+            num_spherical=3, num_radial=6, envelope_exponent=5,
             num_before_skip=1, num_after_skip=2, num_output_layers=3,
             act_name='swish', output_init='GlorotOrthogonal', use_node_features=True,
             MLP_hidden_sizes=[]):
@@ -83,20 +94,24 @@ class SphereNet(torch.nn.Module):
                                 num_before_skip=num_before_skip,  # 1
                                 num_after_skip=num_after_skip,  # 2
                                 num_output_layers=num_output_layers,  # 3
-                                act_name='swish',
-                                output_init=output_init,
-                                use_node_features=use_node_features,
-                                MLP_hidden_sizes=MLP_hidden_sizes,  # [] for contrastive
+                                # act_name='swish',
+                                # output_init=output_init,
+                                # use_node_features=use_node_features,
+                                # MLP_hidden_sizes=MLP_hidden_sizes,  # [] for contrastive
                             )
     def forward(self, batch_data):
 
-        node_batch = batch_data.batch
-        z = batch_data.x
-        pos = batch_data.pos
+        # node_batch = batch_data.batch
+        # z = batch_data.x
+        # pos = batch_data.pos
+
+        batch_data.z = batch_data.x.squeeze()
 
 
-        output, latent_vector = self.encoder(z.squeeze(), pos, node_batch)
-        graph_embedding = latent_vector
+        # output, latent_vector = self.encoder(z.squeeze(), pos, node_batch)
+        # graph_embedding = latent_vector
+
+        graph_embedding = self.encoder(batch_data)
 
         return graph_embedding
 
@@ -120,7 +135,7 @@ class SphereNet(torch.nn.Module):
                             help='')
         parser.add_argument('--hidden_channels', type=int, default=128,
                             help='')
-        parser.add_argument('--out_channels', type=int, default=1,
+        parser.add_argument('--out_channels', type=int, default=64,
                             help='')
         parser.add_argument('--int_emb_size', type=int, default=64,
                             help='')
