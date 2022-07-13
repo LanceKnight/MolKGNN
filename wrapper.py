@@ -436,7 +436,7 @@ class D4DCHPDataset(Dataset):
         return split_dict
 
 
-class QSARDataset(Dataset):
+class QSARDataset(InMemoryDataset):
     """
     Dataset from Mariusz Butkiewics et al., 2013, Benchmarking ligand-based
     virtual High_Throughput Screening with the PubChem Database
@@ -471,7 +471,8 @@ class QSARDataset(Dataset):
                                                               pre_filter
 
         if not empty:
-            self.data = torch.load(self.processed_paths[0])
+            # self.data = torch.load(self.processed_paths[0]) # For non-InMemoryDataset
+            self.data, self.slices = torch.load(self.processed_paths[0])
 
     # def get(self, idx):
     #     data = Data()
@@ -490,38 +491,39 @@ class QSARDataset(Dataset):
         # # single raw file
         return file_name_list
 
-    @property
-    def processed_dir(self):
-        folder_name = ''
-        if self.gnn_type in ['kgnn']:
-            folder_name = f'kgnn-based-{self.dataset}-{self.D}D'
-        elif self.gnn_type in ['chironet']:
-            folder_name = f'chironet-based-{self.dataset}-{self.D}D'
-        elif self.gnn_type in ['dimenet_pp', 'schnet',
-                               'spherenet']:
-            folder_name = f'dimenetpp-based-{self.dataset}-{self.D}D'
-        else:
-            NotImplementedError('wrapper.py gnn_type is not defined for '
-                                'processed dataset')
-        return osp.join(self.root, f'processed/{folder_name}')
+    # @property
+    # def processed_dir(self):
+    #     folder_name = ''
+    #     if self.gnn_type in ['kgnn']:
+    #         folder_name = f'kgnn-based-{self.dataset}-{self.D}D'
+    #     elif self.gnn_type in ['chironet']:
+    #         folder_name = f'chironet-based-{self.dataset}-{self.D}D'
+    #     elif self.gnn_type in ['dimenet_pp', 'schnet',
+    #                            'spherenet']:
+    #         folder_name = f'dimenetpp-based-{self.dataset}-{self.D}D'
+    #     else:
+    #         NotImplementedError('wrapper.py gnn_type is not defined for '
+    #                             'processed dataset')
+    #     return osp.join(self.root, f'processed/{folder_name}')
 
 
     @property
     def processed_file_names(self):
-        data_list = []
-        counter=-1
-        for file_name, label in [(f'{self.dataset}_actives_new.sdf', 1),
-                                 (f'{self.dataset}_inactives_new.sdf', 0)]:
-            sdf_path = os.path.join(self.root, 'raw', file_name)
-            sdf_supplier = Chem.SDMolSupplier(sdf_path)
-            for i in range(len(sdf_supplier)):
-                counter+=1
-                data_list.append(f'data_{counter}.pt')
-            if label == 1:
-                self.num_actives = len(sdf_supplier)
-            else:
-                self.num_inactives = len(sdf_supplier)
-        return data_list
+        # data_list = []
+        # counter=-1
+        # for file_name, label in [(f'{self.dataset}_actives_new.sdf', 1),
+        #                          (f'{self.dataset}_inactives_new.sdf', 0)]:
+        #     sdf_path = os.path.join(self.root, 'raw', file_name)
+        #     sdf_supplier = Chem.SDMolSupplier(sdf_path)
+        #     for i in range(len(sdf_supplier)):
+        #         counter+=1
+        #         data_list.append(f'data_{counter}.pt')
+        #     if label == 1:
+        #         self.num_actives = len(sdf_supplier)
+        #     else:
+        #         self.num_inactives = len(sdf_supplier)
+        # return data_list
+        return f'{self.dataset}-{self.D}D.pt'
 
     def download(self):
         raise NotImplementedError('Must indicate valid location of raw data. '
@@ -537,6 +539,7 @@ class QSARDataset(Dataset):
         RDLogger.DisableLog('rdApp.*')
 
         data_smiles_list = []
+        data_list = []
         counter = -1
         for file_name, label in [(f'{self.dataset}_actives_new.sdf', 1),
                                  (f'{self.dataset}_inactives_new.sdf', 0)]:
@@ -563,17 +566,21 @@ class QSARDataset(Dataset):
                 smiles = AllChem.MolToSmiles(mol)
                 data.smiles = smiles
 
-                # Write to processed file
-                torch.save(data, osp.join(self.processed_dir, f'data_'
-                                                              f'{counter}.pt'))
-
+                data_list.append(data)
                 data_smiles_list.append(smiles)
+
+                # # Write to processed file
+                # torch.save(data, osp.join(self.processed_dir, f'data_'
+                #                                               f'{counter}.pt'))
+
 
         # Write data_smiles_list in processed paths
         data_smiles_series = pd.Series(data_smiles_list)
         data_smiles_series.to_csv(os.path.join(
             self.processed_dir, f'{self.dataset}-smiles.csv'), index=False,
             header=False)
+        data, slices = self.collate(data_list)
+        torch.save((data, slices), self.processed_paths[0])
 
 
 
@@ -638,12 +645,21 @@ class QSARDataset(Dataset):
         split_dict = torch.load(f'data_split/shrink_{self.dataset}_seed2.pt')
         return split_dict
 
-    def get(self, idx):
-        data = torch.load(osp.join(self.processed_dir, f'data_{idx}.pt'))
-        return data
+    # For non-InMemDataset
+    # def get(self, idx):
+    #     data = torch.load(osp.join(self.processed_dir, f'data_{idx}.pt'))
+    #     return data
 
-    def len(self):
-        return len(self.processed_file_names)
+    def __getitem__(self, idx):
+        if isinstance(idx, int):
+            item = self.get(self.indices()[idx])
+            item.idx = idx
+            return item
+        else:
+            return self.index_select(idx)
+
+    # def len(self):
+    #     return len(self.processed_file_names)
 
     @staticmethod
     def collate(data_list):
