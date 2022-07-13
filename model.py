@@ -127,8 +127,8 @@ class GNNModel(pl.LightningModule):
                 use_node_features=True,
                 MLP_hidden_sizes=args.MLP_hidden_sizes,
                 # [] for contrastive
-
             )
+            out_dim = args.out_channels
         elif gnn_type == 'kgnn':
             self.gnn_model = KGNNNet(num_layers=args.num_layers,
                                      num_kernel1_1hop = args.num_kernel1_1hop,
