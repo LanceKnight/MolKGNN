@@ -830,8 +830,8 @@ if __name__ == "__main__":
     from clearml import Task
     from argparse import ArgumentParser
 
-    gnn_type = 'kgnn'
-    # gnn_type = 'chironet'
+    # gnn_type = 'kgnn'
+    gnn_type = 'chironet'
     # gnn_type = 'dimenet_pp'
     use_clearml = False
     if use_clearml:
@@ -850,9 +850,14 @@ if __name__ == "__main__":
         print(f'change_task_name...')
         task.set_name(args.task_name)
 
+    if gnn_type== 'kgnn':
+        transform = ToXAndPAndEdgeAttrForDeg()
+    else:
+        transform = None
+
     qsar_dataset = QSARDataset(root='../dataset/qsar/clean_sdf',
                                dataset=args.dataset,
-                               pre_transform=ToXAndPAndEdgeAttrForDeg(),
+                               pre_transform=transform,
                                gnn_type=args.gnn_type
                                )
 
