@@ -1,4 +1,6 @@
-from ..ChIRoNet.gnn_3D.dimenet_pp import DimeNetPlusPlus
+# from ..ChIRoNet.gnn_3D.dimenet_pp import DimeNetPlusPlus
+# from dig.threedgraph.method import DimeNetPP as Encoder
+# from torch_geometric.nn.models import DimeNetPlusPlus as Encoder
 from ..ChIRoNet.train_functions import get_local_structure_map
 import json
 
@@ -56,41 +58,34 @@ class DimeNetPP(torch.nn.Module):
                  act_name='swish',
                  MLP_hidden_sizes = [], ):
         super(DimeNetPP, self).__init__()
-        self.encoder = DimeNetPlusPlus(
-            hidden_channels=hidden_channels,  # 128
-            out_channels=out_channels,  # 1
-            num_blocks=num_blocks,  # 4
-            int_emb_size=int_emb_size,  # 64
-            basis_emb_size=basis_emb_size,  # 8
-            out_emb_channels=out_emb_channels,  # 256
-            num_spherical=num_spherical,  # 7
-            num_radial=num_radial,  # 6
-            cutoff=cutoff,  # 5.0
-            envelope_exponent=envelope_exponent,  # 5
-            num_before_skip=num_before_skip,  # 1
-            num_after_skip=num_after_skip,  # 2
-            num_output_layers=num_output_layers,  # 3
-            act_name=act_name,
-            MLP_hidden_sizes=MLP_hidden_sizes,  # [] for contrastive
-        )
+        self.encoder = Encoder(
+            energy_and_force=False, cutoff=5.0, num_layers=4,
+            hidden_channels=128, out_channels=1, int_emb_size=64,
+            basis_emb_size=8, out_emb_channels=256, num_spherical=7,
+            num_radial=6, envelope_exponent=5, num_before_skip=1,
+            num_after_skip=2, num_output_layers=3, act= 'swish',
+            output_init='GlorotOrthogonal')
 
 
     def forward(self, batch_data):
-        batch_data = batch_data.to(batch_data.x.device)
+        # batch_data = batch_data.to(batch_data.x.device)
 
-        node_batch = batch_data.batch
-        z = batch_data.x
-        pos = batch_data.pos
+        # node_batch = batch_data.batch
+        # z = batch_data.x
+        # pos = batch_data.pos
 
         # print(f'DimeNetPP.py::z:{z}')
         # print(f'DimeNetPP.py::pos:{pos}')
         # print(f'DimeNetPP.py::node_batch:{node_batch}')
-        try:
-            latent_vector = self.encoder(z.squeeze(), pos, node_batch)
-        except Exception as e:
-            print('failed to process batch due to error:', e)
+        # try:
+        #     latent_vector = self.encoder(z.squeeze(), pos, node_batch)
+        # except Exception as e:
+        #     print('failed to process batch due to error:', e)
+        #
+        # graph_embedding = latent_vector
 
-        graph_embedding = latent_vector
+        batch_data.z = batch_data.x.squeeze()
+        graph_embedding = self.encoder(batch_data)
 
         return graph_embedding
 
