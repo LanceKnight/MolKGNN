@@ -9,6 +9,7 @@ from datetime import datetime
 import torch
 
 branch = 'spherenet' # Change this
+gnn_type = 'spherenet'
 task_comment = '\"10K for all of datasets\"' # Change this
 
 def gitclone(dir_name):
@@ -60,7 +61,7 @@ def copyanything(src, dst):
 
 def run(exp_id, *args):
     print(f'args1:{args}')
-    exp_name = f'exp{exp_id}_dataset{args[0]}_chiro_seed{args[1]}_peak{args[4]}' # Change this
+    exp_name = f'exp{exp_id}_dataset{args[0]}_{gnn_type}_seed{args[1]}_peak{args[4]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
