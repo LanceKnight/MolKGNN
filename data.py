@@ -7,7 +7,7 @@ from torch.nn import functional as F
 from torch.nn import BCEWithLogitsLoss, MSELoss
 from torch.utils.data import WeightedRandomSampler
 from torch_geometric.loader import DataLoader
-from torchvision.transforms import Lambda
+# from torchvision.transforms import Lambda
 from functools import partial
 
 aug_num = 5
