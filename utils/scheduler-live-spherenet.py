@@ -44,7 +44,7 @@ def run_command(exp_id, args): # Change this
         --end_lr {args[5]} \
         --batch_size 32 \
         --default_root_dir actual_training_checkpoints \
-        --gpus 1 \
+        --gpus 2 \
         --task_comment {task_comment}\
         ')\
 
@@ -105,9 +105,10 @@ if __name__ == '__main__':
     # dataset_list = [ '485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087'] # arg0
     # dataset_list = ['463087', '488997', '2689', '485290']
     dataset_list = [ '1798']
-    seed_list = [1, 10, 2, 3, 4] # arg1
+    # seed_list = [1, 10, 2, 3, 4] # arg1
+    seed_list = [1, 2]
     warmup_list = [200] # arg2
-    epochs_list = [100] # arg3
+    epochs_list = [60] # arg3
     peak_lr_list = [1.4e-4] # arg4
     end_lr_list = [1e-9] # arg5
     
