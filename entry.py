@@ -87,6 +87,9 @@ def add_args(gnn_type):
             task.add_tags(f'hidden_{args.hidden_dim}') # args11
             task.add_tags(f'batch_{args.batch_size}') # args12
             task.set_comment(args.task_comment)
+    with open(filename, 'a') as out_file:
+        out_file.write(f'\n{args.task_comment}')
+
     return args
 
 
@@ -438,7 +441,7 @@ if __name__ == '__main__':
     filename = 'logs/task_info.log'
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w') as out_file:
-        use_clearml = True
+        use_clearml = False
         if use_clearml:
             task = Task.init(project_name=f"HyperParams/kgnn",
                              task_name=f"{gnn_type}",
