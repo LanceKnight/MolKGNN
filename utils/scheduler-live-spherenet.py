@@ -9,6 +9,7 @@ from datetime import datetime
 import torch
 
 branch = 'spherenet' # Change this
+gnn_type = 'spherenet'
 task_comment = '\"10K for all of datasets\"' # Change this
 
 def gitclone(dir_name):
@@ -60,7 +61,7 @@ def copyanything(src, dst):
 
 def run(exp_id, *args):
     print(f'args1:{args}')
-    exp_name = f'exp{exp_id}_dataset{args[0]}_chiro_seed{args[1]}_peak{args[4]}' # Change this
+    exp_name = f'exp{exp_id}_dataset{args[0]}_{gnn_type}_seed{args[1]}_peak{args[4]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -104,9 +105,10 @@ if __name__ == '__main__':
     # dataset_list = [ '485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087'] # arg0
     # dataset_list = ['463087', '488997', '2689', '485290']
     dataset_list = [ '1798']
-    seed_list = [1, 10, 2, 3, 4] # arg1
+    seed_list = [10, 2, 3, 4] # arg1
+    # seed_list = [1]
     warmup_list = [200] # arg2
-    epochs_list = [100] # arg3
+    epochs_list = [40] # arg3
     peak_lr_list = [1.4e-4] # arg4
     end_lr_list = [1e-9] # arg5
     
@@ -128,7 +130,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 9) as pool: # Change this
+    with Pool(processes = 1) as pool: # Change this
         pool.starmap(run, data_pair_with_exp_id)
     end_time=time.time()
     run_time = end_time-start_time
