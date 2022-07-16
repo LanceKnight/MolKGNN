@@ -169,7 +169,11 @@ class MolGCN(MessagePassing):
             data.x = h
 
             kernel_layer = self.layers[i]
-            sim_sc = kernel_layer(data=data, save_score=save_score)
+            if i == self.num_layers-1:
+                is_last_layer = True
+            else:
+                is_last_layer = False
+            sim_sc = kernel_layer(is_last_layer = is_last_layer, data=data, save_score=save_score)
 
             # print(f'edge_index:{edge_index.device}, sim_sc:{sim_sc.device}')
             # print('sim_sc')
