@@ -87,6 +87,9 @@ def add_args(gnn_type):
             task.add_tags(f'hidden_{args.hidden_dim}') # args11
             task.add_tags(f'batch_{args.batch_size}') # args12
             task.set_comment(args.task_comment)
+    with open(filename, 'a') as out_file:
+        out_file.write(f'\n{args.task_comment}')
+
     return args
 
 
@@ -151,10 +154,14 @@ def prepare_actual_model(args):
 
 def load_best_model(trainer, data_module, metric=None, args=None):
     # Load best model
-    search_name = f'best*{metric}*'
-    try:
-        best_path = glob.glob(osp.join(args.default_root_dir, search_name))[0]
-    except:
+    search_name = f'best*_{metric}*'
+    all_files = glob.glob(osp.join(args.default_root_dir, search_name))
+    if len(all_files) == 1:
+        best_path = all_files[0]
+    elif len(all_files) >1:
+        print(f"entry::more than one best model found for {metric}!!!")
+        return False
+    elif len(all_files) ==0:
         print(f'No best model saved for {metric}')
         return False
     print(f"glob result:{best_path}")
@@ -246,8 +253,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
 
 
 
-
-
     # # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
     # if not args.test and not args.validate and os.path.exists(
     #         f'{actual_training_checkpoint_dir}/last.ckpt'):
@@ -261,6 +266,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks=[prog_bar]
     trainer.callbacks.append(actual_training_checkpoint_callback)
+
     trainer.callbacks.append(best_AUC_callback)
     trainer.callbacks.append(best_AUC_0_001_0_1_callback)
     trainer.callbacks.append(best_loss_callback)
@@ -427,8 +433,6 @@ if __name__ == '__main__':
     gnn_type = 'chironet'
     # gnn_type = 'dimenet_pp'
     # gnn_type = 'spherenet'
-
-
 
     print(f'========================')
     print(f'Runing model: {gnn_type}')

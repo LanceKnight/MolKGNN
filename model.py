@@ -19,6 +19,7 @@ from torch.nn import Linear, Sigmoid, ReLU, Embedding, Dropout
 from torch_geometric.data import Data
 import torch
 from torch.optim import Adam
+from torch_geometric.nn.acts import swish
 import time
 
 class GNNModel(pl.LightningModule):
@@ -100,7 +101,8 @@ class GNNModel(pl.LightningModule):
                 num_before_skip=args.num_before_skip,
                 num_after_skip=args.num_after_skip,
                 num_output_layers=args.num_output_layers,
-                act_name='swish',
+                # act_name='swish',
+                act=swish,
                 MLP_hidden_sizes=[],  # [] for contrastive)
             )
             out_dim = args.out_channels
@@ -127,8 +129,8 @@ class GNNModel(pl.LightningModule):
                 use_node_features=True,
                 MLP_hidden_sizes=args.MLP_hidden_sizes,
                 # [] for contrastive
-
             )
+            out_dim = args.out_channels
         elif gnn_type == 'kgnn':
             self.gnn_model = KGNNNet(num_layers=args.num_layers,
                                      num_kernel1_1hop = args.num_kernel1_1hop,
