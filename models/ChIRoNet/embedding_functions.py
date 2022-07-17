@@ -4,6 +4,7 @@ from rdkit.Chem import TorsionFingerprints
 import numpy as np
 import networkx as nx
 import random
+import torch
 
 atomTypes = ['H', 'C', 'B', 'N', 'O', 'F', 'Si', 'P', 'S', 'Cl', 'Br', 'I']
 formalCharge = [-1, -2, 1, 2, 0]
@@ -117,7 +118,8 @@ def getInternalCoordinatesFromAllPaths(mol, adj, repeats = False):
     distance_paths, angle_paths, dihedral_paths = get_all_paths(graph, N = 1), get_all_paths(graph, N = 2), get_all_paths(graph, N = 3)
     
     if len(dihedral_paths) == 0:
-        raise Exception('No Dihedral Angle Detected')
+        print('No Dihedral Angle Detected')
+        return None
     
     bond_distance_indices = np.array(distance_paths, dtype = int)
     bond_angle_indices = np.array(angle_paths, dtype = int)
@@ -158,7 +160,12 @@ def embedConformerWithAllPaths(rdkit_mol3D, repeats = False):
     atoms = rdkit.Chem.rdchem.Mol.GetAtoms(mol)
     atom_symbols = [atom.GetSymbol() for atom in atoms]
     node_features = getNodeFeatures(atoms, mol)
-    
-    bond_distances, bond_distance_indices, bond_angles, bond_angle_indices, dihedral_angles, dihedral_angle_indices = getInternalCoordinatesFromAllPaths(conformer, adj, repeats = repeats)
 
-    return atom_symbols, edge_index, edge_features, node_features, bond_distances, bond_distance_indices, bond_angles, bond_angle_indices, dihedral_angles, dihedral_angle_indices
+    return_values = getInternalCoordinatesFromAllPaths(mol, adj, repeats = repeats)
+    if return_values is not None:
+        bond_distances, bond_distance_indices, bond_angles, bond_angle_indices, dihedral_angles, dihedral_angle_indices =\
+        return_values
+
+        return atom_symbols, edge_index, edge_features, node_features, bond_distances, bond_distance_indices, bond_angles, bond_angle_indices, dihedral_angles, dihedral_angle_indices
+    else:
+        return None
