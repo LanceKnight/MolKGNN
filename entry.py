@@ -159,7 +159,7 @@ def load_best_model(trainer, data_module, metric=None, args=None):
     if len(all_files) == 1:
         best_path = all_files[0]
     elif len(all_files) >1:
-        print("entry::more than one best model found for {metric}!")
+        print(f"entry::more than one best model found for {metric}!!!")
         return False
     elif len(all_files) ==0:
         print(f'No best model saved for {metric}')
