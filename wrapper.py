@@ -881,8 +881,8 @@ if __name__ == "__main__":
 
     # gnn_type = 'kgnn'
     # gnn_type = 'chironet'
-    gnn_type = 'spherenet'
-    # gnn_type = 'dimenet_pp'
+    # gnn_type = 'spherenet'
+    gnn_type = 'dimenet_pp'
     use_clearml = False
     if use_clearml:
         task = Task.init(project_name=f"DatasetCreation/kgnn",

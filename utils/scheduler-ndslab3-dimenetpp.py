@@ -9,7 +9,7 @@ from datetime import datetime
 import torch
 
 branch = 'dimenet_pp' # Change this
-
+task_comment = '\"dimenet_pp\"' # Change this
 def gitclone(dir_name):
     cwd = os.getcwd()
     os.chdir(dir_name)
@@ -43,6 +43,7 @@ def run_command(exp_id, args): # Change this
         --batch_size 32 \
         --default_root_dir actual_training_checkpoints \
         --gpus 1 \
+	--task_comment {task_comment}\
         ')\
 
 def copyanything(src, dst):
