@@ -9,6 +9,7 @@ from datetime import datetime
 import torch
 
 branch = 'chiro' # Change this
+task_comment = '\"10K for mini-set of datasets\"' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -43,6 +44,7 @@ def run_command(exp_id, args): # Change this
         --batch_size 32 \
         --default_root_dir actual_training_checkpoints \
         --gpus 1 \
+        --task_comment {task_comment}\
         ')\
 
 def copyanything(src, dst):
@@ -100,11 +102,12 @@ if __name__ == '__main__':
 
 
     # dataset_list = [ '485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087'] # arg0
-    dataset_list = [ '1798']
-    seed_list = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] # arg1
+    dataset_list = ['463087', '488997', '2689', '485290']
+    # dataset_list = [ '463087']
+    seed_list = [1, 10, 2, 3, 4] # arg1
     warmup_list = [200] # arg2
-    epochs_list = [80] # arg3
-    peak_lr_list = [6.04e-3, 6.04e-4, 6.04e-5] # arg4
+    epochs_list = [100] # arg3
+    peak_lr_list = [6.04e-4] # arg4
     end_lr_list = [1e-9] # arg5
     
 

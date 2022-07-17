@@ -55,6 +55,8 @@ def add_args(gnn_type):
 
     # Experiment labels arguments for tagging the task
     parser.add_argument("--machine", default='barium')
+    parser.add_argument("--gnn_type", default=gnn_type)
+    parser.add_argument("--task_comment", type=str, default='')
 
 
     args = parser.parse_args()
@@ -84,6 +86,7 @@ def add_args(gnn_type):
             task.add_tags(f'k4_{args.num_kernel4_1hop}') # args10
             task.add_tags(f'hidden_{args.hidden_dim}') # args11
             task.add_tags(f'batch_{args.batch_size}') # args12
+            task.set_comment(args.task_comment)
     return args
 
 
@@ -243,23 +246,20 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
 
 
 
-
-
-    # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
-    if not args.test and not args.validate and os.path.exists(
-            f'{actual_training_checkpoint_dir}/last.ckpt'):
-        print('Resuming from actual training checkpoint')
-        args.resume_from_checkpoint = actual_training_checkpoint_dir + \
-            '/last.ckpt'
+    # # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
+    # if not args.test and not args.validate and os.path.exists(
+    #         f'{actual_training_checkpoint_dir}/last.ckpt'):
+    #     print('Resuming from actual training checkpoint')
+    #     args.resume_from_checkpoint = actual_training_checkpoint_dir + \
+    #         '/last.ckpt'
 
 
     prog_bar=TQDMProgressBar(refresh_rate=500)
-    args.gpus = str(args.gpus)
-    print(f'entry::cpus:{args.gpus}, type:{type(args.gpus)}')
     # print(f'entry::accelerator:{args.accelerator}, type:{type(args.accelerator)}')
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks=[prog_bar]
     trainer.callbacks.append(actual_training_checkpoint_callback)
+
     trainer.callbacks.append(best_AUC_callback)
     trainer.callbacks.append(best_AUC_0_001_0_1_callback)
     trainer.callbacks.append(best_loss_callback)
@@ -421,7 +421,7 @@ if __name__ == '__main__':
     Task.set_offline(offline_mode=True)
     # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
-    # gnn_type = 'kgnn'
+    gnn_type = 'kgnn'
     # gnn_type = 'dimenet' # Not implemented
     # gnn_type = 'chironet'
     gnn_type = 'dimenet_pp'
@@ -435,7 +435,7 @@ if __name__ == '__main__':
     filename = 'logs/task_info.log'
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w') as out_file:
-        use_clearml = True
+        use_clearml = False
         if use_clearml:
             task = Task.init(project_name=f"HyperParams/kgnn",
                              task_name=f"{gnn_type}",
