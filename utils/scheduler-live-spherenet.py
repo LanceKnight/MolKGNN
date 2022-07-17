@@ -10,7 +10,7 @@ import torch
 
 branch = 'spherenet' # Change this
 gnn_type = 'spherenet'
-task_comment = '\"10K for all of datasets\"' # Change this
+task_comment = '\"10K for all of datasets; spherenet\"' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -104,8 +104,8 @@ if __name__ == '__main__':
 
     # dataset_list = [ '485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087'] # arg0
     # dataset_list = ['463087', '488997', '2689', '485290']
-    dataset_list = [ '435034']
-    seed_list = [1, 10, 2, 3, 4] # arg1
+    dataset_list = [ '463087']
+    seed_list = [1, 2] # arg1
     # seed_list = [1]
     warmup_list = [200] # arg2
     epochs_list = [40] # arg3
@@ -130,7 +130,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 1) as pool: # Change this
+    with Pool(processes = 3) as pool: # Change this
         pool.starmap(run, data_pair_with_exp_id)
     end_time=time.time()
     run_time = end_time-start_time

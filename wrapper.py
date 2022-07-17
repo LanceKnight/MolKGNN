@@ -323,11 +323,10 @@ def convert_to_single_emb(x, offset=512):
     return x
 
 
-class D4DCHPDataset(Dataset):
+class D4DCHPDataset(InMemoryDataset):
     """
     Dataset from Langnajit Pattanaik et al., 2020, Message Passing Networks
     for Molecules with Tetrahedral Chirality
-
     The dataset itself is a subset of the screening result for the protein
     protein-ligand docking for D4 dopamine receptor that only keeps
     stereoisomer pairs for a single 1,3-dicyclohexylpropane skeletal scaffold.
@@ -377,14 +376,16 @@ class D4DCHPDataset(Dataset):
 
     @property
     def processed_file_names(self):
-        return f'{self.subset_name}.pt'
+        return f'shrink_{self.subset_name}.pt'
 
     def process(self):
         data_smiles_list = []
         data_list = []
         data_df = pd.read_csv(self.data_file)
+
         smiles_list = list(data_df['smiles'])[0:num_data]
         labels_list = list(data_df[self.label_column_name])[0:num_data]
+
 
         for i, smi in tqdm(enumerate(smiles_list)):
             label = labels_list[i]
@@ -396,23 +397,27 @@ class D4DCHPDataset(Dataset):
             # data.dummy_graph_embedding = torch.ones(1, 32)
             data.smiles = smi
 
-            if self.pre_filter is not None:
-                data = self.pre_filter(data)
-
-            if self.pre_transform is not None:
-                data = self.pre_transform(data)
-
-            torch.save(data, self.processed_paths[0])
-
+            data_list.append(data)
             data_smiles_list.append(smiles_list[i])
 
-        # Write data_smiles_list in processed paths
+        if self.pre_filter is not None:
+            data_list = [data for data in data_list if self.pre_filter(data)]
+
+        if self.pre_transform is not None:
+            print('doing pre_transforming...')
+            data_list = [self.pre_transform(data) for data in data_list]
+
+        # write data_smiles_list in processed paths
         data_smiles_series = pd.Series(data_smiles_list)
         data_smiles_series.to_csv(os.path.join(
             self.processed_dir, f'{self.subset_name}-smiles.csv'), index=False,
             header=False)
 
-
+        # print(f'data length:{len(data_list)}')
+        # for data in data_list:
+        #     print(data)
+        data, slices = self.collate(data_list)
+        torch.save((data, slices), self.processed_paths[0])
 
     def get_idx_split(self, seed):
         indices = np.load(self.idx_file, allow_pickle=True)
@@ -426,12 +431,9 @@ class D4DCHPDataset(Dataset):
         split_dict['test'] = test_indices
 
         # Delete if statement if using the full CHIRAL1 dataset
-        split_dict['train'] = [torch.tensor(x) for x in train_indices if x <
-                               num_data]
-        split_dict['valid'] = [torch.tensor(x) for x in val_indices if
-                               x < num_data]
-        split_dict['test'] = [torch.tensor(x) for x in test_indices if
-                              x < num_data]
+        split_dict['train'] = [torch.tensor(x) for x in train_indices if x <  num_data]
+        split_dict['valid'] = [torch.tensor(x) for x in val_indices if x < num_data]
+        split_dict['test'] = [torch.tensor(x) for x in test_indices if x < num_data]
 
         return split_dict
 

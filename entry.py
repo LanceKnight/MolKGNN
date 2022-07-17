@@ -159,7 +159,7 @@ def load_best_model(trainer, data_module, metric=None, args=None):
     if len(all_files) == 1:
         best_path = all_files[0]
     elif len(all_files) >1:
-        print("entry::more than one best model found for {metric}!")
+        print(f"entry::more than one best model found for {metric}!!!")
         return False
     elif len(all_files) ==0:
         print(f'No best model saved for {metric}')
@@ -253,8 +253,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
 
 
 
-
-
     # # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
     # if not args.test and not args.validate and os.path.exists(
     #         f'{actual_training_checkpoint_dir}/last.ckpt'):
@@ -268,6 +266,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks=[prog_bar]
     trainer.callbacks.append(actual_training_checkpoint_callback)
+
     trainer.callbacks.append(best_AUC_callback)
     trainer.callbacks.append(best_AUC_0_001_0_1_callback)
     trainer.callbacks.append(best_loss_callback)
@@ -429,13 +428,11 @@ if __name__ == '__main__':
     Task.set_offline(offline_mode=True)
     # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
-    # gnn_type = 'kgnn'
+    gnn_type = 'kgnn'
     # gnn_type = 'dimenet' # Not implemented
     # gnn_type = 'chironet'
     # gnn_type = 'dimenet_pp'
-    gnn_type = 'spherenet'
-
-
+    # gnn_type = 'spherenet'
 
     print(f'========================')
     print(f'Runing model: {gnn_type}')

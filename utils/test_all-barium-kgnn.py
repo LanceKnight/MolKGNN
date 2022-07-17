@@ -197,8 +197,8 @@ def get_table(use_best, best_based_on, monitored_metric, ):
 
 if __name__ == '__main__':
     use_best = True
-    # best_based_on = 'logAUC_0.001_0.1'
-    best_based_on = 'AUC'
+    best_based_on = 'logAUC_0.001_0.1'
+    # best_based_on = 'AUC'
     monitored_metrics = ['AUC', 'f1', 'logAUC_0.001_0.1', 'logAUC_0.001_1', 'loss', 'ppv']
     start_time = time.time()
     mp.set_start_method('spawn')
