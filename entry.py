@@ -87,6 +87,9 @@ def add_args(gnn_type):
             task.add_tags(f'hidden_{args.hidden_dim}') # args11
             task.add_tags(f'batch_{args.batch_size}') # args12
             task.set_comment(args.task_comment)
+    with open(filename, 'a') as out_file:
+        out_file.write(f'\n{args.task_comment}')
+
     return args
 
 
@@ -151,10 +154,14 @@ def prepare_actual_model(args):
 
 def load_best_model(trainer, data_module, metric=None, args=None):
     # Load best model
-    search_name = f'best*{metric}*'
-    try:
-        best_path = glob.glob(osp.join(args.default_root_dir, search_name))[0]
-    except:
+    search_name = f'best*_{metric}*'
+    all_files = glob.glob(osp.join(args.default_root_dir, search_name))
+    if len(all_files) == 1:
+        best_path = all_files[0]
+    elif len(all_files) >1:
+        print("entry::more than one best model found for {metric}!")
+        return False
+    elif len(all_files) ==0:
         print(f'No best model saved for {metric}')
         return False
     print(f"glob result:{best_path}")
