@@ -150,7 +150,7 @@ def get_table(use_best, best_based_on, monitored_metric, ):
                 key = 'best' if use_best else 'last'
                 print(f'error message:{e}')
                 print(f'error folder:{folder}')
-                out_table.setdefault(f'{peak}_{layers}',[]).append({f'{key}_{monitored_metric}_{seed}':f'None'})
+                out_table.setdefault(f'{peak}',[]).append({f'{key}_{monitored_metric}_{seed}':f'None'})
 
 
         # for folder in folder_list:
