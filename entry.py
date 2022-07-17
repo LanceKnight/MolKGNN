@@ -428,10 +428,10 @@ if __name__ == '__main__':
     Task.set_offline(offline_mode=True)
     # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
-    # gnn_type = 'kgnn'
+    gnn_type = 'kgnn'
     # gnn_type = 'dimenet' # Not implemented
     # gnn_type = 'chironet'
-    gnn_type = 'dimenet_pp'
+    # gnn_type = 'dimenet_pp'
     # gnn_type = 'spherenet'
 
     print(f'========================')
@@ -442,7 +442,7 @@ if __name__ == '__main__':
     filename = 'logs/task_info.log'
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w') as out_file:
-        use_clearml = True
+        use_clearml = False
         if use_clearml:
             task = Task.init(project_name=f"HyperParams/kgnn",
                              task_name=f"{gnn_type}",
