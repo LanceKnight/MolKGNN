@@ -79,9 +79,8 @@ def get_table(use_best, best_based_on, monitored_metric, ):
             base_name = osp.basename(folder)
             name_components = base_name.split('_')
             exp_id = name_components[0]
-            seed = name_components[2]
-            peak = name_components[5]
-            layers = name_components[7]
+            seed = name_components[3]
+            peak = name_components[4]
             
             # print('\n=======\n')
             try:
@@ -90,7 +89,7 @@ def get_table(use_best, best_based_on, monitored_metric, ):
                         if 'Namespace' in line: # for arguments
                             components = line.split(', ')
                             for component in components:
-                                if ('peak' in component) or ('layer') in component: # specifiy which arguments to print
+                                if ('seed' in component) or ('peak') in component: # specifiy which arguments to print
                                     split_component = component.split('=')
                                     component_name = split_component[0]
                                     component_value = split_component[1]
@@ -132,13 +131,13 @@ def get_table(use_best, best_based_on, monitored_metric, ):
                                 if is_last:
                                     key = 'last'
                                     if use_best == False:
-                                        out_table.setdefault(f'{peak}_{layers}',[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
+                                        out_table.setdefault(f'{peak}',[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
                                         out_content = out_table
                                         # print(out_content)
                                 else:
                                     key = 'best'
                                     if use_best == True:
-                                        out_table.setdefault(f'{peak}_{layers}',[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
+                                        out_table.setdefault(f'{peak}',[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
                                         out_content = out_table
                                     # print(out_content)
                                 # metric_counter+=1
@@ -198,7 +197,7 @@ def get_table(use_best, best_based_on, monitored_metric, ):
 if __name__ == '__main__':
     use_best = True
     best_based_on = 'logAUC_0.001_0.1'
-    # best_based_on = 'AUC'
+    best_based_on = 'AUC'
     monitored_metrics = ['AUC', 'f1', 'logAUC_0.001_0.1', 'logAUC_0.001_1', 'loss', 'ppv']
     start_time = time.time()
     mp.set_start_method('spawn')

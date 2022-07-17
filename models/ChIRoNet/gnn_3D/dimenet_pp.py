@@ -360,6 +360,7 @@ class DimeNetPlusPlus(torch.nn.Module):
             P += output_block(x, rbf, i, num_nodes=pos.size(0))
 
         out = P.sum(dim=0) if batch is None else scatter(P, batch, dim=0)
+        # print(f'dimenet_pp:{out.shape}')
         # #if we are using a MLP for downstream target prediction
         # if len(self.MLP_hidden_sizes) > 0:
         #     target = self.Output_MLP(out)
