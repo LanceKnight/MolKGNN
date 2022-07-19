@@ -4,6 +4,7 @@ from models.KGNN.KGNNNet import KGNNNet
 from models.DimeNetPP.DimeNetPP import DimeNetPP
 from models.ChebNet.ChebNet import ChebNet
 from models.ChIRoNet.ChIRoNet import ChIRoNet
+from models.SchNet.SchNet import SchNet
 from models.ChIRoNet.params_interpreter import string_to_object
 from models.SphereNet.SphereNet import SphereNet
 from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy, \
@@ -129,6 +130,17 @@ class GNNModel(pl.LightningModule):
                 use_node_features=True,
                 MLP_hidden_sizes=args.MLP_hidden_sizes,
                 # [] for contrastive
+            )
+            out_dim = args.out_channels
+        elif gnn_type == 'schnet':
+            self.gnn_model = SchNet(
+                energy_and_force=False,
+                cutoff=args.cutoff,
+                num_layers=args.num_layers,
+                hidden_channels=args.hidden_channels,
+                num_filters=args.num_filters,
+                num_gaussians=args.num_gaussians,
+                out_channels=args.out_channels
             )
             out_dim = args.out_channels
         elif gnn_type == 'kgnn':
@@ -516,6 +528,8 @@ class GNNModel(pl.LightningModule):
             ChIRoNet.add_model_specific_args(parent_parser)
         elif gnn_type == 'spherenet':
             SphereNet.add_model_specific_args(parent_parser)
+        elif gnn_type == 'schnet':
+            SchNet.add_model_specific_args(parent_parser)
         else:
             NotImplementedError('model.py::GNNModel::add_model_args(): '
                                 'gnn_type is not defined for args groups')
