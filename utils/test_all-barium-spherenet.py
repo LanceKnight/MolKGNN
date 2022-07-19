@@ -8,8 +8,8 @@ import itertools
 import time
 import pandas as pd
 
-branch = 'chiro' # Change this
-task_comment = '\" test all chiro/spherenet\"'
+branch = 'spherenet' # Change this
+task_comment = '\" test all spherenet\"'
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -30,16 +30,11 @@ def run_command(dataset): # Change this
     # Model=kgnn
     if not osp.exists('logs/best_test_sample_scores.log'):
         os.system(f'python -W ignore entry.py \
-            --task_name id{exp_id}_lr{args[4]}_seed{args[1]}\
-            --dataset_name {args[0]} \
-            --seed {args[1]}\
+            --dataset_name {dataset} \
             --num_workers 11 \
+            --max_epochs 1\
             --dataset_path ../../../dataset/ \
             --enable_oversampling_with_replacement \
-            --warmup_iterations {args[2]} \
-            --max_epochs {args[3]}\
-            --peak_lr {args[4]} \
-            --end_lr {args[5]} \
             --batch_size 32 \
             --default_root_dir actual_training_checkpoints \
             --gpus 1 \
@@ -58,18 +53,8 @@ def run(folder):
     run_command(dataset)
 
 
-def get_table(use_best, best_based_on, monitored_metric, ):
-    exp_dir = '/home/liuy69/projects/unified_framework/experiments/'
+def get_table(use_best, best_based_on, monitored_metric, folder_list):
 
-   # Get a list of folders
-    folder_list = []
-    for folder in os.listdir(exp_dir):
-        if 'exp' in folder:
-            folder_list.append(osp.join(exp_dir, folder))
-
-    # Update git and run testing
-    with Pool(processes = 9) as pool:
-        pool.map(run, folder_list)
 
     # Gather testing results
     file_name = 'logs/all_test_result.log'
@@ -204,11 +189,37 @@ if __name__ == '__main__':
     start_time = time.time()
     mp.set_start_method('spawn')
 
+    exp_dir = os.getcwd()#'/home/liuy69/projects/unified_framework/experiments/'
+
+   # Get a list of folders
+    folder_list = []
+    for folder in os.listdir(exp_dir):
+        if 'exp' in folder:
+            folder_list.append(osp.join(exp_dir, folder))
+
+    # check if all has logs/test_results.log
+    result_exists = True
+    print(f'check folders{folder_list}')
+    for folder in folder_list:
+        print(f'checking {folder}')
+        if not os.path.exists(f'{folder}/kgnn/logs/test_results.log'):
+            print(f'{folder} does not have result')
+            result_exists = False
+            break
+
+    # Update git and run testing
+    if result_exists:
+        print(f'all folders has results')
+    else:
+        print(f'at least one folder does not have test results')
+        with Pool(processes = 3) as pool:
+            pool.map(run, folder_list)
+
     all_table = pd.DataFrame()
 
     for monitored_metric in monitored_metrics:
         print(f'metric:{monitored_metric}')
-        output_df = get_table(use_best, best_based_on, monitored_metric)
+        output_df = get_table(use_best, best_based_on, monitored_metric, folder_list)
         # print(output_df)
         all_table = pd.concat([all_table, output_df], axis = 1)
         output_df.to_csv(f'logs/all_test_result_df_{monitored_metric}.csv')    
