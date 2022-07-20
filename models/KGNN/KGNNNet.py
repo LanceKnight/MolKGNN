@@ -2,9 +2,11 @@ from .KernelLayer import MolGCN
 from lr import PolynomialDecayLR
 
 import torch
-from torch.nn import Linear, Sigmoid
+from torch.nn import Linear, Sigmoid, BatchNorm1d
 from torch_geometric.nn import global_add_pool
+from torch_geometric.nn.acts import swish
 from torch.optim import Adam
+
 
 
 class KGNNNet(torch.nn.Module):
@@ -23,6 +25,21 @@ class KGNNNet(torch.nn.Module):
             + num_kernel3_Nhop
             + num_kernel4_Nhop
             , graph_embedding_dim)
+        self.node_batch_norm = BatchNorm1d(x_dim)
+        self.edge_batch_norm = BatchNorm1d(edge_attr_dim)
+
+        self.graph_embedding_lin1 = Linear(
+            num_kernel1_Nhop
+            + num_kernel2_Nhop
+            + num_kernel3_Nhop
+            + num_kernel4_Nhop
+            , graph_embedding_dim)
+
+        self.graph_embedding_lin2 = Linear(
+            graph_embedding_dim
+            , graph_embedding_dim)
+
+        self.act = swish
 
         if self.num_layers < 1:
             raise ValueError(
@@ -100,9 +117,13 @@ class KGNNNet(torch.nn.Module):
 
         # print(f'x:{x.shape}')
         # print(f'self.atom_encoder{self.atom_encoder}')
+
+        x = self.node_batch_norm(data.x)
+        edge_attr = self.edge_batch_norm(data.edge_attr)
         x = self.atom_encoder(data.x)
         edge_attr = self.bond_encoder(data.edge_attr)
-        
+
+
         node_representation = self.gnn(x=x, edge_index=edge_index,
                                        edge_attr=edge_attr, p=p,
                                        p_focal_deg1=p_focal_deg1,
@@ -127,8 +148,10 @@ class KGNNNet(torch.nn.Module):
                                        nei_index_deg4=nei_index_deg4,
                                        save_score=save_score)
 
-        graph_representation = self.graph_embedding_linear(
-            self.pool(node_representation, batch))
+        graph_representation = self.pool(
+            self.graph_embedding_lin2(self.act(self.graph_embedding_lin1(node_representation))),
+            batch)
+
 
         return graph_representation
 
