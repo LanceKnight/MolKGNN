@@ -33,7 +33,7 @@ def run_command(dataset): # Change this
             --dataset_name {dataset} \
             --num_workers 11 \
             --max_epochs 1\
-            --dataset_path ../../../dataset/ \
+            --dataset_path "/home/liuy69/projects/unified_framework/dataset/" \
             --enable_oversampling_with_replacement \
             --batch_size 32 \
             --default_root_dir actual_training_checkpoints \
@@ -48,8 +48,8 @@ def run(folder):
     os.chdir(osp.join(folder, 'kgnn'))
     gitupdate()
 
-    folder_name_components = folder.split('_')
-    dataset = folder_name_components[2][7:]
+    folder_name_components = os.path.basename(folder).split('_')
+    dataset = folder_name_components[1][7:]
     run_command(dataset)
 
 
@@ -171,18 +171,18 @@ def get_table_for_a_dataset(best_based_on = 'logAUC_0.001_0.1', exp_dir = '/home
     
 
    # Get a list of folders
-    folder_list = []
+    dataset_folder_list = []
     for folder in os.listdir(exp_dir):
         if 'exp' in folder:
-            folder_list.append(osp.join(exp_dir, folder))
+            dataset_folder_list.append(osp.join(exp_dir, folder))
 
     # check if all has logs/test_results.log
     result_exists = True
-    print(f'check folders{folder_list}')
-    for folder in folder_list:
-        print(f'checking {folder}')
-        if not os.path.exists(f'{folder}/kgnn/logs/test_result.log'):
-            print(f'{folder} does not have result')
+    print(f'check folders{dataset_folder_list}')
+    for seed_folder in dataset_folder_list:
+        print(f'checking {seed_folder}')
+        if not os.path.exists(f'{seed_folder}/kgnn/logs/test_result.log'):
+            print(f'{seed_folder} does not have result')
             result_exists = False
             break
 
@@ -192,13 +192,13 @@ def get_table_for_a_dataset(best_based_on = 'logAUC_0.001_0.1', exp_dir = '/home
     else:
         print(f'at least one folder does not have test results')
         with Pool(processes = 3) as pool:
-            pool.map(run, folder_list)
+            pool.map(run, dataset_folder_list)
 
     all_table = pd.DataFrame()
 
     for monitored_metric in monitored_metrics:
         # print(f'metric:{monitored_metric}')
-        output_df = get_table_for_a_metric(use_best, best_based_on, monitored_metric, folder_list, exp_dir)
+        output_df = get_table_for_a_metric(use_best, best_based_on, monitored_metric, dataset_folder_list, exp_dir)
         # print(output_df)
         all_table = pd.concat([all_table, output_df], axis = 1)
         output_df.to_csv(f'logs/all_test_result_df_{monitored_metric}.csv')    
@@ -214,13 +214,15 @@ if __name__ == '__main__':
     mp.set_start_method('spawn')
     model_dir = '/home/liuy69/projects/unified_framework/experiments/final_spherenet'
     best_based_on = 'logAUC_0.001_0.1'
-    best_based_on = 'AUC'
+    # best_based_on = 'AUC'
 
     all_table = pd.DataFrame()
     for dataset_exp in os.listdir(model_dir):
-        print(dataset_exp)
-        table = get_table_for_a_dataset(best_based_on, osp.join(model_dir, dataset_exp))
-        all_table = all_table.append(table)
+        
+        if os.path.isdir(osp.join(model_dir, dataset_exp)):
+            print(dataset_exp)
+            table = get_table_for_a_dataset(best_based_on, osp.join(model_dir, dataset_exp))
+            all_table = all_table.append(table)
     print(all_table)
     all_table.to_csv(f'logs/all_test_result_df_all_table.csv')
 
