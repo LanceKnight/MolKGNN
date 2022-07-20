@@ -879,10 +879,10 @@ if __name__ == "__main__":
     from clearml import Task
     from argparse import ArgumentParser
 
-    # gnn_type = 'kgnn'
+    gnn_type = 'kgnn'
     # gnn_type = 'chironet'
     # gnn_type = 'spherenet'
-    gnn_type = 'schnet'
+    # gnn_type = 'schnet'
     # gnn_type = 'dimenet_pp'
     use_clearml = False
     if use_clearml:
