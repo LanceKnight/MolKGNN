@@ -36,7 +36,7 @@ class KernelConv(Module):
                  init_center_attr_sc_weight=0.2,
                  init_support_attr_sc_weight=0.2,
                  init_edge_attr_support_sc_weight=0.2,
-                 weight_requires_grad=False):
+                 weight_requires_grad=True):
         """
         Do the molecular convolution between a neighborhood and a kernel
         :param L:
