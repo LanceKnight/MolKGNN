@@ -9,8 +9,8 @@ import time
 from datetime import datetime
 import math
 
-branch = 'chirality-last-layer' # Change this
-task_comment = '\"chirality only applies to the last layer\test of 1798\nadd-back chirality\nchirality_sign is for tot_sc\"' # Change this
+branch = 'main' # Change this
+task_comment = '\"make score weight learnable\"' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
