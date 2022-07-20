@@ -53,13 +53,13 @@ class KGNNNet(torch.nn.Module):
                           num_kernel1_Nhop=num_kernel1_Nhop,
                           num_kernel2_Nhop=num_kernel2_Nhop,
                           num_kernel3_Nhop=num_kernel3_Nhop,
-                          num_kernel4_Nhop=num_kernel4_Nhop, x_dim=graph_embedding_dim,
+                          num_kernel4_Nhop=num_kernel4_Nhop, x_dim=x_dim,
                           p_dim=p_dim, edge_attr_dim=edge_attr_dim,
                           predefined_kernelsets=predefined_kernelsets)
 
         self.pool = global_add_pool
-        self.atom_encoder = Linear(x_dim, graph_embedding_dim)
-        self.bond_encoder = Linear(edge_attr_dim, graph_embedding_dim)
+        # self.atom_encoder = Linear(x_dim, graph_embedding_dim)
+        # self.bond_encoder = Linear(edge_attr_dim, graph_embedding_dim)
 
     def save_kernellayer(self, path, time_stamp):
         layers = self.gnn.layers
@@ -120,8 +120,8 @@ class KGNNNet(torch.nn.Module):
 
         x = self.node_batch_norm(data.x)
         edge_attr = self.edge_batch_norm(data.edge_attr)
-        x = self.atom_encoder(data.x)
-        edge_attr = self.bond_encoder(data.edge_attr)
+        # x = self.atom_encoder(data.x)
+        # edge_attr = self.bond_encoder(data.edge_attr)
 
 
         node_representation = self.gnn(x=x, edge_index=edge_index,
