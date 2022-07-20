@@ -53,7 +53,7 @@ def run(folder):
     run_command(dataset)
 
 
-def get_table(use_best, best_based_on, monitored_metric, folder_list):
+def get_table_for_a_metric(use_best, best_based_on, monitored_metric, folder_list, exp_dir):
 
 
     # Gather testing results
@@ -66,9 +66,10 @@ def get_table(use_best, best_based_on, monitored_metric, folder_list):
             base_name = osp.basename(folder)
             name_components = base_name.split('_')
             exp_id = name_components[0]
+            dataset_name = name_components[1]
             seed = name_components[3]
             peak = name_components[4]
-            
+            index_name = f'{dataset_name}_{peak}'
             # print('\n=======\n')
             try:
                 with open(osp.join(exp_dir,f'{folder}/kgnn/logs/test_result.log'), 'r') as in_file:
@@ -114,17 +115,16 @@ def get_table(use_best, best_based_on, monitored_metric, folder_list):
                                 elif monitored_metric == 'loss':
                                     metric = loss
                                 
-
                                 if is_last:
                                     key = 'last'
                                     if use_best == False:
-                                        out_table.setdefault(f'{peak}',[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
+                                        out_table.setdefault(index_name,[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
                                         out_content = out_table
                                         # print(out_content)
                                 else:
                                     key = 'best'
                                     if use_best == True:
-                                        out_table.setdefault(f'{peak}',[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
+                                        out_table.setdefault(index_name,[]).append({f'{key}_{monitored_metric}_{seed}':f'{metric}'})
                                         out_content = out_table
                                     # print(out_content)
                                 # metric_counter+=1
@@ -137,25 +137,8 @@ def get_table(use_best, best_based_on, monitored_metric, folder_list):
                 key = 'best' if use_best else 'last'
                 print(f'error message:{e}')
                 print(f'error folder:{folder}')
-                out_table.setdefault(f'{peak}',[]).append({f'{key}_{monitored_metric}_{seed}':f'None'})
+                out_table.setdefault(index_name,[]).append({f'{key}_{monitored_metric}_{seed}':f'None'})
 
-
-        # for folder in folder_list:
-        #     print('\n=======\n')
-        #     with open(osp.join(exp_dir,f'{folder}/kgnn/logs/test_result.log'), 'r') as in_file:
-        #         for line in in_file:
-        #             if 'Namespace' in line: # for arguments
-        #                 components = line.split(', ')
-        #                 for component in components:
-        #                     if ('peak' in component) or ('layer') in component: # specifiy which arguments to print
-        #                         out_content = component
-        #                         print(out_content)
-        #                         output_file.write(out_content)
-        #             else:
-        #                 out_content = line
-        #                 print(out_content)
-        #                 output_file.write(out_content)
-        #         output_file.write('\n=======\n')
 
     
     # Prepare dataframe
@@ -180,16 +163,12 @@ def get_table(use_best, best_based_on, monitored_metric, folder_list):
     output_df.columns=sorted_key_list
     return output_df
 
+def get_table_for_a_dataset(best_based_on = 'logAUC_0.001_0.1', exp_dir = '/home/liuy69/projects/unified_framework/experiments/'):
 
-if __name__ == '__main__':
     use_best = True
-    best_based_on = 'logAUC_0.001_0.1'
-    # best_based_on = 'AUC'
-    monitored_metrics = ['AUC', 'f1', 'logAUC_0.001_0.1', 'logAUC_0.001_1', 'loss', 'ppv']
-    start_time = time.time()
-    mp.set_start_method('spawn')
 
-    exp_dir = os.getcwd()#'/home/liuy69/projects/unified_framework/experiments/'
+    monitored_metrics = ['AUC', 'f1', 'logAUC_0.001_0.1', 'logAUC_0.001_1', 'loss', 'ppv']
+    
 
    # Get a list of folders
     folder_list = []
@@ -202,14 +181,14 @@ if __name__ == '__main__':
     print(f'check folders{folder_list}')
     for folder in folder_list:
         print(f'checking {folder}')
-        if not os.path.exists(f'{folder}/kgnn/logs/test_results.log'):
+        if not os.path.exists(f'{folder}/kgnn/logs/test_result.log'):
             print(f'{folder} does not have result')
             result_exists = False
             break
 
     # Update git and run testing
     if result_exists:
-        print(f'all folders has results')
+        print(f'all folders have results')
     else:
         print(f'at least one folder does not have test results')
         with Pool(processes = 3) as pool:
@@ -218,15 +197,33 @@ if __name__ == '__main__':
     all_table = pd.DataFrame()
 
     for monitored_metric in monitored_metrics:
-        print(f'metric:{monitored_metric}')
-        output_df = get_table(use_best, best_based_on, monitored_metric, folder_list)
+        # print(f'metric:{monitored_metric}')
+        output_df = get_table_for_a_metric(use_best, best_based_on, monitored_metric, folder_list, exp_dir)
         # print(output_df)
         all_table = pd.concat([all_table, output_df], axis = 1)
         output_df.to_csv(f'logs/all_test_result_df_{monitored_metric}.csv')    
-        print('\n')
+        # print('\n')
 
+    # print(all_table)
+    return all_table
+    
+    
+
+if __name__ == '__main__':
+    start_time = time.time()
+    mp.set_start_method('spawn')
+    model_dir = '/home/liuy69/projects/unified_framework/experiments/final_spherenet'
+    best_based_on = 'logAUC_0.001_0.1'
+    best_based_on = 'AUC'
+
+    all_table = pd.DataFrame()
+    for dataset_exp in os.listdir(model_dir):
+        print(dataset_exp)
+        table = get_table_for_a_dataset(best_based_on, osp.join(model_dir, dataset_exp))
+        all_table = all_table.append(table)
     print(all_table)
     all_table.to_csv(f'logs/all_test_result_df_all_table.csv')
+
     end_time=time.time()
     run_time = end_time-start_time
     print(f'finish getting all test result: {run_time/3600:0.0f}h{(run_time)%3600/60:0.0f}m{run_time%60:0.0f}')
