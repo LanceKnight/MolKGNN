@@ -446,15 +446,15 @@ class GNNModel(pl.LightningModule):
                     or ('x_support' in name):
                 nodecay_dict.append(m)
                 print(f'@@@{name} is in no decay list')
-                print(f'{type(m)}')
+                # print(f'{type(m)}')
             else:
                 decay_dict.append(m)
                 print(f'***{name} is in decay list')
-                print(f'{type(m)}')
+                # print(f'{type(m)}')
 
         optimizer = AdamW([{'params': nodecay_dict, 'weight_decay': 0}, {'params': decay_dict, 'weight_decay':
             self.weight_decay} ])
-        print(optimizer)
+        # print(optimizer)
         # optimizer = Adam(self.parameters())
         # scheduler = warmup.
         scheduler = {
