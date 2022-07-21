@@ -19,7 +19,7 @@ from sklearn.metrics import mean_squared_error
 from torch.nn import Linear, Sigmoid, ReLU, Embedding, Dropout
 from torch_geometric.data import Data
 import torch
-from torch.optim import Adam
+from torch.optim import AdamW
 from torch_geometric.nn.acts import swish
 import time
 
@@ -156,7 +156,8 @@ class GNNModel(pl.LightningModule):
                                      x_dim = args.node_feature_dim,
                                      edge_attr_dim=args.edge_feature_dim,
                                      graph_embedding_dim = args.hidden_dim,
-                                     predefined_kernelsets=False
+                                     predefined_kernelsets=False,
+                                     drop_ratio=args.dropout_ratio
             )
             out_dim = args.hidden_dim
         else:
@@ -179,6 +180,7 @@ class GNNModel(pl.LightningModule):
         self.valid_epoch_outputs = {}
         self.record_valid_pred = args.record_valid_pred
         self.train_metric = args.train_metric
+        self.weight_decay = args.weight_decay
 
     def forward(self, data):
 
@@ -433,7 +435,27 @@ class GNNModel(pl.LightningModule):
         :return: A union of lists, the first one is optimizers and the
         second one is schedulers
         """
-        optimizer = Adam(self.parameters())
+        print(f'params:')
+        # Only apply weight decay to non-kernel params
+        decay_dict = list()
+        nodecay_dict = list()
+        for name, m in self.named_parameters():
+            if ('x_center' in name) \
+                    or ('p_support' in name) \
+                    or (('edge_attr_support' in name) and ('edge_attr_support_sc' not in name) ) \
+                    or ('x_support' in name):
+                nodecay_dict.append(m)
+                print(f'@@@{name} is in no decay list')
+                print(f'{type(m)}')
+            else:
+                decay_dict.append(m)
+                print(f'***{name} is in decay list')
+                print(f'{type(m)}')
+
+        optimizer = AdamW([{'params': nodecay_dict, 'weight_decay': 0}, {'params': decay_dict, 'weight_decay':
+            self.weight_decay} ])
+        print(optimizer)
+        # optimizer = Adam(self.parameters())
         # scheduler = warmup.
         scheduler = {
             'scheduler': PolynomialDecayLR(
@@ -510,6 +532,7 @@ class GNNModel(pl.LightningModule):
         parser.add_argument('--warmup_iterations', type=int, default=60000)
         parser.add_argument('--peak_lr', type=float, default=5e-2)
         parser.add_argument('--end_lr', type=float, default=1e-9)
+        parser.add_argument('--weight_decay', type=float, default=0)
 
         # For linear layer
         parser.add_argument('--ffn_dropout_rate', type=float, default=0.25)

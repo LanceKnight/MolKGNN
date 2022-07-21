@@ -2,7 +2,7 @@ from .KernelLayer import MolGCN
 from lr import PolynomialDecayLR
 
 import torch
-from torch.nn import Linear, Sigmoid, BatchNorm1d
+from torch.nn import Linear, Sigmoid, BatchNorm1d, Dropout
 from torch_geometric.nn import global_add_pool
 from torch_geometric.nn.acts import swish
 from torch.optim import Adam
@@ -14,10 +14,10 @@ class KGNNNet(torch.nn.Module):
                  num_kernel3_1hop=0, num_kernel4_1hop=0, num_kernel1_Nhop=0,
                  num_kernel2_Nhop=0, num_kernel3_Nhop=0, num_kernel4_Nhop=0,
                  predefined_kernelsets=True, x_dim=5, p_dim=3, edge_attr_dim=1,
-                 drop_ratio=0, graph_embedding_dim=5):
+                 drop_ratio=0.25, graph_embedding_dim=5):
         super(KGNNNet, self).__init__()
         self.num_layers = num_layers
-        self.drop_ratio = drop_ratio
+        # self.drop_ratio = drop_ratio
         self.D = p_dim
         self.graph_embedding_linear = Linear(
             num_kernel1_Nhop
@@ -38,6 +38,7 @@ class KGNNNet(torch.nn.Module):
         self.graph_embedding_lin2 = Linear(
             graph_embedding_dim
             , graph_embedding_dim)
+        self.dropout = Dropout(drop_ratio)
 
         self.act = swish
 
@@ -147,9 +148,10 @@ class KGNNNet(torch.nn.Module):
                                        nei_index_deg3=nei_index_deg3,
                                        nei_index_deg4=nei_index_deg4,
                                        save_score=save_score)
+        # print(self.dropout)
 
         graph_representation = self.pool(
-            self.graph_embedding_lin2(self.act(self.graph_embedding_lin1(node_representation))),
+            self.graph_embedding_lin2(self.dropout(self.act(self.graph_embedding_lin1(node_representation)))),
             batch)
 
 
@@ -178,28 +180,29 @@ class KGNNNet(torch.nn.Module):
         parser.add_argument('--node_feature_dim', type=int, default=27)
         parser.add_argument('--edge_feature_dim', type=int, default=7)
         parser.add_argument('--hidden_dim', type=int, default=64)
+        parser.add_argument('--dropout_ratio', type=float, default=0)
 
         return parent_parser
 
-    def configure_optimizers(self, warmup_iterations, tot_iterations,
-                             peak_lr, end_lr):
-        """
-        Returns an optimizer and scheduler suitable for GCNNet
-        :return: optimizer, scheduler
-        """
-        optimizer = Adam(self.parameters())
-        # scheduler = warmup.
-        scheduler = {
-            'scheduler': PolynomialDecayLR(
-                optimizer,
-                warmup_iterations=warmup_iterations,
-                tot_iterations=tot_iterations,
-                lr=peak_lr,
-                end_lr=end_lr,
-                power=1.0,
-            ),
-            'name': 'learning_rate',
-            'interval': 'step',
-            'frequency': 1,
-        }
-        return optimizer, scheduler
+    # def configure_optimizers(self, warmup_iterations, tot_iterations,
+    #                          peak_lr, end_lr):
+    #     """
+    #     Returns an optimizer and scheduler suitable for GCNNet
+    #     :return: optimizer, scheduler
+    #     """
+    #     optimizer = Adam(self.parameters())
+    #     # scheduler = warmup.
+    #     scheduler = {
+    #         'scheduler': PolynomialDecayLR(
+    #             optimizer,
+    #             warmup_iterations=warmup_iterations,
+    #             tot_iterations=tot_iterations,
+    #             lr=peak_lr,
+    #             end_lr=end_lr,
+    #             power=1.0,
+    #         ),
+    #         'name': 'learning_rate',
+    #         'interval': 'step',
+    #         'frequency': 1,
+    #     }
+    #     return optimizer, scheduler
