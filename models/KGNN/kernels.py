@@ -676,8 +676,8 @@ class KernelConv(Module):
                  # + position_sc * self.length_sc_weight
              ) / (self.support_attr_sc_weight+self.center_attr_sc_weight +
                   self.edge_attr_support_sc_weight)
-        if deg ==4:
-            sc = sc * chirality_sign
+        # if deg ==4:
+        #     sc = sc * chirality_sign
         b = time.time()
         return sc
         # return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, \
