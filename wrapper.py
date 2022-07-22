@@ -376,7 +376,7 @@ class D4DCHPDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return f'{self.subset_name}.pt'
+        return f'shrink_{self.subset_name}.pt'
 
     def process(self):
         data_smiles_list = []
@@ -655,7 +655,7 @@ class QSARDataset(InMemoryDataset):
 
 
     def get_idx_split(self, seed):
-        split_dict = torch.load(f'data_split/shrink_{self.dataset}_seed2.pt')
+        split_dict = torch.load(f'data_split/{self.dataset}_seed2.pt')
         try:
             invalid_id_list = pd.read_csv(os.path.join(self.processed_dir, f'{self.gnn_type}-'
                                                                        f'{self.dataset}-invalid_id.csv')
