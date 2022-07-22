@@ -376,7 +376,7 @@ class D4DCHPDataset(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        return f'shrink_{self.subset_name}.pt'
+        return f'{self.subset_name}.pt'
 
     def process(self):
         data_smiles_list = []
