@@ -84,4 +84,4 @@ if __name__ == '__main__':
         for seed in seed_list:
             num_active = dataset_info[dataset_name]['num_active']
             num_inactive = dataset_info[dataset_name]['num_inactive']
-            get_split(num_active, num_inactive, seed, dataset_name, shrink=False)
+            get_split(num_active, num_inactive, seed, dataset_name, shrink=True)
