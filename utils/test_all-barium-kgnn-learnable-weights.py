@@ -231,15 +231,15 @@ def get_table_for_a_dataset(best_based_on = 'logAUC_0.001_0.1', exp_dir = '/home
 if __name__ == '__main__':
     start_time = time.time()
     mp.set_start_method('spawn')
-    model_dir = '/home/liuy69/projects/unified_framework/experiments/final_kgnn_learnable_weights'
+    model_dir = '/home/liuy69/projects/unified_framework/experiments/final_kgnn_optimize1'
     best_based_on = 'logAUC_0.001_0.1'
-    best_based_on = 'AUC'
+    # best_based_on = 'AUC'
 
     all_table = pd.DataFrame()
     for dataset_exp in os.listdir(model_dir):
         
         if os.path.isdir(osp.join(model_dir, dataset_exp)):
-            # print(dataset_exp)
+            print(dataset_exp)
             table = get_table_for_a_dataset(best_based_on, osp.join(model_dir, dataset_exp))
             all_table = pd.concat([all_table,table], axis = 0)
     print(all_table)

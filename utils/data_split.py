@@ -56,10 +56,11 @@ def get_split(num_active, num_inactive, seed, dataset_name, shrink=False):
     print(f'num_train:{num_train}, num_valid:{num_valid}, num_test:{num_test}')
     
     torch.save(split_dict, filename)
-
     data_md5 = hashlib.md5(json.dumps(split_dict, sort_keys=True).encode('utf-8')).hexdigest()
     print(f'data_md5_checksum:{data_md5}')
     print(f'file saved at {filename}')
+    with open(f'{filename}.checksum', 'w+') as checksum_file:
+        checksum_file.write(data_md5)
 
 
 
@@ -76,11 +77,7 @@ if __name__ == '__main__':
         '485290': {'num_active':278, 'num_inactive':341026},#{'num_active':281, 'num_inactive':341084},
         '9999':{'num_active':37, 'num_inactive':226},
     }
-<<<<<<< HEAD
     seed_list = [1,2,3]
-=======
-    seed_list = [2]
->>>>>>> chiro
     dataset_name_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290', '9999']
     # dataset_name_list = ['1798']
     for dataset_name in dataset_name_list:
