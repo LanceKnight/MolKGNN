@@ -195,7 +195,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 7) as pool:
+    with Pool(processes = 6) as pool:
         pool.starmap(run, data_pair_with_exp_id)
 
     end_time=time.time()
