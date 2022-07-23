@@ -7,6 +7,7 @@ import shutil, errno
 import itertools
 import time
 from datetime import datetime
+import math
 
 branch = 'shrink-qsar-dataset' # Change this
 task_comment = '\"shrink-qsar-dataset\"' # Change this
@@ -94,7 +95,7 @@ def overwrite_dir(src, dst):
         else: raise
 
 def run(exp_id, *args):
-    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_end{args[5]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}' # Change this
+    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_shrinkset_epoch{args[3]}_peak{args[4]}_end{args[5]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -198,7 +199,6 @@ if __name__ == '__main__':
 
     end_time=time.time()
     run_time = end_time-start_time
-    run_time = end-start
     run_time_str = f'run_time:{math.floor(run_time/3600)}h{math.floor((run_time)%3600/60)}m' \
                    f'{math.floor(run_time%60)}s'
     print(run_time_str)
