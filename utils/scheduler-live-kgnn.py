@@ -9,8 +9,8 @@ import time
 from datetime import datetime
 import math
 
-branch = 'shrink-qsar-dataset' # Change this
-task_comment = '\"shrink-qsar-dataset\"' # Change this
+branch = 'shrink-no-valid' # Change this
+task_comment = '\"fullset-no-valid\"' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -95,7 +95,7 @@ def overwrite_dir(src, dst):
         else: raise
 
 def run(exp_id, *args):
-    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_shrinkset_epoch{args[3]}_peak{args[4]}_end{args[5]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}' # Change this
+    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_fullsetnovalid_epoch{args[3]}_peak{args[4]}_end{args[5]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder

@@ -24,15 +24,20 @@ def get_split(num_active, num_inactive, seed, dataset_name, shrink=False, no_val
         else:
             num_active_valid = round(num_active * 0.2)
             num_inactive_valid = round(num_inactive * 0.2)
-            filename = f'data_split/novalid_shrink_{dataset_name}_seed{seed}.pt'
+            filename = f'data_split/novalid_{dataset_name}_seed{seed}.pt'
     else:
         num_active_train = round(num_active * 0.8)
         num_inactive_train = 10000 if num_inactive >10000 else round(num_inactive*0.8)
-        num_active_valid = round(num_active * 0.1)
-        num_inactive_valid = round(num_inactive * 0.1)
-        num_active_test = num_active - num_active_train - num_active_valid
-        num_inactive_test = round(num_inactive * 0.1)
-        filename = f'data_split/shrink_{dataset_name}_seed{seed}.pt'
+        if no_valid == False:
+            num_active_valid = round(num_active * 0.1)
+            num_inactive_valid = round(num_inactive * 0.1)
+            num_active_test = num_active - num_active_train - num_active_valid
+            num_inactive_test = round(num_inactive * 0.1)
+            filename = f'data_split/shrink_{dataset_name}_seed{seed}.pt'
+        else:
+            num_active_valid = round(num_active * 0.2)
+            num_inactive_valid = round(num_inactive * 0.2)
+            filename = f'data_split/novalid_shrink_{dataset_name}_seed{seed}.pt'
 
     split_dict = {}
 
