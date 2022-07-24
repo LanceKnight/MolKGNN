@@ -93,7 +93,7 @@ if __name__ == '__main__':
     }
     seed_list = [2]
     # dataset_name_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290', '9999']
-    dataset_name_list = ['1798']
+    dataset_name_list = ['1798', '2258']
     for dataset_name in dataset_name_list:
         for seed in seed_list:
             num_active = dataset_info[dataset_name]['num_active']
