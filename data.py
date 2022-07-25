@@ -150,12 +150,19 @@ class DataLoaderModule(LightningDataModule):
         #print(split_idx)
 
         self.dataset_train = self.dataset['dataset'][split_idx["train"]]
-        print(f'training # samples:{len(self.dataset_train)})')
+        # print(f'training # samples:{len(self.dataset_train)})')
+        # print(f'dataset_train_idx:{split_idx["train"]}')
+        for data in self.dataset_train:
+            print(f'train id:{data.idx}, x.shape:{data.x.shape}')
 
         self.dataset_val = self.dataset['dataset'][split_idx["valid"]]
+        # print(f'dataset_valid_idx:{split_idx["valid"]}')
+        # for data in self.dataset_val:
+        #     print(f'val id:{data.idx}, x.shape:{data.x.shape} data:{data}')
         print(f'validation # samples:{len(self.dataset_val)})')
 
         self.dataset_test = self.dataset['dataset'][split_idx["test"]]
+        print(f'dataset_valid_idx:{split_idx["test"]}')
         print(f'testing # samples:{len(self.dataset_test)})')
 
     def setup(self, stage: str = None):

@@ -21,7 +21,7 @@ import rdkit
 import rdkit.Chem.EState as EState
 import rdkit.Chem.rdMolDescriptors as rdMolDescriptors
 import rdkit.Chem.rdPartialCharges as rdPartialCharges
-
+import copy
 
 pattern_dict = {'[NH-]': '[N-]', '[OH2+]':'[O]'}
 add_atom_num = 5
@@ -548,10 +548,13 @@ class QSARDataset(InMemoryDataset):
                                  (f'{self.dataset}_inactives_new.sdf', 0)]:
             sdf_path = os.path.join(self.root, 'raw', file_name)
             sdf_supplier = Chem.SDMolSupplier(sdf_path)
+            dummy = None
             for i, mol in tqdm(enumerate(sdf_supplier)):
                 counter+=1
                 if self.gnn_type == 'chironet':
                     data = self.chiro_process(mol)
+                    if data is not None:
+                        dummy = data
                 elif self.gnn_type in ['dimenet_pp', 'schnet', 'spherenet']:
                     data = self.dimenetpp_process(mol)
                 else:
@@ -561,10 +564,16 @@ class QSARDataset(InMemoryDataset):
                     # This None currently only happens to ChIRO due to non-existence dihedral angles for simple
                     # molecules.
                     invalid_id_list.append([counter, label])
-                    dummy_data = Data(x =torch.ones([1,52]), edge_index = torch.ones([2,1]), edge_attr=torch.ones([
-                        1, 14]), bond_distances=torch.ones([1, 1]))
-                    data_list.append(dummy_data)
-                    continue
+                    # data = Data(x =torch.ones([2,52]),
+                    #             edge_index = torch.ones([2,1], dtype=torch.long),
+                    #             edge_attr=torch.ones([1, 14]),
+                    #             bond_distances=torch.ones([1]),
+                    #             bond_distance_index = torch.ones([2, 1], dtype=torch.long),
+                    #             bond_angles=torch.ones([1]),
+                    #             bond_angle_index=torch.ones([3, 1], dtype=torch.long),
+                    #             dihedral_angles=torch.ones([2]),
+                    #             dihedral_angle_index=torch.ones([4, 2]), dtype=torch.long )
+                    data = copy.deepcopy(dummy)
 
                 data.idx = counter
                 data.y = torch.tensor([label], dtype=torch.int)
@@ -692,7 +701,7 @@ class QSARDataset(InMemoryDataset):
     def __getitem__(self, idx):
         if isinstance(idx, int):
             item = self.get(self.indices()[idx])
-            item.idx = idx
+            # item.idx = idx
             return item
         else:
             return self.index_select(idx)

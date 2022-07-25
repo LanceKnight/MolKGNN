@@ -209,8 +209,7 @@ class GNNModel(pl.LightningModule):
         """
 
         # Get prediction and ground truth
-        # print(batch_data.edge_index)
-
+        # print(f'training idx:{batch_data.idx}')
         # start = time.time()
         pred_y, _ = self(batch_data)
         # end = time.time()
@@ -266,7 +265,7 @@ class GNNModel(pl.LightningModule):
         outputs from the training datasets. Each output is another list,
         which each item being the dictionary from each step.
         """
-
+        # print(batch_data.idx)
         # Only run validation dataset if train_metric is not set
         if ((not self.train_metric) and (dataloader_idx == 0)) or (self.train_metric):
             output = self(batch_data)
