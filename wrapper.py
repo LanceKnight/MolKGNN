@@ -558,8 +558,14 @@ class QSARDataset(InMemoryDataset):
                     data = self.regular_process(mol)
 
                 if data is None:
+                    # This None currently only happens to ChIRO due to non-existence dihedral angles for simple
+                    # molecules.
                     invalid_id_list.append([counter, label])
+                    dummy_data = Data(x =torch.ones([1,52]), edge_index = torch.ones([2,1]), edge_attr=torch.ones([
+                        1, 14]), bond_distances=torch.ones([1, 1]))
+                    data_list.append(dummy_data)
                     continue
+
                 data.idx = counter
                 data.y = torch.tensor([label], dtype=torch.int)
 
