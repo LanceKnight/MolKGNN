@@ -10,6 +10,7 @@ import pandas as pd
 
 branch = 'chiro' # Change this
 task_comment = '\" test all chiro\"'
+user_name = 'live-lab'
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -33,7 +34,7 @@ def run_command(dataset): # Change this
             --dataset_name {dataset} \
             --num_workers 11 \
             --max_epochs 1\
-            --dataset_path "/home/liuy69/projects/unified_framework/dataset/" \
+            --dataset_path "/home/{user_name}/projects/unified_framework/dataset/" \
             --enable_oversampling_with_replacement \
             --batch_size 32 \
             --default_root_dir actual_training_checkpoints \
@@ -163,7 +164,7 @@ def get_table_for_a_metric(use_best, best_based_on, monitored_metric, folder_lis
     output_df.columns=sorted_key_list
     return output_df
 
-def get_table_for_a_dataset(best_based_on = 'logAUC_0.001_0.1', exp_dir = '/home/liuy69/projects/unified_framework/experiments/'):
+def get_table_for_a_dataset(best_based_on = 'logAUC_0.001_0.1', exp_dir = f'/home/{user_name}/projects/unified_framework/experiments/'):
 
     use_best = True
 
@@ -212,7 +213,7 @@ def get_table_for_a_dataset(best_based_on = 'logAUC_0.001_0.1', exp_dir = '/home
 if __name__ == '__main__':
     start_time = time.time()
     mp.set_start_method('spawn')
-    model_dir = '/home/live-lab/projects/unified_framework/experiments/final_10K_chiro'
+    model_dir = f'/home/{user_name}/projects/unified_framework/experiments/final_10K_chiro'
     best_based_on = 'logAUC_0.001_0.1'
     # best_based_on = 'AUC'
 
