@@ -9,8 +9,8 @@ import time
 from datetime import datetime
 import math
 
-branch = 'chirality-last-layer' # Change this
-task_comment = '\"chirality only applies to the last layer\test of 1798\nadd-back chirality\nchirality_sign is for tot_sc\"' # Change this
+branch = 'new_node_feature' # Change this
+task_comment = '\"new set of node feature; softmax learnable weights; hyperparam same as best large-scale; no chirality; \"' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -131,6 +131,7 @@ def run(exp_id, *args):
             out.write(f'kernel4:{args[10]}')
             out.write(f'hidden_dim:{args[11]}')
             out.write(f'batch_size:{args[12]}')
+	    out.write(f'{task_comment}')
 
         run_command(exp_id, args)
         # time.sleep(3)
@@ -162,13 +163,13 @@ if __name__ == '__main__':
     # Hyperparms
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
     # dataset_list = ['463087','488997','2689', '485290', '1798']
-    dataset_list = [ '1798' ] # arg0
+    dataset_list = [ '2258' ] # arg0
     seed_list = [1, 2, 3, 4, 10] # arg1
-    warmup_list = [200] # arg2
+    warmup_list = [300] # arg2
     epochs_list = [20] # arg3
-    peak_lr_list = [5e-3] # arg4
+    peak_lr_list = [5e-2] # arg4
     end_lr_list = [1e-10] # arg5
-    num_layer_list = [4] # arg6
+    num_layer_list = [3] # arg6
     kernel1_list = [10] # arg7
     kernel2_list = [20] # arg8
     kernel3_list = [30] # arg9
