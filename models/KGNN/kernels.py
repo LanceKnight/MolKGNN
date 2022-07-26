@@ -36,7 +36,7 @@ class KernelConv(Module):
                  init_center_attr_sc_weight=0.2,
                  init_support_attr_sc_weight=0.2,
                  init_edge_attr_support_sc_weight=0.2,
-                 weight_requires_grad=False):
+                 weight_requires_grad=True):
         """
         Do the molecular convolution between a neighborhood and a kernel
         :param L:
@@ -665,17 +665,43 @@ class KernelConv(Module):
         #                                              best_p_support
         #                                              )
 
+        exp_support_attr_weight = torch.exp(self.support_attr_sc_weight)
+        exp_center_attr_weight = torch.exp(self.center_attr_sc_weight)
+        exp_edge_attr_support_weight = torch.exp(self.edge_attr_support_sc_weight)
 
-        # Each score is of Shape[num_kernel, num_nodes_of_this_degree]
+        denominator =  exp_support_attr_weight\
+                      + exp_center_attr_weight\
+                      + exp_edge_attr_support_weight
+
+        support_attr_sc_weight = exp_support_attr_weight/denominator
+        center_attr_sc_weight = exp_center_attr_weight/denominator
+        edge_attr_support_sc_weight = exp_edge_attr_support_weight/denominator
+
+
+        #Each score is of Shape[num_kernel, num_nodes_of_this_degree]
         sc = (
                  # length_sc * self.length_sc_weight,
                  # + angle_sc * self.angle_sc_weight
-                 support_attr_sc * self.support_attr_sc_weight
-                 + center_attr_sc * self.center_attr_sc_weight
-                 + edge_attr_support_sc * self.edge_attr_support_sc_weight
+                 support_attr_sc * support_attr_sc_weight
+                 + center_attr_sc * center_attr_sc_weight
+                 + edge_attr_support_sc * edge_attr_support_sc_weight
                  # + position_sc * self.length_sc_weight
-             ) / (self.support_attr_sc_weight+self.center_attr_sc_weight +
-                  self.edge_attr_support_sc_weight)
+             ) / (support_attr_sc_weight+center_attr_sc_weight +
+                  edge_attr_support_sc_weight)
+        # sc = (
+        #          # length_sc * self.length_sc_weight,
+        #          # + angle_sc * self.angle_sc_weight
+        #          support_attr_sc * self.support_attr_sc_weight
+        #          + center_attr_sc * self.center_attr_sc_weight
+        #          + edge_attr_support_sc * self.edge_attr_support_sc_weight
+        #          # + position_sc * self.length_sc_weight
+        #      ) / (self.support_attr_sc_weight+self.center_attr_sc_weight +
+        #           self.edge_attr_support_sc_weight)
+
+
+
+
+
         # if deg ==4:
         #     sc = sc * chirality_sign
         b = time.time()
