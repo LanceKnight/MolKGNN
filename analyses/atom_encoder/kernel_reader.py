@@ -86,8 +86,10 @@ def intepret_kernel(param_name, deg):
     param = params[f'{deg-1}.{param_name}']
     # print(f'shape of {param_name}:{param.shape}')
     if 'x' in param_name:
-        predicted_atom_num = intepret_emb(param)
-        print(f'predicted_atom_num:\n{predicted_atom_num}')
+
+        # predicted_atom_num = intepret_emb(param)
+        # print(f'predicted_atom_num:\n{predicted_atom_num}')
+        print(f'predicted_atom_num:\n{param}')
     elif 'p':
         print(f'coordinates:\n{param}')
     else:
@@ -102,32 +104,32 @@ if __name__ == '__main__':
     #                  tags=[gnn_type, "debug", "dummy"])
     # logger = task.get_logger()
 
-    encoder = Encoder(32)
-    encoder.load_param('atom_encoder.pt')
-    decoder = Decoder(32)
-    if os.path.exists('decoder.pt'):
-        decoder.load_param('decoder.pt')
-    else:
-        model = decoder
+    # encoder = Encoder(32)
+    # encoder.load_param('atom_encoder.pt')
+    # decoder = Decoder(32)
+    # if os.path.exists('decoder.pt'):
+    #     decoder.load_param('decoder.pt')
+    # else:
+    #     model = decoder
 
-        # Train Decoder
-        criterion = CrossEntropyLoss()
-        optimizer = optim.Adam(model.parameters(), lr=1 * 10 ** -2)
-        for epoch in tqdm(range(100)):
-            loss, acc = train(criterion, optimizer)
-            print(f'loss:{loss} acc:{acc}')
-            # logger.report_scalar(title='loss', series='train', value=loss, iteration=epoch)
-            # logger.report_scalar(title='accuracy', series='train', value=acc, iteration=epoch)
-        decoder.save_param('decoder.pt')
+    #     # Train Decoder
+    #     criterion = CrossEntropyLoss()
+    #     optimizer = optim.Adam(model.parameters(), lr=1 * 10 ** -2)
+    #     for epoch in tqdm(range(100)):
+    #         loss, acc = train(criterion, optimizer)
+    #         print(f'loss:{loss} acc:{acc}')
+    #         # logger.report_scalar(title='loss', series='train', value=loss, iteration=epoch)
+    #         # logger.report_scalar(title='accuracy', series='train', value=acc, iteration=epoch)
+    #     decoder.save_param('decoder.pt')
 
-    # Validating Decoder is working
-    atom_id = 3
-    input = encoder(torch.tensor([atom_id]))
-    pred_num = intepret_emb(input)
-    if pred_num == atom_id:
-        print("Decoder is properly trained to predict the input of encoder")
-    else:
-        print("Decoder is not correctly trained")
+    # # Validating Decoder is working
+    # atom_id = 3
+    # input = encoder(torch.tensor([atom_id]))
+    # pred_num = intepret_emb(input)
+    # if pred_num == atom_id:
+    #     print("Decoder is properly trained to predict the input of encoder")
+    # else:
+    #     print("Decoder is not correctly trained")
 
     # Kernel decoding
     path = 'kernels.pt'
