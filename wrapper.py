@@ -101,8 +101,9 @@ def one_hot_vector(val, lst):
 
 def get_atom_rep(atom):
     features = []
-    features += one_hot_vector(atom.GetAtomicNum(), [6, 7, 8, 9, 15, 16, 17, 35, 53, 999])  # list(range(1, 53))))
-    features += one_hot_vector(len(atom.GetNeighbors()), list(range(0, 5)))
+    # H, C, N, O, F, Si, P, S, Cl, Br, I, other
+    features += one_hot_vector(atom.GetAtomicNum(), [1, 6, 7, 8, 9, 14, 15, 16, 17, 35, 53, 999])
+    features += one_hot_vector(len(atom.GetNeighbors()), list(range(1, 5)))
     # features.append(atom.GetTotalNumHs())
     features.append(atom.GetFormalCharge())
     features.append(atom.IsInRing())
