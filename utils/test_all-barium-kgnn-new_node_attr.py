@@ -231,7 +231,7 @@ def get_table_for_a_dataset(best_based_on = 'logAUC_0.001_0.1', exp_dir = '/home
 if __name__ == '__main__':
     start_time = time.time()
     mp.set_start_method('spawn')
-    model_dir = '/home/liuy69/projects/unified_framework/experiments/optimize3_using_best_largescale_and_new_node_feature'
+    model_dir = '/home/liuy69/projects/unified_framework/experiments/optimize4_new_node_attr_with_optimize2'
     best_based_on = 'logAUC_0.001_0.1'
     best_based_on = 'AUC'
 
