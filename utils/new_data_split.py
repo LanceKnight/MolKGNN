@@ -12,22 +12,15 @@ def get_split(num_active, num_inactive, seed, dataset_name, shrink=False):
     random.shuffle(inactive_idx)
 
 
-    if shrink == False:
-        num_active_train = round(num_active * 0.8)
-        num_inactive_train = round(num_inactive * 0.8)
-        num_active_valid = round(num_active * 0.1)
-        num_inactive_valid = round(num_inactive * 0.1)
-        num_active_test = num_active - num_active_train - num_active_valid
-        num_inactive_test = round(num_inactive * 0.1)
-        filename = f'data_split/{dataset_name}_seed{seed}.pt'
-    else:
-        num_active_train = round(num_active * 0.8)
-        num_inactive_train = 10000 if num_inactive >10000 else round(num_inactive*0.8)
-        num_active_valid = round(num_active * 0.1)
-        num_inactive_valid = round(num_inactive * 0.1)
-        num_active_test = num_active - num_active_train - num_active_valid
-        num_inactive_test = round(num_inactive * 0.1)
-        filename = f'data_split/shrink_{dataset_name}_seed{seed}.pt'
+    num_active_train = round(num_active * 0.8)
+    num_inactive_train = round(num_inactive * 0.8)
+    num_active_valid = round(num_active * 0.1)
+    num_inactive_valid = round(num_inactive * 0.1)
+    num_active_test = num_active - num_active_train - num_active_valid
+    num_inactive_test = round(num_inactive * 0.1)
+    print(f'num_active_train:{num_active_train} num_active_valid:{num_active_valid } num_active_test:{num_active_test}')
+    
+
 
     split_dict = {}
     split_dict['train'] = active_idx[:num_active_train]\
@@ -48,6 +41,13 @@ def get_split(num_active, num_inactive, seed, dataset_name, shrink=False):
                            : num_inactive_train
                              + num_inactive_valid
                              + num_inactive_test]
+
+    if shrink == True:
+        trim_number = 10000 if num_inactive >10000 else round(num_inactive*0.8)
+        split_dict['train'] = split_dict['train'][:(trim_number+num_active)]
+        filename = f'data_split/preserve_shrink_{dataset_name}_seed{seed}.pt'
+    else:
+        filename = f'data_split/preserve_{dataset_name}_seed{seed}.pt'
 
     # print(f'split_dict:{split_dict["test"]}')
     num_train = len(split_dict['train'])
@@ -84,4 +84,4 @@ if __name__ == '__main__':
         for seed in seed_list:
             num_active = dataset_info[dataset_name]['num_active']
             num_inactive = dataset_info[dataset_name]['num_inactive']
-            get_split(num_active, num_inactive, seed, dataset_name, shrink=False)
+            get_split(num_active, num_inactive, seed, dataset_name, shrink=True)
