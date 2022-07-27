@@ -55,7 +55,7 @@ def run_command(exp_id, args):
         --num_kernel2_Nhop {args[8]} \
         --num_kernel3_Nhop {args[9]} \
         --num_kernel4_Nhop {args[10]} \
-        --node_feature_dim 27 \
+        --node_feature_dim 28 \
         --edge_feature_dim 7 \
         --hidden_dim {args[11]}\
         --batch_size {args[12]}\

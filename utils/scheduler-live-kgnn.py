@@ -7,8 +7,12 @@ import shutil, errno
 import itertools
 import time
 from datetime import datetime
+import math
 
-branch = 'main' # Change this
+branch = 'new_node_feature' # Change this
+task_comment = '\"new set of node feature; softmax learnable weights; hyperparam same \
+            as best large-scale; optimize2(dropout; weight decay); optimize1(mlp-before-pooling, batch_norm);no chirality; \"' # Change this
+
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -23,7 +27,7 @@ def gitupdate(dir_name):
     os.chdir(dir_name+'/kgnn')
     os.system('git gc')
     os.system('git pull')
-    os.system(f'git checkout {branch}') 
+    os.system(f'git checkout {branch}')
     os.system('git pull')
     os.chdir(cwd)
 
@@ -51,10 +55,13 @@ def run_command(exp_id, args):
         --num_kernel2_Nhop {args[8]} \
         --num_kernel3_Nhop {args[9]} \
         --num_kernel4_Nhop {args[10]} \
-        --node_feature_dim 27 \
+        --node_feature_dim 28 \
         --edge_feature_dim 7 \
         --hidden_dim {args[11]}\
         --batch_size {args[12]}\
+        --task_comment {task_comment}\
+        --weight_decay {args[14]}\
+        --dropout_ratio {args[15]}\
         ')\
 
 def copyanything(src, dst):
@@ -92,7 +99,7 @@ def overwrite_dir(src, dst):
         else: raise
 
 def run(exp_id, *args):
-    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_end{args[5]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}' # Change this
+    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}_decay{args[14]}_dropout{args[15]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -112,8 +119,8 @@ def run(exp_id, *args):
         if not newly_created:
             os.chdir(cwd)
             overwrite_dir(github_repo_dir, dir_name)
-            os.chdir(dir_name+'/kgnn')
-        os.makedirs('logs', exist_ok=True) 
+            os.chdir(dir_name+'/kgnn') 
+        os.makedirs('logs', exist_ok=True)
         with open('logs/params.log', 'w+') as out:
             out.write(f'dataset:{args[0]}')
             out.write(f'seed:{args[1]}')
@@ -128,6 +135,11 @@ def run(exp_id, *args):
             out.write(f'kernel4:{args[10]}')
             out.write(f'hidden_dim:{args[11]}')
             out.write(f'batch_size:{args[12]}')
+            out.write(f'trials:{args[13]}')
+            out.write(f'weight decay:{args[14]}')
+            out.write(f'droput:{args[15]}')
+            out.write(f'{task_comment}')
+
 
         run_command(exp_id, args)
         # time.sleep(3)
@@ -158,25 +170,29 @@ if __name__ == '__main__':
     # Change this
     # Hyperparms
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
-    dataset_list = [ '1798' ] # arg0
-    seed_list = [1, 2, 3, 4] # arg1
-    warmup_list = [200] # arg2
+    # dataset_list = ['463087','488997','2689', '485290', '1798']
+    dataset_list = [ '435034' ] # arg0
+    seed_list = [1, 2, 10] # arg1
+    warmup_list = [300] # arg2
     epochs_list = [20] # arg3
-    peak_lr_list = [5e-2, 5e-3] # arg4
+    peak_lr_list = [5e-3] # arg4
     end_lr_list = [1e-10] # arg5
-    num_layer_list = [2, 3] # arg6
+    num_layer_list = [4] # arg6
     kernel1_list = [10] # arg7
     kernel2_list = [20] # arg8
     kernel3_list = [30] # arg9
     kernel4_list = [50] # arg10
     hidden_dim = [32] # arg11
     batch_size = [16] # arg12
-    data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim, batch_size )) 
+    trials=[0] # args13
+    decay_list = [0.001] # arg14
+    dropout_list = [0.2] # arg15
+    data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim, batch_size, trials, decay_list, dropout_list )) 
     print(f'num data_pair:{len(data_pair)}')
     data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(len(data_pair))))
     print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
 
-    file_name='utils/scheduler.log'
+    file_name='logs/scheduler.log'
     os.makedirs(os.path.dirname(file_name), exist_ok=True)
     with open(file_name, "w") as out_file:
         out_file.write(f'num data_pair:{len(data_pair)}\n\n')
@@ -195,7 +211,6 @@ if __name__ == '__main__':
 
     end_time=time.time()
     run_time = end_time-start_time
-    run_time = end-start
     run_time_str = f'run_time:{math.floor(run_time/3600)}h{math.floor((run_time)%3600/60)}m' \
                    f'{math.floor(run_time%60)}s'
     print(run_time_str)
