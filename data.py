@@ -152,10 +152,10 @@ class DataLoaderModule(LightningDataModule):
         self.dataset_train = self.dataset['dataset'][split_idx["train"]]
         print(f'training # samples:{len(self.dataset_train)})')
 
-        self.dataset_val = self.dataset['dataset'][split_idx["valid"]]
+        self.dataset_val = self.dataset['dataset'][split_idx["test"]]
         print(f'validation # samples:{len(self.dataset_val)})')
 
-        self.dataset_test = self.dataset['dataset'][split_idx["test"]]
+        self.dataset_test = self.dataset['dataset'][split_idx["valid"]]
         print(f'testing # samples:{len(self.dataset_test)})')
 
     def setup(self, stage: str = None):
