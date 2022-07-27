@@ -9,7 +9,7 @@ from datetime import datetime
 import torch
 
 branch = 'chiro' # Change this
-task_comment = '\"10K for mini-set of datasets\"' # Change this
+task_comment = '\"10K for 485290\"' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -103,8 +103,8 @@ if __name__ == '__main__':
 
     # dataset_list = [ '485290', '1843', '2258', '488997','2689', '435008', '1798', '435034', '463087'] # arg0
     # dataset_list = ['463087', '488997', '2689', '485290']
-    dataset_list = ['435034']
-    # dataset_list = [ '485290']
+    # dataset_list = ['435034']
+    dataset_list = [ '1798']
     seed_list = [1, 10, 2, 3, 4] # arg1
     warmup_list = [200] # arg2
     epochs_list = [100] # arg3
