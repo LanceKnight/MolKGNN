@@ -435,22 +435,23 @@ class GNNModel(pl.LightningModule):
         :return: A union of lists, the first one is optimizers and the
         second one is schedulers
         """
-        print(f'params:')
+
         # Only apply weight decay to non-kernel params
         decay_dict = list()
         nodecay_dict = list()
-        for name, m in self.named_parameters():
-            if ('x_center' in name) \
-                    or ('p_support' in name) \
-                    or (('edge_attr_support' in name) and ('edge_attr_support_sc' not in name) ) \
-                    or ('x_support' in name):
-                nodecay_dict.append(m)
-                print(f'@@@{name} is in no decay list')
-                # print(f'{type(m)}')
-            else:
-                decay_dict.append(m)
-                print(f'***{name} is in decay list')
-                # print(f'{type(m)}')
+
+        # Print all params
+        # print(f'params:')
+        # for name, m in self.named_parameters():
+        #     if ('x_center' in name) \
+        #             or ('p_support' in name) \
+        #             or (('edge_attr_support' in name) and ('edge_attr_support_sc' not in name) ) \
+        #             or ('x_support' in name):
+        #         nodecay_dict.append(m)
+        #         print(f'@@@{name} is in no decay list')
+        #     else:
+        #         decay_dict.append(m)
+        #         print(f'***{name} is in decay list')
 
         optimizer = AdamW([{'params': nodecay_dict, 'weight_decay': 0}, {'params': decay_dict, 'weight_decay':
             self.weight_decay} ])
