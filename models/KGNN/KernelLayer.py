@@ -3,7 +3,8 @@ from .kernels import PredefinedKernelSetConv, KernelSetConv
 from torch_geometric.nn import MessagePassing
 from torch_geometric.data import Data
 from torch.nn import ModuleList
-
+from torch_geometric.utils import add_self_loops
+import torch
 
 class MolGCN(MessagePassing):
     def __init__(self, num_layers=5, num_kernel1_1hop=0, num_kernel2_1hop=0,
@@ -55,7 +56,7 @@ class MolGCN(MessagePassing):
                 # print(f'num_kernels:{self.num_kernels(i)}')
                 kernel_layer = PredefinedKernelSetConv(D=p_dim,
                                                        node_attr_dim=self.num_kernels(
-                                                           i),
+                                                           i)+x_dim,
                                                        edge_attr_dim=edge_attr_dim,
                                                        L1=num_kernel1_Nhop,
                                                        L2=num_kernel2_Nhop,
@@ -163,7 +164,7 @@ class MolGCN(MessagePassing):
             # print(f'foward: data.x{data.x}')
             save_score = kwargv['save_score']
         h = x
-
+        data.edge_index, _ = add_self_loops(data.edge_index, num_nodes=data.x.size(0))
         for i in range(self.num_layers):
             # print(f'KernelLayer.py::{i}th layer==============')
             data.x = h
@@ -178,7 +179,7 @@ class MolGCN(MessagePassing):
             # print(f'edge_index:{edge_index.device}, sim_sc:{sim_sc.device}')
             # print('sim_sc')
             # print(sim_sc)
-            h = self.propagate(edge_index=edge_index, sim_sc=sim_sc)
+            h = torch.cat(h, self.propagate(edge_index=edge_index, sim_sc=sim_sc))
             # print(f'layer time:{end-start}')
         return h
 
