@@ -656,7 +656,7 @@ class QSARDataset(InMemoryDataset):
 
 
     def get_idx_split(self, seed):
-        split_dict = torch.load(f'data_split/shrink_{self.dataset}_seed2.pt')
+        split_dict = torch.load(f'data_split/preserve_{self.dataset}_seed2.pt')
         try:
             invalid_id_list = pd.read_csv(os.path.join(self.processed_dir, f'{self.gnn_type}-'
                                                                        f'{self.dataset}-invalid_id.csv')
