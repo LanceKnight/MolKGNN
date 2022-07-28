@@ -687,7 +687,7 @@ class QSARDataset(InMemoryDataset):
     def __getitem__(self, idx):
         if isinstance(idx, int):
             item = self.get(self.indices()[idx])
-            item.idx = idx
+            # item.idx = idx
             return item
         else:
             return self.index_select(idx)
