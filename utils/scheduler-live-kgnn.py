@@ -9,9 +9,8 @@ import time
 from datetime import datetime
 import math
 
-branch = 'new_node_feature' # Change this
-task_comment = '\"new set of node feature; softmax learnable weights; hyperparam same \
-            as best large-scale; optimize2(dropout; weight decay); optimize1(mlp-before-pooling, batch_norm);no chirality; \"' # Change this
+branch = 'shrink-full-comp-shrink' # Change this
+task_comment = '\" optimize4; new_data_split; shrink\"' # Change this
 
 
 def gitclone(dir_name):
@@ -99,7 +98,7 @@ def overwrite_dir(src, dst):
         else: raise
 
 def run(exp_id, *args):
-    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}_decay{args[14]}_dropout{args[15]}' # Change this
+    exp_name = f'exp{exp_id}shrink_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}_decay{args[14]}_dropout{args[15]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -171,10 +170,10 @@ if __name__ == '__main__':
     # Hyperparms
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
     # dataset_list = ['463087','488997','2689', '485290', '1798']
-    dataset_list = [ '435034' ] # arg0
+    dataset_list = [ '2258' ] # arg0
     seed_list = [1, 2, 10] # arg1
     warmup_list = [300] # arg2
-    epochs_list = [20] # arg3
+    epochs_list = [13] # arg3
     peak_lr_list = [5e-3] # arg4
     end_lr_list = [1e-10] # arg5
     num_layer_list = [4] # arg6
