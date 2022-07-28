@@ -55,8 +55,7 @@ class MolGCN(MessagePassing):
             if (predefined_kernelsets == True):
                 # print(f'num_kernels:{self.num_kernels(i)}')
                 kernel_layer = PredefinedKernelSetConv(D=p_dim,
-                                                       node_attr_dim=self.num_kernels(
-                                                           i)+x_dim,
+                                                       node_attr_dim=self.num_kernels(i),
                                                        edge_attr_dim=edge_attr_dim,
                                                        L1=num_kernel1_Nhop,
                                                        L2=num_kernel2_Nhop,
@@ -163,7 +162,7 @@ class MolGCN(MessagePassing):
                         )
             # print(f'foward: data.x{data.x}')
             save_score = kwargv['save_score']
-        h = x
+        h = ini_h = x
         data.edge_index, _ = add_self_loops(data.edge_index, num_nodes=data.x.size(0))
         for i in range(self.num_layers):
             # print(f'KernelLayer.py::{i}th layer==============')
@@ -179,7 +178,7 @@ class MolGCN(MessagePassing):
             # print(f'edge_index:{edge_index.device}, sim_sc:{sim_sc.device}')
             # print('sim_sc')
             # print(sim_sc)
-            h = torch.cat(h, self.propagate(edge_index=edge_index, sim_sc=sim_sc))
+            h = self.propagate(edge_index=edge_index, sim_sc=sim_sc)
             # print(f'layer time:{end-start}')
         return h
 
