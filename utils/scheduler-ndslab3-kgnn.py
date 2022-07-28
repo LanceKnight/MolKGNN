@@ -173,7 +173,7 @@ if __name__ == '__main__':
     dataset_list = [ '2258' ] # arg0
     seed_list = [1, 2, 10] # arg1
     warmup_list = [300] # arg2
-    epochs_list = [20] # arg3
+    epochs_list = [13] # arg3
     peak_lr_list = [5e-3] # arg4
     end_lr_list = [1e-10] # arg5
     num_layer_list = [4] # arg6
