@@ -49,13 +49,12 @@ class MolGCN(MessagePassing):
             num_kernels)  # num of kernels in each layer
 
         # N layer
-        x_dim = num_kernels
         for i in range(num_layers - 1):
             # print(f'layer:{i}')
             if (predefined_kernelsets == True):
-                # print(f'num_kernels:{self.num_kernels(i)}')
+
                 kernel_layer = PredefinedKernelSetConv(D=p_dim,
-                                                       node_attr_dim=self.num_kernels(i),
+                                                       node_attr_dim=self.num_kernels(i)+x_dim,
                                                        edge_attr_dim=edge_attr_dim,
                                                        L1=num_kernel1_Nhop,
                                                        L2=num_kernel2_Nhop,
@@ -63,12 +62,13 @@ class MolGCN(MessagePassing):
                                                        L4=num_kernel4_Nhop,
                                                        is_first_layer=False)
             else:
+                # print(f'num_kernels:{self.num_kernels(i)}+{x_dim}')
                 kernel_layer = KernelSetConv(L1=num_kernel1_Nhop,
                                              L2=num_kernel2_Nhop,
                                              L3=num_kernel3_Nhop,
                                              L4=num_kernel4_Nhop,
                                              D=p_dim,
-                                             node_attr_dim=self.num_kernels(i),
+                                             node_attr_dim=self.num_kernels(i)+x_dim,
                                              edge_attr_dim=edge_attr_dim)
             self.layers.append(kernel_layer)
             self.num_kernels_list.append(kernel_layer.get_num_kernel())
@@ -177,8 +177,10 @@ class MolGCN(MessagePassing):
 
             # print(f'edge_index:{edge_index.device}, sim_sc:{sim_sc.device}')
             # print('sim_sc')
-            # print(sim_sc)
-            h = self.propagate(edge_index=edge_index, sim_sc=sim_sc)
+
+            # print(f'ini_h.shape:{ini_h.shape}')
+            # print(f'h:{torch.cat([ini_h, self.propagate(edge_index=edge_index, sim_sc=sim_sc)], dim=1).shape}')
+            h = torch.cat([ini_h, self.propagate(edge_index=edge_index, sim_sc=sim_sc)], dim=1)
             # print(f'layer time:{end-start}')
         return h
 

@@ -32,7 +32,7 @@ class KGNNNet(torch.nn.Module):
             num_kernel1_Nhop
             + num_kernel2_Nhop
             + num_kernel3_Nhop
-            + num_kernel4_Nhop
+            + num_kernel4_Nhop + x_dim
             , graph_embedding_dim)
 
         self.graph_embedding_lin2 = Linear(
