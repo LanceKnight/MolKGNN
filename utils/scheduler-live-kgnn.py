@@ -9,8 +9,8 @@ import time
 from datetime import datetime
 import math
 
-branch = 'new_node_feature' # Change this
-task_comment = '\"new set of node feature; softmax learnable weights; hyperparam same \
+branch = 'progate-change' # Change this
+task_comment = '\"add-self-loop;new set of node feature; softmax learnable weights; hyperparam same \
             as best large-scale; optimize2(dropout; weight decay); optimize1(mlp-before-pooling, batch_norm);no chirality; \"' # Change this
 
 
