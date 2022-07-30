@@ -171,7 +171,7 @@ if __name__ == '__main__':
     # Hyperparms
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
     # dataset_list = ['463087','488997','2689', '485290', '1798']
-    dataset_list = [ '1798' ] # arg0
+    dataset_list = [ '435034', '2258', '2689' ] # arg0
     seed_list = [1, 2, 10] # arg1
     warmup_list = [300] # arg2
     epochs_list = [20] # arg3
