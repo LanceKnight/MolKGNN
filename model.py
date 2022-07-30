@@ -282,7 +282,7 @@ class GNNModel(pl.LightningModule):
             return valid_step_output
 
     def validation_epoch_end(self, valid_step_outputs):
-        # Only run validation dataset if train_metric is not set
+        # Run both train and valid dataset in evaluation mode
         if self.train_metric:
             for i, outputs_each_dataloader in enumerate(valid_step_outputs):
                 results = {}
@@ -332,7 +332,7 @@ class GNNModel(pl.LightningModule):
             # This log is used for monitoring metric and saving the best model. The actual logging happends within
             # clearml. See Monitor.py
             for key in results.keys():
-                self.log(key, results[key])
+                self.log(key, results[key], prog_bar=True)
 
 
 
