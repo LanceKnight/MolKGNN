@@ -163,7 +163,7 @@ class MolGCN(MessagePassing):
             # print(f'foward: data.x{data.x}')
             save_score = kwargv['save_score']
         h = ini_h = x
-        data.edge_index, _ = add_self_loops(data.edge_index, num_nodes=data.x.size(0))
+        # data.edge_index, _ = add_self_loops(data.edge_index, num_nodes=data.x.size(0))
         for i in range(self.num_layers):
             # print(f'KernelLayer.py::{i}th layer==============')
             data.x = h
