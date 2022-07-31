@@ -8,7 +8,7 @@ import itertools
 import time
 import pandas as pd
 
-branch = 'main' # Change this
+branch = 'progate-change' # Change this
 task_comment = '\" test all kgnn\"'
 
 def gitclone(dir_name):
@@ -231,9 +231,11 @@ def get_table_for_a_dataset(best_based_on = 'logAUC_0.001_0.1', exp_dir = '/home
 if __name__ == '__main__':
     start_time = time.time()
     mp.set_start_method('spawn')
-    model_dir = '/home/liuy69/projects/unified_framework/experiments/final_kgnn'
+    model_dir = '/home/liuy69/projects/unified_framework/experiments/optimize7-large'
     best_based_on = 'logAUC_0.001_0.1'
-    best_based_on = 'AUC'
+    # best_based_on = 'AUC'
+
+
 
     all_table = pd.DataFrame()
     for dataset_exp in os.listdir(model_dir):
@@ -242,7 +244,11 @@ if __name__ == '__main__':
             # print(dataset_exp)
             table = get_table_for_a_dataset(best_based_on, osp.join(model_dir, dataset_exp))
             all_table = pd.concat([all_table,table], axis = 0)
+
+    print(f'==============')
+    print(f'best based on {best_based_on}')
     print(all_table)
+    print(f'==============')
     all_table.to_csv(f'logs/all_test_result_df_all_table.csv')
 
     end_time=time.time()
