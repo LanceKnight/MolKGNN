@@ -10,7 +10,7 @@ from datetime import datetime
 import math
 
 branch = 'new_node_feature' # Change this
-task_comment = '\"no idx line\"' # Change this
+task_comment = '\"with idx line\"' # Change this
 
 
 def gitclone(dir_name):
@@ -98,7 +98,7 @@ def overwrite_dir(src, dst):
         else: raise
 
 def run(exp_id, *args):
-    exp_name = f'exp{exp_id}noidxline_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}_decay{args[14]}_dropout{args[15]}' # Change this
+    exp_name = f'exp{exp_id}idxline_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}_decay{args[14]}_dropout{args[15]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
