@@ -10,7 +10,7 @@ from datetime import datetime
 import math
 
 branch = 'progate-change' # Change this
-task_comment = '\"self_loop; concate_ori_feature;new set of node feature; softmax learnable weights; hyperparam same \
+task_comment = '\"no self_loop; concate_ori_feature;new set of node feature; softmax learnable weights; hyperparam same \
             as best large-scale; optimize2(dropout; weight decay); optimize1(mlp-before-pooling, batch_norm);no chirality; \"' # Change this
 
 
