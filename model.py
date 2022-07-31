@@ -330,7 +330,7 @@ class GNNModel(pl.LightningModule):
             # This log is used for monitoring metric and saving the best model. The actual logging happends within
             # clearml. See Monitor.py
             for key in results.keys():
-                self.log(key, results[key])
+                self.log(key, results[key], prog_bar=True)
 
 
 
