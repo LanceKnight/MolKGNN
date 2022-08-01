@@ -658,12 +658,12 @@ class KernelConv(Module):
 
 
         # Calculation of chirality
-        # chirality_sign = 1
-        # if (deg == 4) and (is_last_layer):
-        #     chirality_sign = self.get_chirality_sign(p_neighbor,
-        #                                              x_neighbor,
-        #                                              best_p_support
-        #                                              )
+        chirality_sign = 1
+        if (deg == 4) and (is_last_layer):
+            chirality_sign = self.get_chirality_sign(p_neighbor,
+                                                     x_neighbor,
+                                                     best_p_support
+                                                     )
 
         exp_support_attr_weight = torch.exp(self.support_attr_sc_weight)
         exp_center_attr_weight = torch.exp(self.center_attr_sc_weight)
