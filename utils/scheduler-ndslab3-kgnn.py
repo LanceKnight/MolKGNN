@@ -10,7 +10,7 @@ from datetime import datetime
 import math
 
 branch = 'new_node_feature' # Change this
-task_comment = '\"revert valid and test set; new set of node feature; softmax learnable weights; hyperparam same \
+task_comment = '\"large; no idx line; opt4: new set of node feature; softmax learnable weights; hyperparam same \
             as best large-scale; optimize2(dropout; weight decay); optimize1(mlp-before-pooling, batch_norm);no chirality; \"' # Change this
 
 
@@ -171,7 +171,7 @@ if __name__ == '__main__':
     # Hyperparms
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
     # dataset_list = ['463087','488997','2689', '485290', '1798']
-    dataset_list = [ '1798' ] # arg0
+    dataset_list = [ '2689', '435034', '2258', '435008', '1798', '488997' ] # arg0
     seed_list = [1, 2, 10] # arg1
     warmup_list = [300] # arg2
     epochs_list = [20] # arg3
@@ -206,7 +206,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 7) as pool:
+    with Pool(processes = 5) as pool:
         pool.starmap(run, data_pair_with_exp_id)
 
     end_time=time.time()
