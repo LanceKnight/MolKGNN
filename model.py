@@ -4,6 +4,7 @@ from models.KGNN.KGNNNet import KGNNNet
 from models.DimeNetPP.DimeNetPP import DimeNetPP
 from models.ChebNet.ChebNet import ChebNet
 from models.ChIRoNet.ChIRoNet import ChIRoNet
+from models.SchNet.SchNet import SchNet
 from models.ChIRoNet.params_interpreter import string_to_object
 from models.SphereNet.SphereNet import SphereNet
 from evaluation import calculate_logAUC, calculate_ppv, calculate_accuracy, \
@@ -18,7 +19,8 @@ from sklearn.metrics import mean_squared_error
 from torch.nn import Linear, Sigmoid, ReLU, Embedding, Dropout
 from torch_geometric.data import Data
 import torch
-from torch.optim import Adam
+from torch.optim import AdamW
+from torch_geometric.nn.acts import swish
 import time
 
 class GNNModel(pl.LightningModule):
@@ -58,9 +60,6 @@ class GNNModel(pl.LightningModule):
                 activation_dict[key] = string_to_object[
                     value]  # convert strings to actual python
                 # objects/functions using pre-defined mapping
-            print(
-                f'model.py::chironet argument:'
-                f'{type(args.activation_dict["EConv_mlp_hidden_activation"])}')
             self.gnn_model = ChIRoNet(
                 F_z_list=args.F_z_list,  # dimension of latent space
                 F_H=args.F_H,
@@ -103,7 +102,8 @@ class GNNModel(pl.LightningModule):
                 num_before_skip=args.num_before_skip,
                 num_after_skip=args.num_after_skip,
                 num_output_layers=args.num_output_layers,
-                act_name='swish',
+                # act_name='swish',
+                act=swish,
                 MLP_hidden_sizes=[],  # [] for contrastive)
             )
             out_dim = args.out_channels
@@ -130,8 +130,19 @@ class GNNModel(pl.LightningModule):
                 use_node_features=True,
                 MLP_hidden_sizes=args.MLP_hidden_sizes,
                 # [] for contrastive
-
             )
+            out_dim = args.out_channels
+        elif gnn_type == 'schnet':
+            self.gnn_model = SchNet(
+                energy_and_force=False,
+                cutoff=args.cutoff,
+                num_layers=args.num_layers,
+                hidden_channels=args.hidden_channels,
+                num_filters=args.num_filters,
+                num_gaussians=args.num_gaussians,
+                out_channels=args.out_channels
+            )
+            out_dim = args.out_channels
         elif gnn_type == 'kgnn':
             self.gnn_model = KGNNNet(num_layers=args.num_layers,
                                      num_kernel1_1hop = args.num_kernel1_1hop,
@@ -145,7 +156,8 @@ class GNNModel(pl.LightningModule):
                                      x_dim = args.node_feature_dim,
                                      edge_attr_dim=args.edge_feature_dim,
                                      graph_embedding_dim = args.hidden_dim,
-                                     predefined_kernelsets=False
+                                     predefined_kernelsets=False,
+                                     drop_ratio=args.dropout_ratio
             )
             out_dim = args.hidden_dim
         else:
@@ -168,6 +180,7 @@ class GNNModel(pl.LightningModule):
         self.valid_epoch_outputs = {}
         self.record_valid_pred = args.record_valid_pred
         self.train_metric = args.train_metric
+        self.weight_decay = args.weight_decay
 
     def forward(self, data):
 
@@ -319,7 +332,7 @@ class GNNModel(pl.LightningModule):
             # This log is used for monitoring metric and saving the best model. The actual logging happends within
             # clearml. See Monitor.py
             for key in results.keys():
-                self.log(key, results[key])
+                self.log(key, results[key], prog_bar=True)
 
 
 
@@ -422,7 +435,28 @@ class GNNModel(pl.LightningModule):
         :return: A union of lists, the first one is optimizers and the
         second one is schedulers
         """
-        optimizer = Adam(self.parameters())
+
+        # Only apply weight decay to non-kernel params
+        decay_dict = list()
+        nodecay_dict = list()
+
+        # Two groups of params: one not decay, one decay. Params in kernels do not decay.
+        # print(f'params:')
+        for name, m in self.named_parameters():
+            if ('x_center' in name) \
+                    or ('p_support' in name) \
+                    or (('edge_attr_support' in name) and ('edge_attr_support_sc' not in name) ) \
+                    or ('x_support' in name):
+                nodecay_dict.append(m)
+                # print(f'@@@{name} is in no decay list')
+            else:
+                decay_dict.append(m)
+                # print(f'***{name} is in decay list')
+
+        optimizer = AdamW([{'params': nodecay_dict, 'weight_decay': 0}, {'params': decay_dict, 'weight_decay':
+            self.weight_decay} ])
+        # print(optimizer)
+        # optimizer = Adam(self.parameters())
         # scheduler = warmup.
         scheduler = {
             'scheduler': PolynomialDecayLR(
@@ -499,6 +533,7 @@ class GNNModel(pl.LightningModule):
         parser.add_argument('--warmup_iterations', type=int, default=60000)
         parser.add_argument('--peak_lr', type=float, default=5e-2)
         parser.add_argument('--end_lr', type=float, default=1e-9)
+        parser.add_argument('--weight_decay', type=float, default=0)
 
         # For linear layer
         parser.add_argument('--ffn_dropout_rate', type=float, default=0.25)
@@ -517,6 +552,8 @@ class GNNModel(pl.LightningModule):
             ChIRoNet.add_model_specific_args(parent_parser)
         elif gnn_type == 'spherenet':
             SphereNet.add_model_specific_args(parent_parser)
+        elif gnn_type == 'schnet':
+            SchNet.add_model_specific_args(parent_parser)
         else:
             NotImplementedError('model.py::GNNModel::add_model_args(): '
                                 'gnn_type is not defined for args groups')

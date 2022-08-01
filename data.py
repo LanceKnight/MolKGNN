@@ -7,7 +7,7 @@ from torch.nn import functional as F
 from torch.nn import BCEWithLogitsLoss, MSELoss
 from torch.utils.data import WeightedRandomSampler
 from torch_geometric.loader import DataLoader
-from torchvision.transforms import Lambda
+# from torchvision.transforms import Lambda
 from functools import partial
 
 aug_num = 5
@@ -146,8 +146,6 @@ class DataLoaderModule(LightningDataModule):
         self.dataset_path = dataset_path
 
         split_idx = self.dataset['dataset'].get_idx_split(seed=self.seed)
-        # print(f'split:\n')
-        # print(split_idx)
 
         self.dataset_train = self.dataset['dataset'][split_idx["train"]]
         print(f'training # samples:{len(self.dataset_train)})')

@@ -1,7 +1,8 @@
 import torch
 from torch import nn
 from torch_geometric.nn import radius_graph
-from torch_geometric.nn.resolver import activation_resolver
+# from torch_geometric.nn.resolver import activation_resolver
+from torch_geometric.nn.acts import swish
 from torch_geometric.nn.inits import glorot_orthogonal
 from torch_geometric.nn.models.dimenet import (
     BesselBasisLayer,
@@ -54,10 +55,12 @@ class InteractionPPBlock(torch.nn.Module):
         num_radial,
         num_before_skip,
         num_after_skip,
-        act_name='swish',
+        # act_name='swish',
+        act=swish
     ):
         super(InteractionPPBlock, self).__init__()
-        self.act = activation_resolver(act_name)
+        # print(f'dimenet_pp.py::activation_return:{activation_resolver(act_name)}')
+        self.act = act#activation_resolver(act_name)
 
         # Transformations of Bessel and spherical basis representations.
         self.lin_rbf1 = nn.Linear(num_radial, basis_emb_size, bias=False)
@@ -78,14 +81,14 @@ class InteractionPPBlock(torch.nn.Module):
         # Residual layers before and after skip connection.
         self.layers_before_skip = torch.nn.ModuleList(
             [
-                ResidualLayer(hidden_channels, activation_resolver(act_name))
+                ResidualLayer(hidden_channels, act)#activation_resolver(act_name))
                 for _ in range(num_before_skip)
             ]
         )
         self.lin = nn.Linear(hidden_channels, hidden_channels)
         self.layers_after_skip = torch.nn.ModuleList(
             [
-                ResidualLayer(hidden_channels, activation_resolver(act_name))
+                ResidualLayer(hidden_channels, act)#activation_resolver(act_name))
                 for _ in range(num_after_skip)
             ]
         )
@@ -155,10 +158,11 @@ class OutputPPBlock(torch.nn.Module):
         out_emb_channels,
         out_channels,
         num_layers,
-        act_name='swish',
+        act=swish
+        # act_name='swish',
     ):
         super(OutputPPBlock, self).__init__()
-        self.act = activation_resolver(act_name)
+        self.act = act#activation_resolver(act_name)
 
         self.lin_rbf = nn.Linear(num_radial, hidden_channels, bias=False)
         self.lin_up = nn.Linear(hidden_channels, out_emb_channels, bias=True)
@@ -228,7 +232,8 @@ class DimeNetPlusPlus(torch.nn.Module):
         num_before_skip=1,
         num_after_skip=2,
         num_output_layers=3,
-        act_name='swish',
+        # act_name='swish',
+        act=swish,
         MLP_hidden_sizes = [],
     ):
         super(DimeNetPlusPlus, self).__init__()
@@ -247,7 +252,9 @@ class DimeNetPlusPlus(torch.nn.Module):
             num_spherical, num_radial, cutoff, envelope_exponent
         )
 
-        self.emb = EmbeddingBlock(num_radial, hidden_channels, activation_resolver(act_name))
+        # print(f'dimenet_pp.py::activation_return:{activation_resolver(act_name)}')
+        self.act = act#activation_resolver(act_name)
+        self.emb = EmbeddingBlock(num_radial, hidden_channels, act)#activation_resolver(act_name))
 
         self.output_blocks = torch.nn.ModuleList(
             [
@@ -257,7 +264,8 @@ class DimeNetPlusPlus(torch.nn.Module):
                     out_emb_channels,
                     out_channels,
                     num_output_layers,
-                    act_name,
+                    # act_name,
+                    act
                 )
                 for _ in range(num_blocks + 1)
             ]
@@ -273,7 +281,8 @@ class DimeNetPlusPlus(torch.nn.Module):
                     num_radial,
                     num_before_skip,
                     num_after_skip,
-                    act_name,
+                    # act_name,
+                    act
                 )
                 for _ in range(num_blocks)
             ]
@@ -351,6 +360,7 @@ class DimeNetPlusPlus(torch.nn.Module):
             P += output_block(x, rbf, i, num_nodes=pos.size(0))
 
         out = P.sum(dim=0) if batch is None else scatter(P, batch, dim=0)
+        # print(f'dimenet_pp:{out.shape}')
         # #if we are using a MLP for downstream target prediction
         # if len(self.MLP_hidden_sizes) > 0:
         #     target = self.Output_MLP(out)
