@@ -702,8 +702,8 @@ class KernelConv(Module):
 
 
 
-        # if deg ==4:
-        #     sc = sc * chirality_sign
+        if deg ==4:
+            sc = sc * chirality_sign
         b = time.time()
         return sc
         # return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, \
