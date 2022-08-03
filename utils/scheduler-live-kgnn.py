@@ -10,7 +10,7 @@ from datetime import datetime
 import math
 
 branch = 'new_node_feature' # Change this
-task_comment = '\"with idx line\"' # Change this
+task_comment = '\"ablation for angle and length\"' # Change this
 
 
 def gitclone(dir_name):
@@ -170,8 +170,8 @@ if __name__ == '__main__':
     # Hyperparms
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
     # dataset_list = ['463087','488997','2689', '485290', '1798']
-    dataset_list = [ '2258' ] # arg0
-    seed_list = [1, 2] # arg1
+    dataset_list = [ '435084' ] # arg0
+    seed_list = [1, 2, 3, 4, 10] # arg1
     warmup_list = [300] # arg2
     epochs_list = [20] # arg3
     peak_lr_list = [5e-3] # arg4

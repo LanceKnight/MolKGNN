@@ -635,10 +635,10 @@ class KernelConv(Module):
         #
         # # print(f'best_p_support:{best_p_support}')
         #
-        # # Calculate length score
-        # best_p_support = best_p_support.squeeze(1)
-        # length_sc = self.get_length_score(p_neighbor,
-        #                                   best_p_support)
+        # Calculate length score
+        best_p_support = best_p_support.squeeze(1)
+        length_sc = self.get_length_score(p_neighbor,
+                                          best_p_support)
 
         # Calculate the center attribute score
         center_attr_sc = self.get_center_attribute_score(x_focal, x_center)
@@ -680,14 +680,14 @@ class KernelConv(Module):
 
         #Each score is of Shape[num_kernel, num_nodes_of_this_degree]
         sc = (
-                 # length_sc * self.length_sc_weight,
+                 length_sc * self.length_sc_weight,
                  # + angle_sc * self.angle_sc_weight
                  support_attr_sc * support_attr_sc_weight
                  + center_attr_sc * center_attr_sc_weight
                  + edge_attr_support_sc * edge_attr_support_sc_weight
                  # + position_sc * self.length_sc_weight
              ) / (support_attr_sc_weight+center_attr_sc_weight +
-                  edge_attr_support_sc_weight)
+                  edge_attr_support_sc_weight + self.length_sc_weight)
         # sc = (
         #          # length_sc * self.length_sc_weight,
         #          # + angle_sc * self.angle_sc_weight
