@@ -71,7 +71,7 @@ def get_table_for_a_metric(use_best, best_based_on, monitored_metric, folder_lis
             peak = name_components[5]
             layers = name_components[7]
             index_name = f'{dataset_name}_{peak}_{layers}'
-            # print('\n=======\n')
+
             try:
                 with open(osp.join(exp_dir,f'{folder}/kgnn/logs/test_result.log'), 'r') as in_file:
                     for line in in_file:
@@ -192,6 +192,7 @@ def get_table_for_a_dataset(best_based_on = 'logAUC_0.001_0.1', exp_dir = '/home
    # Get a list of folders
     dataset_folder_list = []
     for folder in os.listdir(exp_dir):
+        # print(f'{folder}')
         if 'exp' in folder:
             dataset_folder_list.append(osp.join(exp_dir, folder))
 
@@ -231,9 +232,9 @@ def get_table_for_a_dataset(best_based_on = 'logAUC_0.001_0.1', exp_dir = '/home
 if __name__ == '__main__':
     start_time = time.time()
     mp.set_start_method('spawn')
-    model_dir = '/home/liuy69/projects/unified_framework/experiments/optimize4-large'
+    model_dir = '/home/liuy69/projects/unified_framework/experiments/final_kgnn_optimize4'
     best_based_on = 'logAUC_0.001_0.1'
-    # best_based_on = 'AUC'
+    best_based_on = 'AUC'
 
     all_table = pd.DataFrame()
     for dataset_exp in os.listdir(model_dir):
