@@ -668,19 +668,23 @@ class KernelConv(Module):
         exp_support_attr_weight = torch.exp(self.support_attr_sc_weight)
         exp_center_attr_weight = torch.exp(self.center_attr_sc_weight)
         exp_edge_attr_support_weight = torch.exp(self.edge_attr_support_sc_weight)
+        exp_length_sc_weight = torch.exp(self.length_sc_weight)
+        exp_angle_sc_weight = torch.exp(self.angle_sc_weight)
 
         denominator =  exp_support_attr_weight\
                       + exp_center_attr_weight\
-                      + exp_edge_attr_support_weight
+                      + exp_edge_attr_support_weight\
+                      + exp_length_sc_weight
 
         support_attr_sc_weight = exp_support_attr_weight/denominator
         center_attr_sc_weight = exp_center_attr_weight/denominator
         edge_attr_support_sc_weight = exp_edge_attr_support_weight/denominator
+        length_sc_weight = exp_length_sc_weight/denominator
 
 
         #Each score is of Shape[num_kernel, num_nodes_of_this_degree]
         sc = (
-                 length_sc * self.length_sc_weight+
+                 length_sc * length_sc_weight+
                  # + angle_sc * self.angle_sc_weight
                  support_attr_sc * support_attr_sc_weight
                  + center_attr_sc * center_attr_sc_weight

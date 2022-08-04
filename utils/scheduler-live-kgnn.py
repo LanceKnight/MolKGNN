@@ -171,7 +171,7 @@ if __name__ == '__main__':
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
     # dataset_list = ['463087','488997','2689', '485290', '1798']
     dataset_list = [ '435034' ] # arg0
-    seed_list = [1, 2, 3, 4, 10] # arg1
+    seed_list = [5, 6, 1, 2, 10] # arg1
     warmup_list = [300] # arg2
     epochs_list = [20] # arg3
     peak_lr_list = [5e-3] # arg4
