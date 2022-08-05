@@ -231,9 +231,9 @@ def get_table_for_a_dataset(best_based_on = 'logAUC_0.001_0.1', exp_dir = '/home
 if __name__ == '__main__':
     start_time = time.time()
     mp.set_start_method('spawn')
-    model_dir = '/home/liuy69/projects/unified_framework/experiments/final_kgnn'
+    model_dir = '/home/liuy69/projects/unified_framework/experiments/shrink_full_comp_new_split/shrink'
     best_based_on = 'logAUC_0.001_0.1'
-    best_based_on = 'AUC'
+    # best_based_on = 'AUC'
 
     all_table = pd.DataFrame()
     for dataset_exp in os.listdir(model_dir):

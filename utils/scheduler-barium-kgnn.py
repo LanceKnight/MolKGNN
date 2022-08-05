@@ -9,8 +9,8 @@ import time
 from datetime import datetime
 import math
 
-branch = 'main' # Change this
-task_comment = '\"make score weight learnable\"' # Change this
+branch = 'full-qsar-dataset' # Change this
+task_comment = '\"full_dataset\"' # Change this
 
 def gitclone(dir_name):
     cwd = os.getcwd()
@@ -53,7 +53,7 @@ def run_command(exp_id, args):
         --num_kernel2_Nhop {args[8]} \
         --num_kernel3_Nhop {args[9]} \
         --num_kernel4_Nhop {args[10]} \
-        --node_feature_dim 27 \
+        --node_feature_dim 28 \
         --edge_feature_dim 7 \
         --hidden_dim {args[11]}\
         --batch_size {args[12]}\
@@ -95,7 +95,7 @@ def overwrite_dir(src, dst):
         else: raise
 
 def run(exp_id, *args):
-    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_end{args[5]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}_trial{args[13]}' # Change this
+    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_fullset_epoch{args[3]}_peak{args[4]}_end{args[5]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -131,6 +131,7 @@ def run(exp_id, *args):
             out.write(f'kernel4:{args[10]}')
             out.write(f'hidden_dim:{args[11]}')
             out.write(f'batch_size:{args[12]}')
+            out.write(f'task_comment:{task_comment}')
 
         run_command(exp_id, args)
         # time.sleep(3)
@@ -163,20 +164,19 @@ if __name__ == '__main__':
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
     # dataset_list = ['463087','488997','2689', '485290', '1798']
     dataset_list = [ '1798' ] # arg0
-    seed_list = [1, 2, 3] # arg1
+    seed_list = [1, 2, 3, 4, 10] # arg1
     warmup_list = [200] # arg2
-    epochs_list = [30] # arg3
-    peak_lr_list = [5e-2, 5e-3] # arg4
+    epochs_list = [20] # arg3
+    peak_lr_list = [5e-3] # arg4
     end_lr_list = [1e-10] # arg5
-    num_layer_list = [3, 4] # arg6
+    num_layer_list = [4] # arg6
     kernel1_list = [10] # arg7
     kernel2_list = [20] # arg8
     kernel3_list = [30] # arg9
     kernel4_list = [50] # arg10
     hidden_dim = [32] # arg11
     batch_size = [16] # arg12
-    trials=[0]
-    data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim, batch_size, trials )) 
+    data_pair = list(itertools.product(dataset_list, seed_list, warmup_list, epochs_list, peak_lr_list, end_lr_list, num_layer_list, kernel1_list, kernel2_list, kernel3_list, kernel4_list, hidden_dim, batch_size)) 
     print(f'num data_pair:{len(data_pair)}')
     data_pair_with_exp_id = list(map(attach_exp_id, data_pair, range(len(data_pair))))
     print(f'data_pair_with_exp_id:{data_pair_with_exp_id}')
@@ -195,7 +195,7 @@ if __name__ == '__main__':
     gitupdate(github_repo_dir)
 
     
-    with Pool(processes = 5) as pool:
+    with Pool(processes = 3) as pool:
         pool.starmap(run, data_pair_with_exp_id)
 
     end_time=time.time()
