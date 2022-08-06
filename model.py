@@ -186,9 +186,11 @@ class GNNModel(pl.LightningModule):
 
 
         graph_embedding = self.gnn_model(data)
-        z = self.activate_func(self.lin1(graph_embedding))
-        graph_embedding = self.dropout(z)
-        prediction = self.lin2(z)
+        graph_embedding = self.dropout(graph_embedding)
+        prediction = self.ffn(graph_embedding)
+        # z = self.activate_func(self.lin1(graph_embedding))
+        # graph_embedding = self.dropout(z)
+        # prediction = self.lin2(z)
         # # Debug
         # print(f'model.py::smiles:{data.smiles}\n ')
         # print(f'prediction:\n{prediction}\n ')
