@@ -10,7 +10,7 @@ from datetime import datetime
 import math
 
 branch = 'new_node_feature' # Change this
-task_comment = '\"with chirality ;large; no idx line; opt4: new set of node feature; softmax learnable weights; hyperparam same \
+task_comment = '\"mlp pred;with chirality ;large; no idx line; opt4: new set of node feature; softmax learnable weights; hyperparam same \
             as best large-scale; optimize2(dropout; weight decay); optimize1(mlp-before-pooling, batch_norm);no chirality; \"' # Change this
 
 
@@ -171,17 +171,18 @@ if __name__ == '__main__':
     # Hyperparms
     # dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290']
     # dataset_list = ['1843', '485290', '463087']
-    dataset_list = [ '2689', '435034', '2258', '435008', '1798', '488997' ] # arg0
-    seed_list = [1, 2, 10] # arg1
+    # dataset_list = [ '2689', '435034', '2258', '1798', '488997' ] # arg0
+    dataset_list = [435008]
+    seed_list = [1, 2, 3] # arg1
     warmup_list = [300] # arg2
     epochs_list = [20] # arg3
     peak_lr_list = [5e-3] # arg4
     end_lr_list = [1e-10] # arg5
     num_layer_list = [4] # arg6
-    kernel1_list = [10] # arg7
-    kernel2_list = [20] # arg8
-    kernel3_list = [30] # arg9
-    kernel4_list = [50] # arg10
+    kernel1_list = [1] # arg7
+    kernel2_list = [1] # arg8
+    kernel3_list = [1] # arg9
+    kernel4_list = [1] # arg10
     hidden_dim = [32] # arg11
     batch_size = [16] # arg12
     trials=[0] # args13
