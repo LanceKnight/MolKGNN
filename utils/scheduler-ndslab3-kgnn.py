@@ -9,8 +9,8 @@ import time
 from datetime import datetime
 import math
 
-branch = 'new_node_feature' # Change this
-task_comment = '\"mlp pred;with chirality ;large; no idx line; opt4: new set of node feature; softmax learnable weights; hyperparam same \
+branch = 'ablation-subscore' # Change this
+task_comment = '\"ablation-sub-score-nocenter;linear pred;with chirality ;large; no idx line; opt4: new set of node feature; softmax learnable weights; hyperparam same \
             as best large-scale; optimize2(dropout; weight decay); optimize1(mlp-before-pooling, batch_norm);no chirality; \"' # Change this
 
 
@@ -99,7 +99,7 @@ def overwrite_dir(src, dst):
         else: raise
 
 def run(exp_id, *args):
-    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}_decay{args[14]}_dropout{args[15]}' # Change this
+    exp_name = f'exp{exp_id}nocenter_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}_decay{args[14]}_dropout{args[15]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -179,10 +179,10 @@ if __name__ == '__main__':
     peak_lr_list = [5e-3] # arg4
     end_lr_list = [1e-10] # arg5
     num_layer_list = [4] # arg6
-    kernel1_list = [3, 4] # arg7
-    kernel2_list = [2] # arg8
-    kernel3_list = [2] # arg9
-    kernel4_list = [2] # arg10
+    kernel1_list = [10] # arg7
+    kernel2_list = [10] # arg8
+    kernel3_list = [10] # arg9
+    kernel4_list = [10] # arg10
     hidden_dim = [32] # arg11
     batch_size = [16] # arg12
     trials=[0] # args13
