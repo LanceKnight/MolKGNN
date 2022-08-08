@@ -232,7 +232,7 @@ def get_table_for_a_dataset(best_based_on = 'logAUC_0.001_0.1', exp_dir = '/home
 if __name__ == '__main__':
     start_time = time.time()
     mp.set_start_method('spawn')
-    model_dir = '/home/liuy69/projects/unified_framework/experiments/ablation-num_kernels/40kernels'
+    model_dir = '/home/liuy69/projects/unified_framework/experiments/ablation-num_kernels/4kernels'
     best_based_on = 'logAUC_0.001_0.1'
     best_based_on = 'AUC'
 

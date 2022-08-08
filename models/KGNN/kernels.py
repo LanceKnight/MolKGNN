@@ -669,9 +669,9 @@ class KernelConv(Module):
         exp_center_attr_weight = torch.exp(self.center_attr_sc_weight)
         exp_edge_attr_support_weight = torch.exp(self.edge_attr_support_sc_weight)
 
-        denominator =  exp_support_attr_weight\
-                      + exp_center_attr_weight\
-                      + exp_edge_attr_support_weight
+        denominator =  exp_support_attr_weight + exp_edge_attr_support_weight
+                      # + exp_center_attr_weight\
+
 
         support_attr_sc_weight = exp_support_attr_weight/denominator
         center_attr_sc_weight = exp_center_attr_weight/denominator
@@ -683,11 +683,10 @@ class KernelConv(Module):
                  # length_sc * self.length_sc_weight,
                  # + angle_sc * self.angle_sc_weight
                  support_attr_sc * support_attr_sc_weight
-                 + center_attr_sc * center_attr_sc_weight
+                 #+ center_attr_sc * center_attr_sc_weight
                  + edge_attr_support_sc * edge_attr_support_sc_weight
                  # + position_sc * self.length_sc_weight
-             ) / (support_attr_sc_weight+center_attr_sc_weight +
-                  edge_attr_support_sc_weight)
+             ) #/ (support_attr_sc_weight+center_attr_sc_weight + edge_attr_support_sc_weight)
         # sc = (
         #          # length_sc * self.length_sc_weight,
         #          # + angle_sc * self.angle_sc_weight
