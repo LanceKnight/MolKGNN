@@ -48,13 +48,13 @@ def run_command(exp_id, args):
         --gpus 1 \
         --num_layers {args[6]} \
         --num_kernel1_1hop {args[7]} \
-        --num_kernel2_1hop {args[8]} \
-        --num_kernel3_1hop {args[9]} \
-        --num_kernel4_1hop {args[10]} \
+        --num_kernel2_1hop {args[7]} \
+        --num_kernel3_1hop {args[7]} \
+        --num_kernel4_1hop {args[7]} \
         --num_kernel1_Nhop {args[7]} \
-        --num_kernel2_Nhop {args[8]} \
-        --num_kernel3_Nhop {args[9]} \
-        --num_kernel4_Nhop {args[10]} \
+        --num_kernel2_Nhop {args[7]} \
+        --num_kernel3_Nhop {args[7]} \
+        --num_kernel4_Nhop {args[7]} \
         --node_feature_dim 28 \
         --edge_feature_dim 7 \
         --hidden_dim {args[11]}\
@@ -99,7 +99,7 @@ def overwrite_dir(src, dst):
         else: raise
 
 def run(exp_id, *args):
-    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_layers{args[6]}_k1{args[7]}_k2{args[8]}_k3{args[9]}_k4{args[10]}_hidden{args[11]}_batch{args[12]}_decay{args[14]}_dropout{args[15]}' # Change this
+    exp_name = f'exp{exp_id}_{args[0]}_seed{args[1]}_warm{args[2]}_epoch{args[3]}_peak{args[4]}_layers{args[6]}_k1{args[7]}_k2{args[7]}_k3{args[7]}_k4{args[7]}_hidden{args[11]}_batch{args[12]}_decay{args[14]}_dropout{args[15]}' # Change this
     print(f'=====running {exp_name}')
 
     # Go to correct folder
@@ -130,9 +130,9 @@ def run(exp_id, *args):
             out.write(f'end:{args[5]}')
             out.write(f'layers:{args[6]}')
             out.write(f'kernel1:{args[7]}')
-            out.write(f'kernel2:{args[8]}')
-            out.write(f'kernel3:{args[9]}')
-            out.write(f'kernel4:{args[10]}')
+            out.write(f'kernel2:{args[7]}')
+            out.write(f'kernel3:{args[7]}')
+            out.write(f'kernel4:{args[7]}')
             out.write(f'hidden_dim:{args[11]}')
             out.write(f'batch_size:{args[12]}')
             out.write(f'trials:{args[13]}')
