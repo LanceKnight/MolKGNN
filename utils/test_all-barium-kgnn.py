@@ -8,7 +8,7 @@ import itertools
 import time
 import pandas as pd
 
-branch = 'main' # Change this
+branch = 'new_node_feature' # Change this
 task_comment = '\" test all kgnn\"'
 
 def gitclone(dir_name):
@@ -71,7 +71,7 @@ def get_table_for_a_metric(use_best, best_based_on, monitored_metric, folder_lis
             peak = name_components[5]
             layers = name_components[7]
             index_name = f'{dataset_name}_{peak}_{layers}'
-            # print('\n=======\n')
+
             try:
                 with open(osp.join(exp_dir,f'{folder}/kgnn/logs/test_result.log'), 'r') as in_file:
                     for line in in_file:
@@ -192,6 +192,7 @@ def get_table_for_a_dataset(best_based_on = 'logAUC_0.001_0.1', exp_dir = '/home
    # Get a list of folders
     dataset_folder_list = []
     for folder in os.listdir(exp_dir):
+        # print(f'{folder}')
         if 'exp' in folder:
             dataset_folder_list.append(osp.join(exp_dir, folder))
 
@@ -231,7 +232,7 @@ def get_table_for_a_dataset(best_based_on = 'logAUC_0.001_0.1', exp_dir = '/home
 if __name__ == '__main__':
     start_time = time.time()
     mp.set_start_method('spawn')
-    model_dir = '/home/liuy69/projects/unified_framework/experiments/final_kgnn'
+    model_dir = '/home/liuy69/projects/unified_framework/experiments/ablation-num_kernels/40kernels'
     best_based_on = 'logAUC_0.001_0.1'
     best_based_on = 'AUC'
 
@@ -242,7 +243,10 @@ if __name__ == '__main__':
             # print(dataset_exp)
             table = get_table_for_a_dataset(best_based_on, osp.join(model_dir, dataset_exp))
             all_table = pd.concat([all_table,table], axis = 0)
+    print('=============')
+    print(f'best based on:{best_based_on}')
     print(all_table)
+    print('=============')
     all_table.to_csv(f'logs/all_test_result_df_all_table.csv')
 
     end_time=time.time()

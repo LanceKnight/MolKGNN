@@ -2,9 +2,11 @@ from .KernelLayer import MolGCN
 from lr import PolynomialDecayLR
 
 import torch
-from torch.nn import Linear, Sigmoid
+from torch.nn import Linear, Sigmoid, BatchNorm1d, Dropout
 from torch_geometric.nn import global_add_pool
+from torch_geometric.nn.acts import swish
 from torch.optim import Adam
+
 
 
 class KGNNNet(torch.nn.Module):
@@ -12,10 +14,10 @@ class KGNNNet(torch.nn.Module):
                  num_kernel3_1hop=0, num_kernel4_1hop=0, num_kernel1_Nhop=0,
                  num_kernel2_Nhop=0, num_kernel3_Nhop=0, num_kernel4_Nhop=0,
                  predefined_kernelsets=True, x_dim=5, p_dim=3, edge_attr_dim=1,
-                 drop_ratio=0, graph_embedding_dim=5):
+                 drop_ratio=0.25, graph_embedding_dim=5):
         super(KGNNNet, self).__init__()
         self.num_layers = num_layers
-        self.drop_ratio = drop_ratio
+        # self.drop_ratio = drop_ratio
         self.D = p_dim
         self.graph_embedding_linear = Linear(
             num_kernel1_Nhop
@@ -23,6 +25,22 @@ class KGNNNet(torch.nn.Module):
             + num_kernel3_Nhop
             + num_kernel4_Nhop
             , graph_embedding_dim)
+        self.node_batch_norm = BatchNorm1d(x_dim)
+        self.edge_batch_norm = BatchNorm1d(edge_attr_dim)
+
+        self.graph_embedding_lin1 = Linear(
+            num_kernel1_Nhop
+            + num_kernel2_Nhop
+            + num_kernel3_Nhop
+            + num_kernel4_Nhop
+            , graph_embedding_dim)
+
+        self.graph_embedding_lin2 = Linear(
+            graph_embedding_dim
+            , graph_embedding_dim)
+        self.dropout = Dropout(drop_ratio)
+
+        self.act = swish
 
         if self.num_layers < 1:
             raise ValueError(
@@ -36,13 +54,13 @@ class KGNNNet(torch.nn.Module):
                           num_kernel1_Nhop=num_kernel1_Nhop,
                           num_kernel2_Nhop=num_kernel2_Nhop,
                           num_kernel3_Nhop=num_kernel3_Nhop,
-                          num_kernel4_Nhop=num_kernel4_Nhop, x_dim=graph_embedding_dim,
+                          num_kernel4_Nhop=num_kernel4_Nhop, x_dim=x_dim,
                           p_dim=p_dim, edge_attr_dim=edge_attr_dim,
                           predefined_kernelsets=predefined_kernelsets)
 
         self.pool = global_add_pool
-        self.atom_encoder = Linear(x_dim, graph_embedding_dim)
-        self.bond_encoder = Linear(edge_attr_dim, graph_embedding_dim)
+        # self.atom_encoder = Linear(x_dim, graph_embedding_dim)
+        # self.bond_encoder = Linear(edge_attr_dim, graph_embedding_dim)
 
     def save_kernellayer(self, path, time_stamp):
         layers = self.gnn.layers
@@ -100,9 +118,13 @@ class KGNNNet(torch.nn.Module):
 
         # print(f'x:{x.shape}')
         # print(f'self.atom_encoder{self.atom_encoder}')
-        x = self.atom_encoder(data.x)
-        edge_attr = self.bond_encoder(data.edge_attr)
-        
+
+        x = self.node_batch_norm(data.x)
+        edge_attr = self.edge_batch_norm(data.edge_attr)
+        # x = self.atom_encoder(data.x)
+        # edge_attr = self.bond_encoder(data.edge_attr)
+
+
         node_representation = self.gnn(x=x, edge_index=edge_index,
                                        edge_attr=edge_attr, p=p,
                                        p_focal_deg1=p_focal_deg1,
@@ -126,9 +148,12 @@ class KGNNNet(torch.nn.Module):
                                        nei_index_deg3=nei_index_deg3,
                                        nei_index_deg4=nei_index_deg4,
                                        save_score=save_score)
+        # print(self.dropout)
 
-        graph_representation = self.graph_embedding_linear(
-            self.pool(node_representation, batch))
+        graph_representation = self.pool(
+            self.graph_embedding_lin2(self.dropout(self.act(self.graph_embedding_lin1(node_representation)))),
+            batch)
+
 
         return graph_representation
 
@@ -143,40 +168,41 @@ class KGNNNet(torch.nn.Module):
         # Add specific model arguments below
         # E.g., parser.add_argument('--GCN_arguments', type=int,
         # default=12)
-        parser.add_argument('--num_layers', type=int, default=3)
+        parser.add_argument('--num_layers', type=int, default=4)
         parser.add_argument('--num_kernel1_1hop', type=int, default=10)
         parser.add_argument('--num_kernel2_1hop', type=int, default=20)
         parser.add_argument('--num_kernel3_1hop', type=int, default=30)
-        parser.add_argument('--num_kernel4_1hop', type=int, default=40)
+        parser.add_argument('--num_kernel4_1hop', type=int, default=50)
         parser.add_argument('--num_kernel1_Nhop', type=int, default=10)
         parser.add_argument('--num_kernel2_Nhop', type=int, default=20)
         parser.add_argument('--num_kernel3_Nhop', type=int, default=30)
-        parser.add_argument('--num_kernel4_Nhop', type=int, default=40)
-        parser.add_argument('--node_feature_dim', type=int, default=27)
+        parser.add_argument('--num_kernel4_Nhop', type=int, default=50)
+        parser.add_argument('--node_feature_dim', type=int, default=28)
         parser.add_argument('--edge_feature_dim', type=int, default=7)
-        parser.add_argument('--hidden_dim', type=int, default=64)
+        parser.add_argument('--hidden_dim', type=int, default=32)
+        parser.add_argument('--dropout_ratio', type=float, default=0)
 
         return parent_parser
 
-    def configure_optimizers(self, warmup_iterations, tot_iterations,
-                             peak_lr, end_lr):
-        """
-        Returns an optimizer and scheduler suitable for GCNNet
-        :return: optimizer, scheduler
-        """
-        optimizer = Adam(self.parameters())
-        # scheduler = warmup.
-        scheduler = {
-            'scheduler': PolynomialDecayLR(
-                optimizer,
-                warmup_iterations=warmup_iterations,
-                tot_iterations=tot_iterations,
-                lr=peak_lr,
-                end_lr=end_lr,
-                power=1.0,
-            ),
-            'name': 'learning_rate',
-            'interval': 'step',
-            'frequency': 1,
-        }
-        return optimizer, scheduler
+    # def configure_optimizers(self, warmup_iterations, tot_iterations,
+    #                          peak_lr, end_lr):
+    #     """
+    #     Returns an optimizer and scheduler suitable for GCNNet
+    #     :return: optimizer, scheduler
+    #     """
+    #     optimizer = Adam(self.parameters())
+    #     # scheduler = warmup.
+    #     scheduler = {
+    #         'scheduler': PolynomialDecayLR(
+    #             optimizer,
+    #             warmup_iterations=warmup_iterations,
+    #             tot_iterations=tot_iterations,
+    #             lr=peak_lr,
+    #             end_lr=end_lr,
+    #             power=1.0,
+    #         ),
+    #         'name': 'learning_rate',
+    #         'interval': 'step',
+    #         'frequency': 1,
+    #     }
+    #     return optimizer, scheduler
