@@ -1,5 +1,16 @@
-# kgnn
-A kernel-base 3D GNN for molecular representation learning
+# <ins>Mol</ins>ecular-<ins>K</ins>ernel <ins>G</ins>raph <ins>N</ins>eural <ins>N</ins>etwork (MolKGNN)
+MolKGNN is a deep learning model based on Grah Neural Networks (GNNs) for molecular representation learning. It features in:
+1. SE(3)-invariance
+2. Conformation-invariance
+3. Interpretability
+![mol_conv](https://user-images.githubusercontent.com/5760199/186030531-6bd363d4-73da-414b-8cb7-d4b136dd3812.png)
+
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/5760199/186030469-28661a4e-ff48-43b3-b707-885629791032.png" />
+</p>
+
+
+
 
 <!-- # dataset
 This repo does NOT include the dataset. Please download the dataset from https://github.com/PattanaikL/chiral_gnn/tree/cda134523996d26f94f4c92ffad8c373d79731a0/data/d4_docking -->
