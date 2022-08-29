@@ -1,4 +1,6 @@
 # <ins>Mol</ins>ecular-<ins>K</ins>ernel <ins>G</ins>raph <ins>N</ins>eural <ins>N</ins>etwork (MolKGNN)
+This repository is the official implementation of MolKGNN in paper [*Interpretable Chirality-Aware Graph Neural Network for Quantitative Structure Activity Relationship Modeling in Drug Discovery*](https://www.biorxiv.org/content/10.1101/2022.08.24.505155v1).
+
 MolKGNN is a deep learning model based on Grah Neural Networks (GNNs) for molecular representation learning. It features in:
 1. SE(3)-invariance
 2. Conformation-invariance
