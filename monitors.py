@@ -56,9 +56,6 @@ class MetricMonitor(Callback):
         if 'train' in self.stage:
             if self.logging_interval == "step":
                 series = self.series if self.series is not None else 'train'
-                # print(f'monitors.py::on_train_batch_end:title={self.title}, '
-                #       f'series={series}, value={outputs[self.metric]}, '
-                #       f'trainer.global_step={trainer.global_step}')
                 self.logger.report_scalar(title=self.title, series=series,
                                           value=outputs[self.metric],
                                           iteration=trainer.global_step)
@@ -68,10 +65,6 @@ class MetricMonitor(Callback):
             if self.logging_interval == "epoch":
                 outputs = pl_module.train_epoch_outputs
                 series = self.series if self.series is not None else 'train'
-                # print(
-                #     f'on_train_epoch_end: title={self.title}, series='
-                #     f'{series}, value={outputs[self.metric]}, '
-                #     f'trainer.current_epoch={trainer.current_epoch}')
                 self.logger.report_scalar(title=self.title, series=series,
                                           value=outputs[self.metric],
                                           iteration=trainer.current_epoch)
@@ -81,10 +74,6 @@ class MetricMonitor(Callback):
         if 'valid' in self.stage:
             if self.logging_interval == "step":
                 series = self.series if self.series is not None else 'valid'
-                # print(
-                #     f'on_validation_batch_end title={self.title}, series='
-                #     f'{series}, value={outputs[self.metric]}, '
-                #     f'trainer.global_step={trainer.global_step}')
                 self.logger.report_scalar(title=self.title, series=series,
                                           value=outputs[self.metric],
                                           iteration=trainer.global_step)
@@ -94,10 +83,6 @@ class MetricMonitor(Callback):
             if self.logging_interval == "epoch":
                 outputs = pl_module.valid_epoch_outputs
                 series = self.series if self.series is not None else 'valid'
-                # print(
-                #     f'on_validation_epoch_end title={self.title}, series='
-                #     f'{series}, value={outputs[self.metric]}, '
-                #     f'trainer.current_epoch={trainer.current_epoch}')
                 self.logger.report_scalar(title=self.title,
                                           series=series,
                                           value=outputs[self.metric],
@@ -107,8 +92,7 @@ class MetricMonitor(Callback):
 
 # Loss Monitors
 class LossMonitor(MetricMonitor):
-    def __init__(self, stage='train', logger=None, logging_interval=None,
-                 title=None):
+    def __init__(self, stage='train', logger=None, logging_interval=None):
         super(LossMonitor, self).__init__(stage=stage, metric="loss",
                                           logger=logger,
                                           logging_interval=logging_interval,
@@ -116,8 +100,7 @@ class LossMonitor(MetricMonitor):
 
 
 class LossNoDropoutMonitor(MetricMonitor):
-    def __init__(self, stage='train', logger=None, logging_interval=None,
-                 title=None):
+    def __init__(self, stage='train', logger=None, logging_interval=None):
         super(LossNoDropoutMonitor, self).__init__(stage=stage,
                                                    metric="loss_no_dropout",
                                                    logger=logger,
@@ -129,8 +112,7 @@ class LossNoDropoutMonitor(MetricMonitor):
 
 # LogAUC0.001_0.1 Monitors
 class LogAUC0_001to0_1Monitor(MetricMonitor):
-    def __init__(self, stage='valid', logger=None, logging_interval=None,
-                 title=None):
+    def __init__(self, stage='valid', logger=None, logging_interval=None):
         super(LogAUC0_001to0_1Monitor, self).__init__(stage=stage,
                                                       metric="logAUC_0.001_0.1",
                                                       logger=logger,
@@ -138,8 +120,7 @@ class LogAUC0_001to0_1Monitor(MetricMonitor):
                                                       title=f'logAUC_0.001_0.1_by_{logging_interval}')
 
 class LogAUC0_001to0_1NoDropoutMonitor(MetricMonitor):
-    def __init__(self, stage='valid', logger=None, logging_interval=None,
-                 title=None):
+    def __init__(self, stage='valid', logger=None, logging_interval=None):
         super(LogAUC0_001to0_1NoDropoutMonitor, self).__init__(stage=stage,
                                                       metric="logAUC_0.001_0.1_no_dropout",
                                                       logger=logger,
@@ -149,8 +130,7 @@ class LogAUC0_001to0_1NoDropoutMonitor(MetricMonitor):
 
 # LogAUC_0.001_1 Monitors
 class LogAUC0_001to1Monitor(MetricMonitor):
-    def __init__(self, stage='valid', logger=None, logging_interval=None,
-                 title=None):
+    def __init__(self, stage='valid', logger=None, logging_interval=None):
         super(LogAUC0_001to1Monitor, self).__init__(stage=stage,
                                                       metric="logAUC_0.001_1",
                                                       logger=logger,
@@ -159,8 +139,7 @@ class LogAUC0_001to1Monitor(MetricMonitor):
 
 
 class LogAUC0_001to1NoDropoutMonitor(MetricMonitor):
-    def __init__(self, stage='valid', logger=None, logging_interval=None,
-                 title=None):
+    def __init__(self, stage='valid', logger=None, logging_interval=None):
         super(LogAUC0_001to1NoDropoutMonitor, self).__init__(stage=stage,
                                                      metric="logAUC_0.001_1_no_dropout",
                                                      logger=logger,
@@ -170,8 +149,7 @@ class LogAUC0_001to1NoDropoutMonitor(MetricMonitor):
 
 # AUC
 class AUCMonitor(MetricMonitor):
-    def __init__(self, stage='valid', logger=None, logging_interval=None,
-                 title=None):
+    def __init__(self, stage='valid', logger=None, logging_interval=None):
         super(AUCMonitor, self).__init__(stage=stage,
                                          metric="AUC",
                                          logger=logger,
@@ -179,8 +157,7 @@ class AUCMonitor(MetricMonitor):
                                          title=f'AUC_by_{logging_interval}')
 
 class AUCNoDropoutMonitor(MetricMonitor):
-    def __init__(self, stage='valid', logger=None, logging_interval=None,
-                 title=None):
+    def __init__(self, stage='valid', logger=None, logging_interval=None):
         super(AUCNoDropoutMonitor, self).__init__(stage=stage,
                                                      metric="AUC_no_dropout",
                                                      logger=logger,
@@ -190,8 +167,7 @@ class AUCNoDropoutMonitor(MetricMonitor):
 
 # PPV Monitors
 class PPVMonitor(MetricMonitor):
-    def __init__(self, stage='valid', logger=None, logging_interval=None,
-                 title=None):
+    def __init__(self, stage='valid', logger=None, logging_interval=None):
         super(PPVMonitor, self).__init__(stage=stage, metric="ppv",
                                          logger=logger,
                                          logging_interval=logging_interval,
@@ -199,8 +175,7 @@ class PPVMonitor(MetricMonitor):
 
 
 class PPVNoDropoutMonitor(MetricMonitor):
-    def __init__(self, stage='valid', logger=None, logging_interval=None,
-                 title=None):
+    def __init__(self, stage='valid', logger=None, logging_interval=None):
         super(PPVNoDropoutMonitor, self).__init__(stage=stage,
                                                   metric="ppv_no_dropout",
                                                   logger=logger,
@@ -209,8 +184,7 @@ class PPVNoDropoutMonitor(MetricMonitor):
                                                   series='no_dropout')
 
 class AccuracyMonitor(MetricMonitor):
-    def __init__(self, stage='valid', logger =None, logging_interval=None,
-                 title = None ):
+    def __init__(self, stage='valid', logger =None, logging_interval=None):
         super(AccuracyMonitor, self).__init__(stage=stage,
                                                   metric="accuracy",
                                                   logger=logger,
@@ -220,8 +194,7 @@ class AccuracyMonitor(MetricMonitor):
 
 
 class AccuracyNoDropoutMonitor(MetricMonitor):
-    def __init__(self, stage='valid', logger =None, logging_interval=None,
-                 title = None ):
+    def __init__(self, stage='valid', logger =None, logging_interval=None):
         super(AccuracyNoDropoutMonitor, self).__init__(stage=stage,
                                                   metric="accuracy_no_dropout",
                                                   logger=logger,
@@ -232,8 +205,7 @@ class AccuracyNoDropoutMonitor(MetricMonitor):
 
 # RMSE
 class RMSEMonitor(MetricMonitor):
-    def __init__(self, stage='valid', logger =None, logging_interval=None,
-                 title = None ):
+    def __init__(self, stage='valid', logger =None, logging_interval=None):
         super(RMSEMonitor, self).__init__(stage=stage,
                                                   metric="RMSE",
                                                   logger=logger,
@@ -243,8 +215,7 @@ class RMSEMonitor(MetricMonitor):
 
 
 class RMSENoDropoutMonitor(MetricMonitor):
-    def __init__(self, stage='valid', logger =None, logging_interval=None,
-                 title = None ):
+    def __init__(self, stage='valid', logger =None, logging_interval=None):
         super(RMSENoDropoutMonitor, self).__init__(stage=stage,
                                                   metric="RMSE_no_dropout",
                                                   logger=logger,
@@ -256,8 +227,7 @@ class RMSENoDropoutMonitor(MetricMonitor):
         
 # F1 score
 class F1ScoreMonitor(MetricMonitor):
-    def __init__(self, stage='valid', logger =None, logging_interval=None,
-                 title = None ):
+    def __init__(self, stage='valid', logger =None, logging_interval=None):
         super(F1ScoreMonitor, self).__init__(stage=stage,
                                                   metric="f1_score",
                                                   logger=logger,
@@ -267,8 +237,7 @@ class F1ScoreMonitor(MetricMonitor):
 
 
 class F1ScoreNoDropoutMonitor(MetricMonitor):
-    def __init__(self, stage='valid', logger =None, logging_interval=None,
-                 title = None ):
+    def __init__(self, stage='valid', logger =None, logging_interval=None):
         super(F1ScoreNoDropoutMonitor, self).__init__(stage=stage,
                                                   metric="f1_score_no_dropout",
                                                   logger=logger,

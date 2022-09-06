@@ -1,21 +1,19 @@
 from .KernelLayer import MolGCN
-from lr import PolynomialDecayLR
 
 import torch
-from torch.nn import Linear, Sigmoid, BatchNorm1d, Dropout
+from torch.nn import Linear, BatchNorm1d, Dropout
 from torch_geometric.nn import global_add_pool
 from torch_geometric.nn.acts import swish
-from torch.optim import Adam
 
 
 
-class KGNNNet(torch.nn.Module):
+class MolKGNNNet(torch.nn.Module):
     def __init__(self, num_layers=1, num_kernel1_1hop=0, num_kernel2_1hop=0,
                  num_kernel3_1hop=0, num_kernel4_1hop=0, num_kernel1_Nhop=0,
                  num_kernel2_Nhop=0, num_kernel3_Nhop=0, num_kernel4_Nhop=0,
                  predefined_kernelsets=True, x_dim=5, p_dim=3, edge_attr_dim=1,
                  drop_ratio=0.25, graph_embedding_dim=5):
-        super(KGNNNet, self).__init__()
+        super(MolKGNNNet, self).__init__()
         self.num_layers = num_layers
         # self.drop_ratio = drop_ratio
         self.D = p_dim
@@ -56,11 +54,9 @@ class KGNNNet(torch.nn.Module):
                           num_kernel3_Nhop=num_kernel3_Nhop,
                           num_kernel4_Nhop=num_kernel4_Nhop, x_dim=x_dim,
                           p_dim=p_dim, edge_attr_dim=edge_attr_dim,
-                          predefined_kernelsets=predefined_kernelsets)
+                          )
 
         self.pool = global_add_pool
-        # self.atom_encoder = Linear(x_dim, graph_embedding_dim)
-        # self.bond_encoder = Linear(edge_attr_dim, graph_embedding_dim)
 
     def save_kernellayer(self, path, time_stamp):
         layers = self.gnn.layers
@@ -116,13 +112,8 @@ class KGNNNet(torch.nn.Module):
         else:
             raise ValueError("unmatched number of arguments.")
 
-        # print(f'x:{x.shape}')
-        # print(f'self.atom_encoder{self.atom_encoder}')
-
         x = self.node_batch_norm(data.x)
         edge_attr = self.edge_batch_norm(data.edge_attr)
-        # x = self.atom_encoder(data.x)
-        # edge_attr = self.bond_encoder(data.edge_attr)
 
 
         node_representation = self.gnn(x=x, edge_index=edge_index,
@@ -164,7 +155,7 @@ class KGNNNet(torch.nn.Module):
         :param parent_parser: parent parser for adding arguments
         :return: parent parser with added arguments
         """
-        parser = parent_parser.add_argument_group("KGNNNet")
+        parser = parent_parser.add_argument_group("MolKGNNNet")
         # Add specific model arguments below
         # E.g., parser.add_argument('--GCN_arguments', type=int,
         # default=12)
@@ -184,25 +175,3 @@ class KGNNNet(torch.nn.Module):
 
         return parent_parser
 
-    # def configure_optimizers(self, warmup_iterations, tot_iterations,
-    #                          peak_lr, end_lr):
-    #     """
-    #     Returns an optimizer and scheduler suitable for GCNNet
-    #     :return: optimizer, scheduler
-    #     """
-    #     optimizer = Adam(self.parameters())
-    #     # scheduler = warmup.
-    #     scheduler = {
-    #         'scheduler': PolynomialDecayLR(
-    #             optimizer,
-    #             warmup_iterations=warmup_iterations,
-    #             tot_iterations=tot_iterations,
-    #             lr=peak_lr,
-    #             end_lr=end_lr,
-    #             power=1.0,
-    #         ),
-    #         'name': 'learning_rate',
-    #         'interval': 'step',
-    #         'frequency': 1,
-    #     }
-    #     return optimizer, scheduler

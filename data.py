@@ -1,33 +1,10 @@
-from collator import collator
 from wrapper import QSARDataset, D4DCHPDataset, ToXAndPAndEdgeAttrForDeg
-
 from pytorch_lightning import LightningDataModule
 import torch
-from torch.nn import functional as F
 from torch.nn import BCEWithLogitsLoss, MSELoss
 from torch.utils.data import WeightedRandomSampler
 from torch_geometric.loader import DataLoader
-# from torchvision.transforms import Lambda
-from functools import partial
 
-aug_num = 5
-dataset = None
-
-
-# class ConvertYFromIntToFloat(object):
-#     """
-#     Convert the y label from integer to float type because loss function
-#     requires a float input
-#     :return:
-#     """
-#     def __init__(self):
-#         pass
-#
-#     def __call__(self, data):
-#         print(f'before convert:{data.y.dtype}')
-#         data.y = data.y.float()
-#         print(f'after convert:{data.y.dtype}')
-#         return data
 
 qsar_dataset_names= ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290', '9999']
 d4dchp_dataset_names = ['CHIRAL1', 'DIFF5', 'D4DCHP', "dummy"]
@@ -140,14 +117,9 @@ class DataLoaderModule(LightningDataModule):
         self.batch_size = batch_size
         self.seed = seed
         self.enable_oversampling_with_replacement = enable_oversampling_with_replacement
-        # self.dataset_train = ...
-        # self.dataset_val = ...
         self.gnn_type = gnn_type
         self.dataset_path = dataset_path
-
-        split_idx = self.dataset['dataset'].get_idx_split(seed=self.seed)
-        #print(f'split:\n')
-        #print(split_idx)
+        split_idx = self.dataset['dataset'].get_idx_split()
 
         self.dataset_train = self.dataset['dataset'][split_idx["train"]]
         print(f'training # samples:{len(self.dataset_train)})')
@@ -177,7 +149,6 @@ class DataLoaderModule(LightningDataModule):
                                                      else (1. / num_train_active)
                                                      for data in
                                                      self.dataset_train])
-                # print(f'data.py::train_sampler weight:{train_sampler_weight}')
 
                 generator = torch.Generator()
                 generator.manual_seed(self.seed)
@@ -195,7 +166,6 @@ class DataLoaderModule(LightningDataModule):
                 )
             else:  # Regular sampling without oversampling
                 print('data.py::no resampling')
-                # print(f'dataset_train:{self.dataset_train[0]}')
                 train_loader = DataLoader(
                     self.dataset_train,
                     batch_size=self.batch_size,
@@ -219,55 +189,24 @@ class DataLoaderModule(LightningDataModule):
         return train_loader
 
     def val_dataloader(self):
-
         # Validation laader
-        # print(f'dataset_valid:{self.dataset_val[0]}')
-        num_valid_active = len(torch.nonzero(
-            torch.tensor([data.y for data in self.dataset_val])))
-        num_valid_inactive = len(self.dataset_val) - num_valid_active
-
-        valid_sampler_weight = torch.tensor([(1. / num_valid_inactive)
-                                             if data.y == 0
-                                             else (1. / num_valid_active)
-                                             for data in
-                                             self.dataset_val])
         generator = torch.Generator()
         generator.manual_seed(self.seed)
-        valid_sampler = WeightedRandomSampler(weights=valid_sampler_weight,
-                                              num_samples=len(
-                                                  valid_sampler_weight),
-                                              generator=generator)
 
         val_loader = DataLoader(
             self.dataset_val,
             batch_size=self.batch_size,
-            # sampler=valid_sampler,
             shuffle=False,
             num_workers=self.num_workers,
         )
 
         # Train loader in evaluation mode
-        # print(f'dataset_train:{self.dataset_train[0]}')
-        num_train_active = len(torch.nonzero(
-            torch.tensor([data.y for data in self.dataset_train])))
-        num_train_inactive = len(self.dataset_train) - num_train_active
-
-        train_sampler_weight = torch.tensor([(1. / num_train_inactive)
-                                             if data.y == 0
-                                             else (1. / num_train_active)
-                                             for data in
-                                             self.dataset_train])
         generator = torch.Generator()
         generator.manual_seed(self.seed)
-        train_sampler = WeightedRandomSampler(weights=train_sampler_weight,
-                                              num_samples=len(
-                                                  train_sampler_weight),
-                                              generator=generator)
 
         train_loader = DataLoader(
             self.dataset_train,
             batch_size=self.batch_size,
-            # sampler=train_sampler,
             shuffle=False,
             num_workers=self.num_workers,
         )
@@ -276,27 +215,13 @@ class DataLoaderModule(LightningDataModule):
 
     def test_dataloader(self):
         # Test laader
-        # print(f'dataset_test:{self.dataset_test}')
-        num_test_active = len(torch.nonzero(
-            torch.tensor([data.y for data in self.dataset_test])))
-        num_test_inactive = len(self.dataset_test) - num_test_active
 
-        test_sampler_weight = torch.tensor([(1. / num_test_inactive)
-                                             if data.y == 0
-                                             else (1. / num_test_active)
-                                             for data in
-                                             self.dataset_test])
         generator = torch.Generator()
         generator.manual_seed(self.seed)
-        test_sampler = WeightedRandomSampler(weights=test_sampler_weight,
-                                              num_samples=len(
-                                                  test_sampler_weight),
-                                              generator=generator)
 
         test_loader = DataLoader(
             self.dataset_test,
             batch_size=self.batch_size,
-            # sampler=test_sampler,
             shuffle=False,
             num_workers=self.num_workers,
         )
@@ -312,61 +237,4 @@ class DataLoaderModule(LightningDataModule):
         parser.add_argument('--enable_oversampling_with_replacement', action='store_true', default=False)
         parser.add_argument('--dataset_path', type=str, default="../dataset/")
         return parent_parser
-#
-# class AugmentedDataModule(LightningDataModule):
-#     def __init__(self,
-#                  dataset_name: str = 'qsar',
-#                  num_workers: int = 0,
-#                  batch_size: int = 256,
-#                  seed: int = 42,
-#                  multi_hop_max_dist: int = 5,
-#                  spatial_pos_max: int = 1024,
-#                  generate_num=aug_num,
-#                  *args,
-#                  **kwargs,
-#                  ):
-#         super(AugmentedDataModule, self).__init__()
-#         self.batch_size = batch_size
-#         self.generate_num = generate_num
-#         self.metric = 'loss'
-#         self.multi_hop_max_dist = multi_hop_max_dist
-#         self.spatial_pos_max = spatial_pos_max
-#
-#     def setup(self, stage=None):
-#         self.train_set = AugmentedDataset(root='../../dataset/connect_aug',
-#                                           generate_num=self.generate_num)
-#         self.val_set = self.train_set[:2]
-#         print(
-#             f'len(trainset):{len(self.train_set)} len(val_set):'
-#             f'{len(self.val_set)}')
-#
-#     def train_dataloader(self):
-#         print('train loader here')
-#         loader = DataLoader(self.train_set, batch_size=self.batch_size,
-#                             shuffle=True,
-#                             collate_fn=partial(collator, max_node=38,
-#                                                multi_hop_max_dist=self.multi_hop_max_dist,
-#                                                spatial_pos_max=self.spatial_pos_max), )
-#         # for batch in loader:
-#         #     print(batch)
-#         return loader
-#
-#     def val_dataloader(self):
-#         print('pretrain validation loader here')
-#         val_loader = DataLoader(self.val_set, batch_size=self.batch_size,
-#                                 collate_fn=partial(collator, max_node=38,
-#                                                    multi_hop_max_dist=self.multi_hop_max_dist,
-#                                                    spatial_pos_max=self.spatial_pos_max), )
-#         return val_loader
-#
-#         # # test set
-#         # smi = 'C1(=CC=CC(=C1)C(CC)C)O'
-#         # data1 = smiles2graph(2, smi)
-#         # smi = 'CC1=C(C=C(C=C1)NC(=O)C2=CC=C(C=C2)CN3CCN(CC3)C)NC4=NC=CC(
-#         # =N4)C5=CN=CC=C5'
-#         # data2 = smiles2graph(2, smi)
-#         # smi = 'C1=CC=CC(=C1)C(CC)C'
-#         # data3 = smiles2graph(2, smi)
-#         # dataset = [data1, data2, data3]
-#         #
-#         # self.test_set = dataset
+

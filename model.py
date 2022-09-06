@@ -1,8 +1,5 @@
-from data import get_dataset
-from models.GCNNet.GCNNet import GCNNet
-from models.KGNN.KGNNNet import KGNNNet
+from models.MolKGNN.MolKGNNNet import MolKGNNNet
 from models.DimeNetPP.DimeNetPP import DimeNetPP
-from models.ChebNet.ChebNet import ChebNet
 from models.ChIRoNet.ChIRoNet import ChIRoNet
 from models.SchNet.SchNet import SchNet
 from models.ChIRoNet.params_interpreter import string_to_object
@@ -16,12 +13,10 @@ from copy import deepcopy
 import os
 import pytorch_lightning as pl
 from sklearn.metrics import mean_squared_error
-from torch.nn import Linear, Sigmoid, ReLU, Embedding, Dropout
-from torch_geometric.data import Data
+from torch.nn import Linear, ReLU, Dropout
 import torch
 from torch.optim import AdamW
 from torch_geometric.nn.acts import swish
-import time
 
 class GNNModel(pl.LightningModule):
     """
@@ -38,28 +33,15 @@ class GNNModel(pl.LightningModule):
                  args=None
                  ):
         super(GNNModel, self).__init__()
-        if gnn_type == 'gcn':
-            self.gnn_model = GCNNet(args.node_feature_dim, args.hidden_dim,
-                                    args.num_layers)
-        elif gnn_type == 'chebnet':
-            self.gnn_model = ChebNet(args.node_feature_dim, args.hidden_dim, args.num_layers, args.K)
-        # elif gnn_type == 'dimenet':
-        #     self.gnn_model = DimeNet(emb_size=args.hidden_dim,
-        #                              num_blocks=args.num_layers,
-        #                              num_bilinear=1, num_spherical=7,
-        #     num_radial=6, cutoff=5.0, envelope_exponent=5, num_before_skip=1,
-        #     num_after_skip=2, num_dense_output=3, num_targets=12,
-        #     output_init='zeros', name='dimenet')
-        elif gnn_type == 'chironet':
+
+        if gnn_type == 'chironet':
 
             layers_dict = deepcopy(args.layers_dict)
 
             activation_dict = deepcopy(args.activation_dict)
 
             for key, value in args.activation_dict.items():
-                activation_dict[key] = string_to_object[
-                    value]  # convert strings to actual python
-                # objects/functions using pre-defined mapping
+                activation_dict[key] = string_to_object[value]
             self.gnn_model = ChIRoNet(
                 F_z_list=args.F_z_list,  # dimension of latent space
                 F_H=args.F_H,
@@ -102,7 +84,6 @@ class GNNModel(pl.LightningModule):
                 num_before_skip=args.num_before_skip,
                 num_after_skip=args.num_after_skip,
                 num_output_layers=args.num_output_layers,
-                # act_name='swish',
                 act=swish,
                 MLP_hidden_sizes=[],  # [] for contrastive)
             )
@@ -144,7 +125,7 @@ class GNNModel(pl.LightningModule):
             )
             out_dim = args.out_channels
         elif gnn_type == 'kgnn':
-            self.gnn_model = KGNNNet(num_layers=args.num_layers,
+            self.gnn_model = MolKGNNNet(num_layers=args.num_layers,
                                      num_kernel1_1hop = args.num_kernel1_1hop,
                                      num_kernel2_1hop = args.num_kernel2_1hop,
                                      num_kernel3_1hop = args.num_kernel3_1hop,
@@ -156,7 +137,6 @@ class GNNModel(pl.LightningModule):
                                      x_dim = args.node_feature_dim,
                                      edge_attr_dim=args.edge_feature_dim,
                                      graph_embedding_dim = args.hidden_dim,
-                                     predefined_kernelsets=False,
                                      drop_ratio=args.dropout_ratio
             )
             out_dim = args.hidden_dim
@@ -188,13 +168,6 @@ class GNNModel(pl.LightningModule):
         graph_embedding = self.gnn_model(data)
         graph_embedding = self.dropout(graph_embedding)
         prediction = self.ffn(graph_embedding)
-        # z = self.activate_func(self.lin1(graph_embedding))
-        # graph_embedding = self.dropout(z)
-        # prediction = self.lin2(z)
-        # # Debug
-        # print(f'model.py::smiles:{data.smiles}\n ')
-        # print(f'prediction:\n{prediction}\n ')
-        # print(f'graph_embedding:\n:{graph_embedding}')
 
         self.graph_embedding = graph_embedding
         self.smiles_list = data.smiles
@@ -214,27 +187,14 @@ class GNNModel(pl.LightningModule):
         """
 
         # Get prediction and ground truth
-        # print(batch_data.edge_index)
-
-        # start = time.time()
         pred_y, _ = self(batch_data)
-        # end = time.time()
-        # print(f'=model.py::training time:{end-start}')
         pred_y = pred_y.view(-1)
         true_y = batch_data.y.view(-1)
-
-        # print(f'pred_y')
-        # print(f'{pred_y}')
-        # print(f'true_y')
-        # print(f'{true_y}')
 
         # Get metrics
         results = {}
         loss = self.loss_func(pred_y, true_y.float())
         results['loss'] = loss
-        # results = self.get_evaluations(results, true_y, pred_y)
-
-        # self.log(f"train performance by step", results, on_step=True, prog_bar=True, logger=True)
         return results
 
     def training_epoch_end(self, train_step_outputs):
@@ -256,8 +216,6 @@ class GNNModel(pl.LightningModule):
             self.log(key, mean_output)
 
         self.train_epoch_outputs = train_epoch_outputs
-
-        # self.log(f"train performance by epoch", train_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
 
 
     def validation_step(self, batch_data, batch_idx, dataloader_idx):
@@ -338,33 +296,6 @@ class GNNModel(pl.LightningModule):
                 self.log(key, results[key], prog_bar=True)
 
 
-
-        # results = {}
-        # all_pred = [output['pred_y'] for output in valid_step_outputs]
-        # all_true = [output['true_y'] for output in valid_step_outputs]
-        #
-        # # Store prediciton and labels if needed
-        # if self.record_valid_pred:
-        #     filename = f'logs/valid_predictions/epoch_{self.current_epoch}'
-        #     os.makedirs(os.path.dirname(filename), exist_ok=True)
-        #     with open(filename, 'w+') as out_file:
-        #         for i, pred in enumerate(all_pred):
-        #             true = all_true[i]
-        #             out_file.write(f'{pred},{true}\n')
-        #
-        # results = self.get_evaluations(
-        #     results, torch.cat(all_true),
-        #     torch.cat(all_pred))
-        #
-        # self.valid_epoch_outputs = results
-        # # This log is used for monitoring metric and saving the best model. The actual logging happends within
-        # # clearml. See Monitor.py
-        # for key in results.keys():
-        #     self.log(key, results[key])
-            
-        # Logging
-        # self.log(f"valid performance by epoch", self.valid_epoch_outputs, on_epoch=True, prog_bar=True, logger=True)
-
     def test_step(self, batch_data, batch_idx):
         """
         Process the data in validation dataloader in test mode
@@ -378,7 +309,6 @@ class GNNModel(pl.LightningModule):
         output = self(batch_data)
         pred_y = output[0].view(-1)
         true_y = batch_data.y.view(-1)
-        # print(f'y_pred.shape:{y_pred.shape} y_true:{y_true.shape}')
 
         # Get numpy_prediction and numpy_y and concate those from all batches
         test_step_output = {}
@@ -419,18 +349,13 @@ class GNNModel(pl.LightningModule):
                 out_file.write(f'{pred},{true}\n')
 
 
-        results = self.get_evaluations(
-            results, all_true, all_pred)
+        results = self.get_evaluations(results, all_true, all_pred)
 
         # Logging
         for key in results.keys():
             self.log(key, results[key])
 
         self.test_epoch_outputs = results
-
-        # Logging
-        # self.log(f"valid performance by epoch", self.valid_epoch_outputs,
-        # on_epoch=True, prog_bar=True, logger=True)
 
     def configure_optimizers(self):
         """
@@ -474,11 +399,6 @@ class GNNModel(pl.LightningModule):
             'interval': 'step',
             'frequency': 1,
         }
-        # return optimizer, scheduler
-
-        # optimizer, scheduler = self.gnn_model.configure_optimizers(
-        #     self.warmup_iterations, self.tot_iterations, self.peak_lr,
-        #     self.end_lr)
         return [optimizer], [scheduler]
 
     def save_atom_encoder(self, dir, file_name):
@@ -500,7 +420,7 @@ class GNNModel(pl.LightningModule):
         :param file_name:
         :return:
         """
-        if isinstance(self.gnn_model, KGNNNet):
+        if isinstance(self.gnn_model, MolKGNNNet):
             if not os.path.exists(dir):
                 os.mkdir(dir)
             torch.save(self.gnn_model.gnn.layers[
@@ -543,12 +463,9 @@ class GNNModel(pl.LightningModule):
         parser.add_argument('--ffn_hidden_dim', type=int, default=64)
         parser.add_argument('--task_dim', type=int, default=1)
 
-        if gnn_type == 'gcn':
-            GCNNet.add_model_specific_args(parent_parser)
-        elif gnn_type == 'chebnet':
-            ChebNet.add_model_specific_args(parent_parser)
-        elif gnn_type == 'kgnn':
-            KGNNNet.add_model_specific_args(parent_parser)
+
+        if gnn_type == 'kgnn':
+            MolKGNNNet.add_model_specific_args(parent_parser)
         elif gnn_type == 'dimenet_pp':
             DimeNetPP.add_model_specific_args(parent_parser)
         elif gnn_type == 'chironet':
