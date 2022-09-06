@@ -363,7 +363,6 @@ if __name__ == '__main__':
     # The reason that gnn_type cannot be a cmd line
     # argument is that model specific arguments depends on it
     gnn_type = 'kgnn'
-    # gnn_type = 'dimenet' # Not implemented
     # gnn_type = 'chironet'
     # gnn_type = 'dimenet_pp'
     # gnn_type = 'spherenet'

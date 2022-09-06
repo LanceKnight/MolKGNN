@@ -119,7 +119,7 @@ class DataLoaderModule(LightningDataModule):
         self.enable_oversampling_with_replacement = enable_oversampling_with_replacement
         self.gnn_type = gnn_type
         self.dataset_path = dataset_path
-        split_idx = self.dataset['dataset'].get_idx_split(seed=self.seed)
+        split_idx = self.dataset['dataset'].get_idx_split()
 
         self.dataset_train = self.dataset['dataset'][split_idx["train"]]
         print(f'training # samples:{len(self.dataset_train)})')

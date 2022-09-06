@@ -1,7 +1,5 @@
-from models.GCNNet.GCNNet import GCNNet
 from models.KGNN.KGNNNet import KGNNNet
 from models.DimeNetPP.DimeNetPP import DimeNetPP
-from models.ChebNet.ChebNet import ChebNet
 from models.ChIRoNet.ChIRoNet import ChIRoNet
 from models.SchNet.SchNet import SchNet
 from models.ChIRoNet.params_interpreter import string_to_object
@@ -35,12 +33,8 @@ class GNNModel(pl.LightningModule):
                  args=None
                  ):
         super(GNNModel, self).__init__()
-        if gnn_type == 'gcn':
-            self.gnn_model = GCNNet(args.node_feature_dim, args.hidden_dim,
-                                    args.num_layers)
-        elif gnn_type == 'chebnet':
-            self.gnn_model = ChebNet(args.node_feature_dim, args.hidden_dim, args.num_layers, args.K)
-        elif gnn_type == 'chironet':
+
+        if gnn_type == 'chironet':
 
             layers_dict = deepcopy(args.layers_dict)
 
@@ -443,11 +437,8 @@ class GNNModel(pl.LightningModule):
         parser.add_argument('--ffn_hidden_dim', type=int, default=64)
         parser.add_argument('--task_dim', type=int, default=1)
 
-        if gnn_type == 'gcn':
-            GCNNet.add_model_specific_args(parent_parser)
-        elif gnn_type == 'chebnet':
-            ChebNet.add_model_specific_args(parent_parser)
-        elif gnn_type == 'kgnn':
+
+        if gnn_type == 'kgnn':
             KGNNNet.add_model_specific_args(parent_parser)
         elif gnn_type == 'dimenet_pp':
             DimeNetPP.add_model_specific_args(parent_parser)
