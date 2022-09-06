@@ -112,12 +112,6 @@ def prepare_data(args, enable_pretraining=False, gnn_type='kgnn'):
         print(f'entry.py:: steps/epoch = num_train_batches({num_train_batches}) + num_valid_batches('
               f'{num_valid_batches}) = {num_train_batches+num_valid_batches}')
 
-    # Pretraining data module
-    if enable_pretraining:
-        pass  # 
-        
-        # TODO: add pretraining data module
-
     return data_modules
 
 
@@ -132,8 +126,6 @@ def prepare_actual_model(args):
         if not os.path.exists(args.pretrain_model_dir + '/last.ckpt'):
             raise Exception()
 
-        print('Using pretrained model...')
-        # TODO: Load the model from the pretrained model
     else:  # if not using pretrained model
         print(f'Not using pretrained model.')
         model = GNNModel(gnn_type, args=args)
