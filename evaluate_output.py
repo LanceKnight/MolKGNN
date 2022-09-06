@@ -32,7 +32,6 @@ def evaluate(dataset, model='kgnn', cutoff=0.5):
 			label = int(components[1][0])
 			sc_list.append(pred_sc)
 			label_list.append(label)
-			# print(f'pred_sc:{pred_sc} label:{label}')
 	sc_list = np.array(sc_list)
 	label_list = np.array(label_list)
 

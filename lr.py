@@ -28,7 +28,6 @@ class PolynomialDecayLR(_LRScheduler):
             )
             lr = lr_range * pct_remaining ** (self.power) + self.end_lr
 
-        # print(f'self._step_count:{self._step_count} lr:{lr}')
         return [lr for group in self.optimizer.param_groups]
 
     def _get_closed_form_lr(self):

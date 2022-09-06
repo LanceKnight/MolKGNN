@@ -37,8 +37,7 @@ class KGNNNet(torch.nn.Module):
                           num_kernel2_Nhop=num_kernel2_Nhop,
                           num_kernel3_Nhop=num_kernel3_Nhop,
                           num_kernel4_Nhop=num_kernel4_Nhop, x_dim=graph_embedding_dim,
-                          p_dim=p_dim, edge_attr_dim=edge_attr_dim,
-                          predefined_kernelsets=predefined_kernelsets)
+                          p_dim=p_dim, edge_attr_dim=edge_attr_dim)
 
         self.pool = global_add_pool
         self.atom_encoder = Linear(x_dim, graph_embedding_dim)
@@ -98,8 +97,6 @@ class KGNNNet(torch.nn.Module):
         else:
             raise ValueError("unmatched number of arguments.")
 
-        # print(f'x:{x.shape}')
-        # print(f'self.atom_encoder{self.atom_encoder}')
         x = self.atom_encoder(data.x)
         edge_attr = self.bond_encoder(data.edge_attr)
         
@@ -165,7 +162,6 @@ class KGNNNet(torch.nn.Module):
         :return: optimizer, scheduler
         """
         optimizer = Adam(self.parameters())
-        # scheduler = warmup.
         scheduler = {
             'scheduler': PolynomialDecayLR(
                 optimizer,

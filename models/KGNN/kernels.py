@@ -1,26 +1,10 @@
-from torch_geometric.nn import MessagePassing
-from torch_geometric.data import Data
-
-import torch
-from torch.nn import ModuleList, CosineSimilarity, Module, Linear, Sigmoid
-# from torch.nn import
-from torch.nn.parameter import Parameter
-
 from itertools import permutations, combinations
-import math
+import torch
+from torch_geometric.data import Data
+from torch.nn import ModuleList, CosineSimilarity, Module
+from torch.nn.parameter import Parameter
 import pandas as pd
-
-import time
-
 import os
-
-from .get_customized_kernels import get_hop1_kernel_list, \
-    hop1_degree1_functional_groups, hop1_degree2_functional_groups, \
-    hop1_degree3_functional_groups, hop1_degree4_functional_groups, \
-    generate_kernel_with_angle_and_length_and_edge_attr
-
-torch.autograd.set_detect_anomaly(True)
-
 
 class KernelConv(Module):
     def __init__(self,
@@ -64,11 +48,8 @@ class KernelConv(Module):
                     'node_attr_dim is not specified')
             else:
                 init_kernel = Data(x_center=torch.randn(L, node_attr_dim),
-                                   x_support=torch.randn(L, num_supports,
-                                                         node_attr_dim),
-                                   edge_attr_support=torch.randn(L,
-                                                                 num_supports,
-                                                                 edge_attr_dim),
+                                   x_support=torch.randn(L, num_supports, node_attr_dim),
+                                   edge_attr_support=torch.randn(L, num_supports, edge_attr_dim),
                                    p_support=torch.randn(L, num_supports, D))
 
         self.num_kernels = init_kernel.x_center.shape[0]
@@ -146,36 +127,29 @@ class KernelConv(Module):
             l = [x[:, torch.tensor(permute), :]
                  for permute in d4_permutations]
         output = torch.stack(l, dim=1)
-        # print(f'output:{output}')
         return output
 
-    def intra_angle(self, input):
-        """
-        Calculate cosine of angles between all pairs of vectors stored in a
-        tensor
-        :param input: Shape[num_vectors, dim]
-        :return: a tensor of Shape[num_combination, dim]
-        """
-        all_vecotr = input.unbind()
-        num_vector = len(all_vecotr)
-
-        # Get cosine angle between all paris of tensors in the input
-        cos = CosineSimilarity(dim=-1)
-        res_list = []
-        all_combination = combinations(range(num_vector), 2)  # All
-        for combination in all_combination:
-            t1 = all_vecotr[combination[0]]
-            t2 = all_vecotr[combination[1]]
-            res_list.append(cos(t1, t2))
-        result = torch.stack(res_list)
-        result = torch.acos(result) # Convert to angle in radian
-        return result
-
-        # cos = CosineSimilarity(dim=-1)
-        # new_p = torch.roll(p, 1, dims=-2)
-        # sc = cos(new_p, p)
-        # #         print(f'intra angle sc:{sc.shape}')
-        # return sc
+    # def intra_angle(self, input):
+    #     """
+    #     Calculate cosine of angles between all pairs of vectors stored in a
+    #     tensor
+    #     :param input: Shape[num_vectors, dim]
+    #     :return: a tensor of Shape[num_combination, dim]
+    #     """
+    #     all_vecotr = input.unbind()
+    #     num_vector = len(all_vecotr)
+    #
+    #     # Get cosine angle between all paris of tensors in the input
+    #     cos = CosineSimilarity(dim=-1)
+    #     res_list = []
+    #     all_combination = combinations(range(num_vector), 2)  # All
+    #     for combination in all_combination:
+    #         t1 = all_vecotr[combination[0]]
+    #         t2 = all_vecotr[combination[1]]
+    #         res_list.append(cos(t1, t2))
+    #     result = torch.stack(res_list)
+    #     result = torch.acos(result) # Convert to angle in radian
+    #     return result
 
     def calculate_average_similarity_score(self, tensor1, tensor2, sim_dim=None, avg_dim=None):
         """
@@ -215,131 +189,10 @@ class KernelConv(Module):
         cos = CosineSimilarity(dim=sim_dim)
         sc = cos(tensor1, tensor2)
         if avg_dim is not None:
-            if sim_dim > avg_dim:  # The sim_dim disappear after Cos,
-                # so avg_dim
-                # changes as well
+            if sim_dim > avg_dim:  # The sim_dim disappear after Cos, so avg_dim changes as well
                 avg_dim = avg_dim - sim_dim
             sc = torch.mean(sc, dim=avg_dim)
         return sc
-
-        # diff = torch.square(tensor1 - tensor2)
-        # if dim is not None:
-        #     sc = torch.sum(diff, dim=dim)
-        # else:
-        #     sc = torch.sum(diff)
-        # sc = torch.atan(1 / (sc + 1e-8))
-        # return sc
-
-    def get_angle_score(self, p_neighbor, p_support):
-        """
-        Calculate angle scores between the coordinates of neighbors and
-        supports.
-
-        It first calculates angles between each pairs of vectors in the
-        neighbors/supports. Then these pairs of angles are compared between
-        neighbors and supports
-
-        :param p_neighbor: a tensor of size [num_nodes_of_this_degree, degree,
-        space_dim] for the neighborhood
-        :param p_support: a tensor of size [num_kernels,
-        num_nodes_of_this_degree, degree, space_dim] for the kernel
-        :return: returns the angle score, a tensor of Shape[num_kernels,
-        num_nodes_of_this_degree]
-        """
-
-        # If the degree is 1, always return a tensor of max similarity (i.e.,1)
-        deg = p_support.shape[-2]
-        if ( deg == 1):
-            num_kernel = p_support.shape[0]
-            num_nodes_of_this_degree = p_neighbor.shape[0]
-            return torch.full((num_kernel, num_nodes_of_this_degree),
-                             1, device=p_neighbor.device)
-
-        # # Debug
-        # if deg == 2 or deg == 3 or deg == 4:
-        #     print(f'======================')
-        #     print(f'get_angle():p_neighbor:{p_neighbor}')
-        #     print(f'get_angle():p_support:{p_support}')
-
-        p_neighbor_for_all_node = p_neighbor.unbind()
-        p_support_for_all_kernel = p_support.unbind()
-
-        res_list_for_all_kernel = []
-        for p_support_each_kernel in p_support_for_all_kernel:
-            p_support_for_all_node = p_support_each_kernel.unbind()
-            res_list_for_all_node = []
-            for node_id, p_support_each_node in \
-                    enumerate(p_support_for_all_node):
-                support_intra_angle = self.intra_angle(p_support_each_node)
-                support_intra_angle = (support_intra_angle * 10).round() / 10
-                # print(f'support_intra_angle:{support_intra_angle}')
-
-                neighbor_intra_angle = self.intra_angle(
-                    p_neighbor_for_all_node[node_id])
-                neighbor_intra_angle = (neighbor_intra_angle * 10).round()/10
-                # print(f'neighbor_intra_angle:{neighbor_intra_angle}')
-                intra_angle_similarity = \
-                    self.calculate_average_similarity_score(
-                        support_intra_angle, neighbor_intra_angle, sim_dim
-                        =-1)
-                res_list_for_all_node.append(intra_angle_similarity)
-            res_list_for_all_kernel.append(res_list_for_all_node)
-        result = torch.tensor(res_list_for_all_kernel, device =
-        p_support.device)
-
-        # # Debug
-        # if deg == 2 or deg == 3 or deg == 4:
-        #     print(f'get_angle():result:{result}')
-
-        return result
-
-        # p_neighbor = p_neighbor.unsqueeze(0).unsqueeze(0).expand(
-        #     p_support.shape[0], p_support.shape[1], p_neighbor.shape[-3],
-        #     p_neighbor.shape[-2], p_neighbor.shape[-1])
-        #
-        # intra_p_neighbor_angle = self.intra_angle(p_neighbor)
-        #
-        # intra_p_support_angle = self.intra_angle(p_support)
-        #
-        # sc = self.arctan_sc(intra_p_neighbor_angle,
-        #                     intra_p_support_angle, sim_dim=(-1))
-        #
-        # # Debug
-        # print(f'get_angle():sc:{sc.shape}')
-        # return sc.squeeze(1)
-
-    # def get_length_score(self, p_neighbor, p_support):
-    #     """
-    #     Compare the length of the neighbors and supports
-    #
-    #     It calculates the norm for all vectors in neighbors/supports first
-    #     and then calculates similarities between those norms
-    #     :param p_neighbor: Shape[num_nodes_in_this_degree, degree, dim]
-    #     :param p_support: Shape[num_kernels, num_nodes_in_this_degree,
-    #     degree, dim]
-    #     :return: a tensor. Shape[num_kernel, num_nodes_in_this_degree]
-    #     """
-    #     len_p_neighbor = torch.norm(p_neighbor, dim=-1)
-    #     len_p_support = torch.norm(p_support, dim=-1)
-    #
-    #
-    #
-    #     # Round the length of neighbors to 0.1. E.g., 1.512 becomes 1.5
-    #     # This eliminates the impact of small difference in lengths
-    #     len_p_neighbor = (len_p_neighbor * 10).round()/10
-    #
-    #     # Debug
-    #     # deg = p_neighbor.shape[-2]
-    #     # if deg == 4:
-    #     #     print(f'get_length():p_neighbor:{p_neighbor}')
-    #     #     print(f'get_length_score():p_neighbor:{p_neighbor.shape} p_support:'
-    #     #           f'{p_support.shape}')
-    #     #     print(f'get_length_score():\nlen_p_neighbor:\n'
-    #     #           f'{len_p_neighbor}\nlen_p_support:\n{len_p_support}')
-    #
-    #     # Get the similarity score
-    #     sc = self.calculate_average_similarity_score(len_p_neighbor, len_p_support, sim_dim=(-1))
-    #     return sc
 
     def get_the_permutation_with_best_alignment_id(self, input_tensor,
                                                    best_alignment_id):
@@ -382,17 +235,6 @@ class KernelConv(Module):
         :return: a tensor of Shape[num_kernels,
         num_permute, num_node_of_this_degree]
         """
-        # print('===start==')
-        # print(f'before x_nei:{x_nei.shape} numel: '
-        #       f'{torch.numel(x_nei)/1000000}M mem:'
-        #       f'{self.mem_size(x_nei)/1000000} '
-        #       f'MB')
-        # print(f'before x_suppport:{x_support.shape} numel:'
-        #       f' {torch.numel(x_support)/1000000}M mem:'
-        #       f'{self.mem_size(x_support)/1000000}MB')
-
-
-
         res_permute = []
         x_support_permute_list = x_support.unbind(dim=1)
         x_nei = x_nei.unsqueeze(0).expand(x_support.shape[0],
@@ -409,61 +251,6 @@ class KernelConv(Module):
         sc = torch.stack(res_permute, dim=1)
         return sc
 
-
-        # x_nei_node_list = x_nei.unbind()
-        # x_support_kernel_list = x_support.unbind()
-        # res_kernel = []
-        # for x_support_kernel in x_support_kernel_list:
-        #     x_support_permute_list = x_support_kernel.unbind()
-        #     res_permute = []
-        #     for x_support_permute in x_support_permute_list:
-        #         def sim(input):
-        #             sc = self.calculate_average_similarity_score(input,
-        #                                                          x_support_permute,
-        #                                                          sim_dim=-1,
-        #                                                          avg_dim=-2)
-        #             return sc
-        #
-        #         res_node = list(map(sim, x_nei_node_list))
-        #         # for x_nei_node in x_nei_node_list:
-        #
-        #             # res_node.append(sc)
-        #         res_permute.append(res_node)
-        #     res_kernel.append(res_permute)
-        # sc = torch.tensor(res_kernel, device=x_nei.device)
-        # return sc
-
-
-
-
-
-
-
-
-        # # ====================
-        # # Debugging
-        # # deg = x_support.shape[-2]
-        # # if deg == 4:
-        # #     print(f'kernels.py::\nx_nei:\n{x_nei}\nx_support:\n{x_support}')
-        #
-        # x_nei = x_nei.unsqueeze(0).unsqueeze(0).expand(
-        #     x_support.shape[0], x_support.shape[1], x_nei.shape[0],
-        #     x_nei.shape[1], x_nei.shape[2])
-        # x_support = x_support.unsqueeze(2).expand(x_nei.shape)
-        # sc = self.calculate_average_similarity_score(x_nei, x_support, sim_dim=-1, avg_dim=-2)
-        # # print(f'kernels.py::sc:{sc.shape}')
-        # # # =====================
-        # #
-        # # print(f'after x_nei shape:{x_nei.shape}, numel:'
-        # #       f'{torch.numel(x_nei)/1000000}M mem:'
-        # #       f'{self.mem_size(x_nei)/1000000}MB')
-        # # print(f'x_support shape:{x_support.shape}, numel:'
-        # #       f'{torch.numel(x_support)/1000000}M mem:'
-        # #       f'{self.mem_size(x_support)/(1024*1024)}MB')
-        # # print(f'sc shape:{sc.shape}')
-        # # print('===end==')
-        # return sc
-
     def get_center_attribute_score(self, x_focal, x_center):
         """
         Get the similarity score between center and focal atoms in the
@@ -472,19 +259,6 @@ class KernelConv(Module):
         :param x_center: Shape[num_kernels, node_attr_dim]
         :return: a tensor of Shape[num_kernels, num_node]
         """
-
-        # x_focal_node_list = x_focal.unbind()
-        # x_center_kernel_list = x_center.unbind()
-        # res_kernel = []
-        # for x_center_kernel in x_center_kernel_list:
-        #     res_node = []
-        #     for x_focal_node in x_focal_node_list:
-        #         sc = self.calculate_average_similarity_score(x_focal_node,
-        #                                                      x_center_kernel,
-        #                                                 sim_dim=(-1))
-        #         res_node.append(sc)
-        #     res_kernel.append(res_node)
-        # sc = torch.tensor(res_kernel, device = x_focal.device)
 
         x_focal = x_focal.unsqueeze(0).expand(
             x_center.shape[0], x_focal.shape[0], x_focal.shape[1])
@@ -538,8 +312,7 @@ class KernelConv(Module):
                 neighbor1 = neighbor_list[combination[0]]
                 neighbor2 = neighbor_list[combination[1]]
                 if torch.equal(neighbor1, neighbor2):
-                    node_res_list.append([1]*num_kernel) # Return 1 for all
-                    # kernels
+                    node_res_list.append([1]*num_kernel) # Return 1 for all kernels
                     is_chiral = False
                     break
 
@@ -590,15 +363,6 @@ class KernelConv(Module):
 
         # Just for debugging
         deg = p_support.shape[-2]
-        # if deg == 4:
-        #     print(f'total_score():deg:{deg}-------------------')
-            # print(f'total_score():x_focal:{x_focal}')
-            # print(f'total_score():x_neighbor:{x_neighbor}')
-
-        # Because every sub-score is calculated using actan function,
-        # which peaks at pi/2, so this max_atn is used to normalized the
-        # score so it is in [0,1]
-        # max_atan = torch.tensor([math.pi / 2], device=p_neighbor.device)
 
         # Calculate the support attribute score
         permuted_x_support = self.permute(x_support)
@@ -608,37 +372,9 @@ class KernelConv(Module):
         # Get the best support_attr_sc and its index
         best_support_attr_sc, best_support_attr_sc_index = torch.max(support_attr_sc, dim=1)
 
-        # # Debug
-        # if deg==3:
-        #     print(f'KernelConv()::deg={deg} p_neighbor:\n{p_neighbor}')
-
-        # # Calculate position score
-        # best_p_support = self.get_the_permutation_with_best_alignment_id(
-        #     p_support, best_support_attr_sc_index)
-        # position_sc = self.get_position_score(p_neighbor, best_p_support)
-
         # # Calculate the angle score
         best_p_support = self.get_the_permutation_with_best_alignment_id(p_support, best_support_attr_sc_index)
-        # # permuted_p_support = self.permute(p_support)
-        # # permuted_p_support = permuted_p_support.unsqueeze(2).expand(
-        # #     permuted_p_support.shape[0], permuted_p_support.shape[1],
-        # #     best_support_attr_sc_index.shape[1], permuted_p_support.shape[2],
-        # #     permuted_p_support.shape[3])
-        # # selected_index = best_support_attr_sc_index.unsqueeze(1).unsqueeze(
-        # #     -1).unsqueeze(-1).expand(
-        # #     permuted_p_support.shape[0], 1,
-        # #     best_support_attr_sc_index.shape[-1],
-        # #     permuted_p_support.shape[3],
-        # #     permuted_p_support.shape[4])
-        # # best_p_support = torch.gather(permuted_p_support, 1, selected_index)
-        # angle_sc = self.get_angle_score(p_neighbor, best_p_support)
-        #
-        # # print(f'best_p_support:{best_p_support}')
-        #
-        # # Calculate length score
-        # best_p_support = best_p_support.squeeze(1)
-        # length_sc = self.get_length_score(p_neighbor,
-        #                                   best_p_support)
+
 
         # Calculate the center attribute score
         center_attr_sc = self.get_center_attribute_score(x_focal, x_center)
@@ -658,32 +394,27 @@ class KernelConv(Module):
 
 
         # Calculation of chirality
-        # chirality_sign = 1
-        # if (deg == 4) and (is_last_layer):
-        #     chirality_sign = self.get_chirality_sign(p_neighbor,
-        #                                              x_neighbor,
-        #                                              best_p_support
-        #                                              )
+        chirality_sign = 1
+        if (deg == 4) and (is_last_layer):
+            chirality_sign = self.get_chirality_sign(p_neighbor,
+                                                     x_neighbor,
+                                                     best_p_support
+                                                     )
 
 
         # Each score is of Shape[num_kernel, num_nodes_of_this_degree]
         sc = (
-                 # length_sc * self.length_sc_weight,
-                 # + angle_sc * self.angle_sc_weight
                  support_attr_sc * self.support_attr_sc_weight
                  + center_attr_sc * self.center_attr_sc_weight
                  + edge_attr_support_sc * self.edge_attr_support_sc_weight
-                 # + position_sc * self.length_sc_weight
              ) / (self.support_attr_sc_weight+self.center_attr_sc_weight +
                   self.edge_attr_support_sc_weight)
-        # if deg ==4:
-        #     sc = sc * chirality_sign
-        b = time.time()
+        if deg ==4:
+            sc = sc * chirality_sign
         return sc
-        # return sc, length_sc, angle_sc, support_attr_sc, center_attr_sc, \
-        #        edge_attr_support_sc
 
-    def forward(self, is_last_layer, *argv, **kwargv):
+
+    def forward(self, is_last_layer, **kwargv):
         if len(kwargv) == 1:
             x_focal = kwargv['data'].x_focal
             p_focal = kwargv['data'].p_focal
@@ -697,32 +428,16 @@ class KernelConv(Module):
             p_neighbor = kwargv['p_neighbor']
             edge_attr_neighbor = kwargv['edge_attr_neighbor']
 
-        # Check if neighborhood and kernel agrees in space dimension (i.e.,
-        # 2D or 3D).
+        # Check if neighborhood and kernel agrees in space dimension (i.e., 2D or 3D).
         if (p_focal.shape[-1] != self.p_support.shape[-1]):
             raise Exception(
-                f'data coordinates is of {p_focal.shape[-1]}D, but the '
-                f'kernel is {self.p_support.shape[-1]}D')
+                f'data coordinates is of {p_focal.shape[-1]}D, but the kernel is {self.p_support.shape[-1]}D')
 
-        # sc, length_sc, angle_sc, supp_attr_sc, center_attr_sc, \
-        # edge_attr_support_sc
-        sc = self.calculate_total_score(
-            x_focal, p_focal, x_neighbor, p_neighbor, edge_attr_neighbor, is_last_layer)
-
-        # print('\n')
-        # print(f'len sc:{length_sc}')
-        # print(f'angle sc:{angle_sc}')
-        # print(f'support attribute_sc:{supp_attr_sc}')
-        # print(f'center_attr_sc:{center_attr_sc}')
-        # print(f'edge attribute score:{edge_attr_support_sc}')
-        # print(f'total sc: {sc.shape}')
-        return sc  # , length_sc, angle_sc, supp_attr_sc, center_attr_sc,
-        # edge_attr_support_sc
+        sc = self.calculate_total_score(x_focal, p_focal, x_neighbor, p_neighbor, edge_attr_neighbor, is_last_layer)
+        return sc
 
 
 class BaseKernelSetConv(Module):
-    # , trainable_kernelconv2=None, trainable_kernelconv3=None,
-    # trainable_kernelconv4=None, ):
     def __init__(self, fixed_kernelconv1=None, fixed_kernelconv2=None,
                  fixed_kernelconv3=None, fixed_kernelconv4=None,
                  trainable_kernelconv1=None, trainable_kernelconv2=None,
@@ -754,22 +469,6 @@ class BaseKernelSetConv(Module):
         else:
             self.num_fixed_kernel_list.append(None)
 
-        # if (trainable_kernelconv1 is not None) and (trainable_kernelconv2
-        # is not None) and (trainable_kernelconv3 is not None) and (
-        # trainable_kernelconv4 is not None):
-        #     self.trainable_kernelconv_set = ModuleList([
-        #     trainable_kernelconv1, trainable_kernelconv2,
-        #     trainable_kernelconv3, trainable_kernelconv4]
-        #                                                )  # ,
-        #                                                trainable_kernelconv2, trainable_kernelconv3, trainable_kernelconv4])
-        #     self.num_trainable_kernel_list = [
-        #     trainable_kernelconv1.get_num_kernels(),
-        #     trainable_kernelconv2.get_num_kernels(),
-        #                                       trainable_kernelconv3.get_num_kernels(), trainable_kernelconv4.get_num_kernels()]
-        # else:
-        #     self.trainable_kernelconv_set = ModuleList([])
-        #     self.num_trainable_kernel_list = []
-
         self.trainable_kernelconv_set = ModuleList(
             [trainable_kernelconv1, trainable_kernelconv2,
              trainable_kernelconv3, trainable_kernelconv4])
@@ -795,8 +494,7 @@ class BaseKernelSetConv(Module):
         else:
             self.num_trainable_kernel_list.append(None)
 
-        # num of kernels for each degree, combining both fixed and trainable
-        # kerenls
+        # Num of kernels for each degree, combining both fixed and trainable kerenls
         self.num_kernel_list = []
         for i in range(4):
             num = 0
@@ -806,18 +504,6 @@ class BaseKernelSetConv(Module):
                 num += self.num_trainable_kernel_list[i]
             self.num_kernel_list.append(num)
 
-        # print(f'self.num_kernel_list:{self.num_kernel_list}')
-
-    #         kernel_set = ModuleList(
-    #             [KernelConv(D=D, num_supports=1, node_attr_dim =
-    #             node_attr_dim, edge_attr_dim = edge_attr_dim),
-    #              KernelConv(D=D, num_supports=2, node_attr_dim =
-    #              node_attr_dim, edge_attr_dim = edge_attr_dim),
-    #              KernelConv(D=D, num_supports=3, node_attr_dim =
-    #              node_attr_dim, edge_attr_dim = edge_attr_dim),
-    #              KernelConv(D=D, num_supports=4, node_attr_dim =
-    #              node_attr_dim, edge_attr_dim = edge_attr_dim)
-    #             ])
 
     def get_focal_nodes_of_degree(self, x, p, selected_index):
         '''
@@ -827,13 +513,8 @@ class BaseKernelSetConv(Module):
         ori_p: a position matrix that only contains rows (i.e. the center
         node) having certain degree
         '''
-        start = time.time()
         x_focal = torch.index_select(input=x, dim=0, index=selected_index)
-        end = time.time()
-        # print(f'=====kernels.py::x_focal index_select:{end-start}')
-        # p_focal = torch.index_select(input=p, dim=0, index=selected_index)
-
-        return x_focal  # , p_focal
+        return x_focal
 
     def get_neighbor_nodes_and_edges_of_degree(self, deg, x, p, nei_index):
         '''
@@ -848,32 +529,10 @@ class BaseKernelSetConv(Module):
         neighboring node) that its center node has certain degree
         '''
 
-        # 		num_focal = len(focal_index)
-        # #         print('center_index')
-        # #         print(center_index)
-
-        # 		nei_x_list = []
-        # 		nei_p_list = []
-        # 		nei_edge_attr_list = []
-        # 		print(f'nei_index:{torch.squeeze(nei_index.T)}')
-        # print(f'nei_index:{nei_index.shape}')
-        # nei_x = torch.index_select(x, 0, torch.squeeze(nei_index.T))
-
-        start = time.time()
         nei_x = torch.index_select(x, 0, nei_index)
-        end = time.time()
-        # print(f'=====kernels.py::nei index_select:{end-start}')
-        nei_x = nei_x.reshape(-1, deg, nei_x.shape[-1])
-        # print(f'nei_x:{nei_x.shape}')
 
-        # nei_p = torch.index_select(p, 0, torch.squeeze(nei_index))
-        # if deg == 2:
-        #     print(f'deg2 before nei_p:{nei_p}')
-        # nei_p = nei_p.reshape(-1, deg, nei_p.shape[-1])
-        # if deg == 2:
-        #     print(f'deg2 after nei_x:{nei_x}')
-        #     print(f'deg2 after nei_p:{nei_p}')
-        #             print(f'nei_p:{nei_p.shape}')
+        nei_x = nei_x.reshape(-1, deg, nei_x.shape[-1])
+
 
         return nei_x
 
@@ -902,10 +561,6 @@ class BaseKernelSetConv(Module):
             x_neighbor = self.get_neighbor_nodes_and_edges_of_degree(deg=deg,
                                                                      x=x, p=p,
                                                                      nei_index=nei_index)
-            #             print(f'x_neighbor:{x_neighbor.shape}')
-            #             print(f'p_neighbor:{p_neighbor.shape}')
-            # end = time.time()
-            # print(f'2receptive_field:{end-start}')
             return x_focal, x_neighbor
         return None
 
@@ -916,7 +571,6 @@ class BaseKernelSetConv(Module):
 
         '''
         rearranged, new_index = torch.sort(index, dim=0)
-
         return new_index
 
     def format_output(self, output):
@@ -1004,50 +658,25 @@ class BaseKernelSetConv(Module):
                               kwargv['nei_index_deg4']]
 
             save_score = kwargv['save_score']
-        #         print('edge_index')
-        #         print(edge_index)
 
-        #         print('edge_attr')
-        #         print(edge_attr)
-
-        # loop through all possbile degrees. i.e. 1 to 4 bonds
-        sc_list = []
         index_list = []
-
-        # print(f'sum(self.num_kernel_list):{sum(self.num_kernel_list)}')
         zeros = torch.zeros(sum(self.num_kernel_list), x.shape[0],
                             device=p.device)
-        # print('zeros')
-        # print(zeros)
         start_row_id = 0
         start_col_id = 0
         for deg in range(1, 5):
-            # print(f'deg:{deg}')
-            start_deg = time.time()
-            # x_focal = x_focal_list[deg-1]
-            # p_focal = p_focal_list[deg-1]
-            # x_neighbor = nei_x_list[deg-1]
-            # p_neighbor = nei_p_list[deg-1]
             edge_attr_neighbor = nei_edge_attr_list[deg - 1]
             selected_index = selected_index_list[deg - 1]
             p_focal = p_focal_list[deg - 1]
             nei_index = nei_index_list[deg - 1]
             p_neighbor = nei_p_list[deg - 1]
 
-            # if x_focal.shape[0] !=0: # make sure there are some nodes
-            # having a certain degree
-            # 	data = Data(x_focal=x_focal, p_focal=p_focal,
-            # 	x_neighbor=x_neighbor, p_neighbor=p_neighbor,
-            # 	edge_attr_neighbor=edge_attr_neighbor)
-            start_convert = time.time()
+
             receptive_field = self.convert_graph_to_receptive_field(
                 deg, x, p, edge_index, edge_attr,
                 selected_index, nei_index
             )
-            end_convert = time.time()
-            # print(f'=====kernels.py::convert:{end_convert-start_convert}')
-            # #             print('receptive_field')
-            # #             print(receptive_field)
+
             if receptive_field is not None:
                 x_focal, x_neighbor = receptive_field[0], receptive_field[1]
                 data = Data(x_focal=x_focal, p_focal=p_focal,
@@ -1055,21 +684,7 @@ class BaseKernelSetConv(Module):
                             p_neighbor=p_neighbor,
                             edge_attr_neighbor=edge_attr_neighbor)
 
-                # print(f'selected_index:{selected_index.shape}')
-                # print('====data info====')
-                # print('x_focal')
-                # print(x_focal.shape)
-                # print('p_focal')
-                # print(p_focal.shape)
-                # print('x_neighbor')
-                # print(x_neighbor.shape)
-                # print('p_neighbor')
-                # print(p_neighbor.shape)
-                # print('edge_attr_neighbor')
-                # print(edge_attr_neighbor.shape)
 
-
-                start_cal_sc = time.time()
                 # Depanding on whether fixed kernels are used, choose the
                 # correct KernelConv to use (either fixed_kernelConv,
                 # trainable_kernel_conv, or both)
@@ -1093,8 +708,6 @@ class BaseKernelSetConv(Module):
                             f'kernels.py::BaseKernelSet:both fixed and '
                             f'trainable kernelconv_set are '
                             f'None for degree {deg}')
-                # end_cal_sc = time.time()
-                # print(f'====kernels.py::calc:{end_cal_sc-start_cal_sc}')
 
                 # Fill a zero tensor will score for each degree in
                 # corresponding positions
@@ -1108,14 +721,10 @@ class BaseKernelSetConv(Module):
                 index_list.append(selected_index)
                 start_row_id += self.num_kernel_list[deg - 1]
                 start_col_id += x_focal.shape[0]
-                #
-                # if(deg == 4):
-                #     torch.set_printoptions(profile="full")
-                #     print(f'kernels.py::shape:{zeros.shape} zeros:{zeros}')
+
             else:
                 start_row_id += self.num_kernel_list[deg - 1]
-            # end_deg = time.time()
-            # print(f'===kernels.py::deg_time:{end_deg-start_deg}')
+
 
         # Reorder the output score tensor so that its rows correspond to the
         # original index in the feature matrix x. Score tensor has shape
@@ -1128,8 +737,6 @@ class BaseKernelSetConv(Module):
 
         if (save_score == True):
             self.save_score(sc)  # save scores for analysis
-        # end = time.time()
-        # print(f'==kernels.py::kernelset:{end-start}')
         return sc
 
 
@@ -1141,43 +748,6 @@ class KernelSetConv(BaseKernelSetConv):
     def __init__(self, L1, L2, L3, L4, D, node_attr_dim, edge_attr_dim):
         self.L = [L1, L2, L3, L4]
 
-        # Test of std kernel
-        p_support = torch.tensor([[1.2990e+00, 7.5000e-01]]).unsqueeze(0)
-        # print(p_support)
-
-        x_center = torch.tensor([[16, 32.067, 1.8, 2, 6]]).unsqueeze(0)
-
-        x_support = torch.tensor(
-            [[6.0000, 12.0110, 1.7000, 4.0000, 4.0000]]).unsqueeze(0)
-
-        edge_attr_support = torch.tensor([[2]],
-                                         dtype=torch.double).unsqueeze(0)
-
-        kernel1_std = Data(p_support=p_support, x_support=x_support,
-                           x_center=x_center,
-                           edge_attr_support=edge_attr_support)
-
-        p_support = torch.tensor([[1.2990e+00, 7.5000e-01],
-                                  [-1.2990e+00, 7.5000e-01],
-                                  [-2.7756e-16, -1.5000e+00]]).unsqueeze(0)
-        # print(p_support)
-
-        x_support = torch.tensor([[16, 32.067, 1.8, 2, 6],
-                                  [6.0000, 12.0110, 1.7000, 4.0000, 4.0000],
-                                  [1.0000, 1.0080, 1.2000, 1.0000,
-                                   1.0000]]).unsqueeze(0)
-
-        x_center = torch.tensor(
-            [[6.0000, 12.0110, 1.7000, 4.0000, 4.0000]]).unsqueeze(0)
-
-        edge_attr_support = torch.tensor(
-            [[2], [1], [1]], dtype=torch.double).unsqueeze(0)
-
-        kernel3_std = Data(p_support=p_support, x_support=x_support,
-                           x_center=x_center,
-                           edge_attr_support=edge_attr_support)
-
-        #         kernel1 = KernelConv(init_kernel = kernel1_std)
         kernelconv1 = KernelConv(L=L1, D=D, num_supports=1,
                                  node_attr_dim=node_attr_dim,
                                  edge_attr_dim=edge_attr_dim)
@@ -1200,383 +770,6 @@ class KernelSetConv(BaseKernelSetConv):
         return sum(self.L)
 
 
-class PredefinedKernelSetConv(BaseKernelSetConv):
-    def __init__(self, D, node_attr_dim, edge_attr_dim, L1=0, L2=0, L3=0, L4=0,
-                 is_first_layer=False):
-        '''
-        if is_first_layer == True, the use the fixed kernels, otherwise,
-        don't use fixed kernels
-        '''
-        # generate functional kernels
-        # trainable
-        typical_smiles = 'C[H]'
-        typical_center_atom_id = 1
-        trainable_kernel1_list = []
-        if L1 != 0:
-            for i in range(L1):
-                trainable_kernel1 = \
-                    generate_kernel_with_angle_and_length_and_edge_attr(
-                        D, typical_smiles, typical_center_atom_id,
-                        node_attr_dim)
-                trainable_kernel1_list.append(trainable_kernel1)
-            self.trainable_kernel1 = self.cat_kernels(
-                trainable_kernel1_list)  # generate a single tensor with L
-            # as the first dimension from the list
-            trainable_kernelconv1 = KernelConv(
-                init_kernel=self.trainable_kernel1,
-                requires_grad=True)  # generate the trainable KernelConv
-        else:
-            trainable_kernelconv1 = None
-        # fixed
-        if is_first_layer == True:
-            fixed_kernel1_list = get_hop1_kernel_list(D)[0]
-            self.fixed_kernel1 = self.cat_kernels(fixed_kernel1_list)
-            fixed_kernelconv1 = KernelConv(init_kernel=self.fixed_kernel1,
-                                           requires_grad=False)
-            print(
-                f'PredefinedKernelSetConv: there are '
-                f'{self.fixed_kernel1.x_center.shape[0]} degree1 fixed '
-                f'kernels, {L1} degree1 trainable kernels')
-        else:
-            print(
-                f'PredefinedKernelSetConv: there are {L1} degree1 trainable '
-                f'kernels')
-
-        # degree2 kernels
-        # trainable
-        typical_smiles = 'CO[H]'
-        typical_center_atom_id = 1
-        trainable_kernel2_list = []
-        if L2 != 0:
-            for i in range(L2):
-                trainable_kernel2 = \
-                    generate_kernel_with_angle_and_length_and_edge_attr(
-                        D, typical_smiles, typical_center_atom_id,
-                        node_attr_dim)
-                trainable_kernel2_list.append(trainable_kernel2)
-            self.trainable_kernel2 = self.cat_kernels(
-                trainable_kernel2_list)  # generate a single tensor with L
-            # as the first dimension from the list
-            trainable_kernelconv2 = KernelConv(
-                init_kernel=self.trainable_kernel2,
-                requires_grad=True)  # generate the trainable KernelConv
-        else:
-            trainable_kernelconv2 = None
-        # fixed
-        if is_first_layer == True:
-            fixed_kernel2_list = get_hop1_kernel_list(D)[1]
-            self.fixed_kernel2 = self.cat_kernels(fixed_kernel2_list)
-            fixed_kernelconv2 = KernelConv(init_kernel=self.fixed_kernel2,
-                                           requires_grad=False)
-            print(
-                f'PredefinedKernelSetConv: there are '
-                f'{self.fixed_kernel2.x_center.shape[0]} degree2 fixed '
-                f'kernels, {L2} degree2 trainable kernels')
-        else:
-            print(
-                f'PredefinedKernelSetConv: there are {L2} degree2 trainable '
-                f'kernels')
-
-        # degree3 kernels
-        # trainable
-        typical_smiles = 'C=C'
-        typical_center_atom_id = 1
-        trainable_kernel3_list = []
-        if L3 != 0:
-            for i in range(L3):
-                trainable_kernel3 = \
-                    generate_kernel_with_angle_and_length_and_edge_attr(
-                        D, typical_smiles, typical_center_atom_id,
-                        node_attr_dim)
-                trainable_kernel3_list.append(trainable_kernel3)
-            self.trainable_kernel3 = self.cat_kernels(
-                trainable_kernel3_list)  # generate a single tensor with L
-            # as the first dimension from the list
-            trainable_kernelconv3 = KernelConv(
-                init_kernel=self.trainable_kernel3,
-                requires_grad=True)  # generate the trainable KernelConv
-        else:
-            trainable_kernelconv3 = None
-        # fixed
-        if is_first_layer == True:
-            fixed_kernel3_list = get_hop1_kernel_list(D)[2]
-            self.fixed_kernel3 = self.cat_kernels(fixed_kernel3_list)
-            fixed_kernelconv3 = KernelConv(init_kernel=self.fixed_kernel3,
-                                           requires_grad=False)
-            print(
-                f'PredefinedKernelSetConv: there are '
-                f'{self.fixed_kernel3.x_center.shape[0]} degree3 fixed '
-                f'kernels, {L3} degree3 trainable kernels')
-        else:
-            print(
-                f'PredefinedKernelSetConv: there are {L3} degree3 trainable '
-                f'kernels')
-
-        # degree4 kernels
-        # trainable
-        typical_smiles = 'CC'
-        typical_center_atom_id = 1
-        trainable_kernel4_list = []
-        if L4 != 0:
-            for i in range(L4):
-                trainable_kernel4 = \
-                    generate_kernel_with_angle_and_length_and_edge_attr(
-                        D, typical_smiles, typical_center_atom_id,
-                        node_attr_dim)
-                trainable_kernel4_list.append(trainable_kernel4)
-            self.trainable_kernel4 = self.cat_kernels(
-                trainable_kernel4_list)  # generate a single tensor with L
-            # as the first dimension from the list
-            trainable_kernelconv4 = KernelConv(
-                init_kernel=self.trainable_kernel4,
-                requires_grad=True)  # generate the trainable KernelConv
-        else:
-            trainable_kernelconv4 = None
-        # fixed
-        if is_first_layer == True:
-            fixed_kernel4_list = get_hop1_kernel_list(D)[3]
-            self.fixed_kernel4 = self.cat_kernels(fixed_kernel4_list)
-            fixed_kernelconv4 = KernelConv(init_kernel=self.fixed_kernel4,
-                                           requires_grad=False)
-            print(
-                f'PredefinedKernelSetConv: there are '
-                f'{self.fixed_kernel4.x_center.shape[0]} degree4 fixed '
-                f'kernels, {L4} degree4 trainable kernels')
-        else:
-            print(
-                f'PredefinedKernelSetConv: there are {L4} degree4 trainable '
-                f'kernels')
-
-        if is_first_layer == True:
-            super(PredefinedKernelSetConv, self).__init__(fixed_kernelconv1,
-                                                          fixed_kernelconv2,
-                                                          fixed_kernelconv3,
-                                                          fixed_kernelconv4,
-                                                          trainable_kernelconv1,
-                                                          trainable_kernelconv2,
-                                                          trainable_kernelconv3,
-                                                          trainable_kernelconv4)
-        else:
-            super(PredefinedKernelSetConv, self).__init__(
-                trainable_kernelconv1=trainable_kernelconv1,
-                trainable_kernelconv2=trainable_kernelconv2,
-                trainable_kernelconv3=trainable_kernelconv3,
-                trainable_kernelconv4=trainable_kernelconv4)
-
-    def cat_kernels(self, kernel_list):
-        x_center_list = [kernel.x_center for kernel in kernel_list]
-        x_support_list = [kernel.x_support for kernel in kernel_list]
-        p_support_list = [kernel.p_support for kernel in kernel_list]
-        edge_attr_support_list = [kernel.edge_attr_support for kernel in
-                                  kernel_list]
-
-        # for x_center in x_center_list:
-        #     print(x_center.shape)
-        x_center = torch.cat(x_center_list)
-        x_support = torch.cat(x_support_list)
-        p_support = torch.cat(p_support_list)
-        edge_attr_support = torch.cat(edge_attr_support_list)
-        data = Data(x_center=x_center, x_support=x_support,
-                    p_support=p_support, edge_attr_support=edge_attr_support)
-        return data
-
-    def get_num_kernel(self):
-        num_kernel = 0
-        if hasattr(self, 'trainable_kernel1'):
-            num_kernel = self.trainable_kernel1.x_center.shape[0]
-        if hasattr(self, 'trainable_kernel2'):
-            num_kernel += self.trainable_kernel2.x_center.shape[0]
-        if hasattr(self, 'trainable_kernel3'):
-            num_kernel += self.trainable_kernel3.x_center.shape[0]
-        if hasattr(self, 'trainable_kernel4'):
-            num_kernel += self.trainable_kernel4.x_center.shape[0]
-
-        if hasattr(self, 'fixed_kernel1'):
-            num_kernel += self.fixed_kernel1.x_center.shape[0]
-        if hasattr(self, 'fixed_kernel2'):
-            num_kernel += self.fixed_kernel2.x_center.shape[0]
-        if hasattr(self, 'fixed_kernel3'):
-            num_kernel += self.fixed_kernel3.x_center.shape[0]
-        if hasattr(self, 'fixed_kernel4'):
-            num_kernel += self.fixed_kernel4.x_center.shape[0]
-        # total_num = self.fixed_kernel1.x_center.shape[0] +
-        # self.fixed_kernel2.x_center.shape[0] +
-        # self.fixed_kernel3.x_center.shape[0] +
-        # self.fixed_kernel4.x_center.shape[0] + num_trainable_kernel
-        # print(f'total number kernels:{total_num}')
-        return num_kernel
-
-
-# class PredefinedNHopKernelSetConv(BaseKernelSetConv):
-#     '''
-#     The main difference between a PredefinedNHopKernelSetConv(abbreviated
-#     as NHop for simplicity) and Predefined1HopKernelSetConv(abbreviated as
-#     1Hop for simplicity)
-#     is that 1HOP has some fixed kernels but NHop has all trainable but
-#     predefined kernels.
-#     '''
-#     def __init__(self, D, node_attr_dim, edge_attr_dim, L1=0, L2=0, L3=0,
-#     L4=0):
-
-#         # generate functional kernels
-#         # degree1 kernels
-#         typical_smiles = 'C[H]'
-#         typical_center_atom_id = 1
-#         trainable_kernel1_list = []
-#         if L1 != 0:
-#             for i in range(L1):
-#                 trainable_kernel1 =
-#                 generate_kernel_with_angle_and_length_and_edge_attr(D,
-#                 typical_smiles, typical_center_atom_id, node_attr_dim)
-#                 trainable_kernel1_list.append(trainable_kernel1)
-#             self.trainable_kernel1 = self.cat_kernels(
-#             trainable_kernel1_list)  # generate a single tensor with L as
-#             the first dimension from the list
-#             trainable_kernelconv1 = KernelConv(
-#             init_kernel=self.trainable_kernel1, requires_grad=True)  #
-#             generate the trainable KernelConv
-#         else:
-#             trainable_kernelconv1 = None
-#         print(f'PredefinedNHopKernelSetConv: there are {L1} degree1
-#         trainable kernels')
-
-
-#         # degree2 kernels
-#         # degree2 kernels
-#         typical_smiles = 'CO[H]'
-#         typical_center_atom_id = 1
-#         trainable_kernel2_list = []
-#         if L2 != 0:
-#             for i in range(L2):
-#                 trainable_kernel2 =
-#                 generate_kernel_with_angle_and_length_and_edge_attr(D,
-#                 typical_smiles, typical_center_atom_id, node_attr_dim)
-#                 trainable_kernel2_list.append(trainable_kernel2)
-#             self.trainable_kernel2 = self.cat_kernels(
-#             trainable_kernel2_list)  # generate a single tensor with L as
-#             the first dimension from the list
-#             trainable_kernelconv2 = KernelConv(
-#             init_kernel=self.trainable_kernel2, requires_grad=True)  #
-#             generate the trainable KernelConv
-#         else:
-#             trainable_kernelconv2 = None
-#         print(f'PredefinedNHopKernelSetConv: there are {L2} degree2
-#         trainable kernels')
-
-#         # degree3 kernels
-#         typical_smiles = 'C=C'
-#         typical_center_atom_id = 1
-#         trainable_kernel3_list = []
-#         if L3 != 0:
-#             for i in range(L3):
-#                 trainable_kernel3 =
-#                 generate_kernel_with_angle_and_length_and_edge_attr(D,
-#                 typical_smiles, typical_center_atom_id, node_attr_dim)
-#                 trainable_kernel3_list.append(trainable_kernel3)
-#             self.trainable_kernel3 = self.cat_kernels(
-#             trainable_kernel3_list)  # generate a single tensor with L as
-#             the first dimension from the list
-#             trainable_kernelconv3 = KernelConv(
-#             init_kernel=self.trainable_kernel3, requires_grad=True)  #
-#             generate the trainable KernelConv
-#         else:
-#             trainable_kernelconv3 = None
-#         print(f'PredefinedNHopKernelSetConv: there are {L3} degree3
-#         trainable kernels')
-
-#         # degree4 kernels
-#         typical_smiles = 'CC'
-#         typical_center_atom_id = 1
-#         trainable_kernel4_list = []
-#         if L4 != 0:
-#             for i in range(L4):
-#                 trainable_kernel4 =
-#                 generate_kernel_with_angle_and_length_and_edge_attr(D,
-#                 typical_smiles, typical_center_atom_id, node_attr_dim)
-#                 trainable_kernel4_list.append(trainable_kernel4)
-#             self.trainable_kernel4 = self.cat_kernels(
-#             trainable_kernel4_list)  # generate a single tensor with L as
-#             the first dimension from the list
-#             trainable_kernelconv4 = KernelConv(
-#             init_kernel=self.trainable_kernel4, requires_grad=True)  #
-#             generate the trainable KernelConv
-#         else:
-#             trainable_kernelconv4 = None
-#         print(f'PredefinedNHopKernelSetConv: there are {L4} degree4
-#         trainable kernels')
-
-#         super(PredefinedNHopKernelSetConv, self).__init__(
-#         trainable_kernelconv1=trainable_kernelconv1,
-#         trainable_kernelconv2=trainable_kernelconv2,
-#         trainable_kernelconv3=trainable_kernelconv3,
-#         trainable_kernelconv4=trainable_kernelconv4)
-
-#     def cat_kernels(self, kernel_list):
-#         x_center_list = [kernel.x_center for kernel in kernel_list]
-#         x_support_list = [kernel.x_support for kernel in kernel_list]
-#         p_support_list = [kernel.p_support for kernel in kernel_list]
-#         edge_attr_support_list = [kernel.edge_attr_support for kernel in
-#         kernel_list]
-
-#         # for x_center in x_center_list:
-#         #     print(x_center.shape)
-#         x_center = torch.cat(x_center_list)
-#         x_support = torch.cat(x_support_list)
-#         p_support = torch.cat(p_support_list)
-#         edge_attr_support = torch.cat(edge_attr_support_list)
-#         data = Data(x_center=x_center, x_support=x_support,
-#         p_support=p_support, edge_attr_support=edge_attr_support)
-#         return data
-
-#     def get_num_kernel(self):
-#         num_trainable_kernel = 0
-#         if hasattr(self, 'trainable_kernel1'):
-#             num_trainable_kernel = self.trainable_kernel1.x_center.shape[0]
-#         if hasattr(self, 'trainable_kernel2'):
-#             num_trainable_kernel += self.trainable_kernel2.x_center.shape[0]
-#         if hasattr(self, 'trainable_kernel3'):
-#             num_trainable_kernel += self.trainable_kernel3.x_center.shape[0]
-#         if hasattr(self, 'trainable_kernel4'):
-#             num_trainable_kernel += self.trainable_kernel4.x_center.shape[0]
-
-#         total_num = num_trainable_kernel
-#         # print(f'total number kernels:{total_num}')
-#         return total_num
-
-# class KernelLayer(Module):
-#     '''
-#         a wrapper of KernelSetConv for clear input/output dimension, inputs:
-#         D: dimension
-#         L: number of KernelConvSet
-
-#         the output will be of dimension L1+L2+L3+L4
-#     '''
-
-#     def __init__(self, x_dim, p_dim, edge_dim, L1=None, L2=None, L3=None,
-#     L4=None, predined_kernelsets=True):
-
-#         super(KernelLayer, self).__init__()
-#         if(predined_kernelsets == True):
-#             self.conv = PredefinedKernelSetConv(D=p_dim,
-#             node_attr_dim=x_dim, edge_attr_dim=edge_dim)
-#         else:
-#             if L1 is None or L2 is None or L3 is None or L4 is None:
-#                 raise Exception('KernelLayer(): if predined_kernelsets is
-#                 false, then L1-L4 needs to be specified')
-#             self.conv = KernelSetConv(L1, L2, L3, L4, D=p_dim,
-#             node_attr_dim=x_dim, edge_attr_dim=edge_dim)
-
-#     def forward(self, data):
-#         return self.conv(data=data)
-
-
 if __name__ == "__main__":
     print('testing')
-    # model = Predefined1HopKernelSetConv(D=2, node_attr_dim=5, edge_attr_dim=1,
-    #                                     L1=2, L2=3, L3=4, L4=2)
-    # model = KernelSetConv(D=2, node_attr_dim=5, edge_attr_dim=1, L1=15, L2=15,
-    #                       L3=15, L4=15)
-    # for param in model.parameters():
-    #     print(param)
-    # num = model.get_num_kernel()
-    # print(num)
+

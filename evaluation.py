@@ -1,6 +1,4 @@
-import math
 import numpy as np
-import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, auc, roc_curve, f1_score, \
     roc_auc_score
 
@@ -54,51 +52,21 @@ def calculate_logAUC(true_y, predicted_score, FPR_range=(0.001, 0.1)):
     if (lower_bound >= upper_bound):
         raise Exception('FPR upper_bound must be greater than lower_bound')
 
-    # print(f'true_y:')
-    # print(true_y)
-    # print(f'predicted_score:')
-    # print(predicted_score)
-
     fpr, tpr, thresholds = roc_curve(true_y, predicted_score, pos_label=1)
-    # print(f'ori_tpr:{tpr}')
-    # print(f'ori_fpr:{fpr}')
 
-    # ori_fig, ori_ax = plt.subplots()
-    # ori_ax.plot(fpr, tpr)
-
-    # Intecept the curve at the two ends of the region, i.e., lower_bound,
-    # and upper_bound
-    # print(f'\n')
-    # print(f'tpr:{tpr}')
-    # print(f'fpr:{fpr}')
-    # print(f'intercept tpr:{np.interp([lower_bound, upper_bound], fpr, tpr)}')
     tpr = np.append(tpr, np.interp([lower_bound, upper_bound], fpr, tpr))
     fpr = np.append(fpr, [lower_bound, upper_bound])
 
     # Sort both x-, y-coordinates array
     tpr = np.sort(tpr)
     fpr = np.sort(fpr)
-    # print('\n')
-    # print(f'tpr:{tpr}')
-    # print(f'fpr:{fpr}')
 
-
-    # Get the data points' coordinates. log_fpr is the x coordinate, tpr is
-    # the y coordinate.
+    # Get the data points' coordinates. log_fpr is the x coordinate, tpr is the y coordinate.
     log_fpr = np.log10(fpr)
     x = log_fpr
     y = tpr
     lower_bound = np.log10(lower_bound)
     upper_bound = np.log10(upper_bound)
-
-
-    # For visulization of the plot before trimming, uncomment the following
-    # line, with proper libray imported
-    # log_fig, log_ax = plt.subplots(nrows=1, ncols=1)
-    # log_ax.plot(x, y)
-    # # For visulization of the plot in the trimmed area, uncomment the
-    # # following line
-    # plt.xlim(lower_bound, upper_bound)
 
     # Get the index of the lower and upper bounds
     lower_bound_idx = np.where(x == lower_bound)[-1][-1]
@@ -108,12 +76,7 @@ def calculate_logAUC(true_y, predicted_score, FPR_range=(0.001, 0.1)):
     trim_x = x[lower_bound_idx:upper_bound_idx + 1]
     trim_y = y[lower_bound_idx:upper_bound_idx + 1]
 
-    # print(f'\n')
-    # print(f'trim_x:{trim_x}')
-    # print(f'trim_y:{trim_y}')
     area = auc(trim_x, trim_y) / (upper_bound-lower_bound)
-    # print(f'evaluation.py::fpr:{trim_x} tpr:{trim_y}')
-
     return area
 
 def calculate_auc(true_y, predicted_score):
@@ -142,8 +105,6 @@ def calculate_ppv(true_y, predicted_score, cutoff = 0.5):
         ppv = (tp / (tp + fp))
     else:
         ppv = np.NAN
-    # print(f'\nevaluation.py::tn:{tn}, fp:{fp}, fn:{fn}, tp:{tp}, tp+fp'
-    #       f':{tp + fp} ppv:{ppv}')
     return ppv
 
 def calculate_accuracy(true_y, predicted_score):
@@ -155,12 +116,8 @@ def calculate_accuracy(true_y, predicted_score):
 
     if (tp + fp + tn + fn) != 0:
         accuracy = ((tp + tn) / (tp + fp + tn + fn))
-        # print(f'\ntn:{tn}, fp:{fp}, fn:{fn}, tp:{tp}, all:'
-        #       f'{tp + fp + tn + fn}, accuracy:{accuracy}')
     else:
         accuracy = np.NAN
-        # print(f'\ntn:{tn}, fp:{fp}, fn:{fn}, tp:{tp}, all:'
-        #       f'{tp + fp + tn + fn}, accuracy:NAN')
     return accuracy
 
 def calculate_f1_score(true_y, predicted_score):

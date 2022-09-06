@@ -51,7 +51,6 @@ class ChIRoNet(torch.nn.Module):
 
         output, latent_vector, phase_shift_norm, z_alpha, mol_embedding, \
         c_tensor, phase_cos, phase_sin, sin_cos_psi, sin_cos_alpha = self.encoder(batch_data, LS_map, alpha_indices)
-        # graph_embedding = self.encoder(batch_data, LS_map, alpha_indices)
         graph_embedding = mol_embedding
 
         return graph_embedding
@@ -135,28 +134,5 @@ class ChIRoNet(torch.nn.Module):
 
         return parent_parser
 
-
-    # def configure_optimizers(self, warmup_iterations, tot_iterations,
-    #                          peak_lr, end_lr):
-    #     """
-    #     Returns an optimizer and scheduler suitable for GCNNet
-    #     :return: optimizer, scheduler
-    #     """
-    #     optimizer = Adam(self.parameters())
-    #     # scheduler = warmup.
-    #     scheduler = {
-    #         'scheduler': PolynomialDecayLR(
-    #             optimizer,
-    #             warmup_iterations=warmup_iterations,
-    #             tot_iterations=tot_iterations,
-    #             lr=peak_lr,
-    #             end_lr=end_lr,
-    #             power=1.0,
-    #         ),
-    #         'name': 'learning_rate',
-    #         'interval': 'step',
-    #         'frequency': 1,
-    #     }
-    #     return optimizer, scheduler
 
 

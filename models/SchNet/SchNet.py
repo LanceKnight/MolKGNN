@@ -1,7 +1,4 @@
-
 from .schnet import SchNet as Encoder
-# from dig.threedgraph.method import SchNet as Encoder
-# from torch_geometric.nn import SchNet as Encoder
 import torch
 
 
@@ -22,32 +19,12 @@ class SchNet(torch.nn.Module):
                                num_gaussians=num_gaussians,
                                out_channels=out_channels
                             )
-        # self.encoder = Encoder(hidden_channels = 128,
-        #                         num_filters = 128,
-        #                         num_interactions = 6,
-        #                         num_gaussians = 50,
-        #                         cutoff= 10.0,
-        #                         max_num_neighbors = 32,
-        #                         readout = 'add',
-        #                         dipole = False,
-        #                         mean = None,
-        #                         std = None,
-        #                         atomref = None)
     def forward(self, batch_data):
 
 
 
         batch_data.z = batch_data.x.squeeze()
         graph_embedding = self.encoder(batch_data)
-
-        # node_batch = batch_data.batch
-        # z = batch_data.x
-        # pos = batch_data.pos
-        #
-        # latent_vector = self.encoder(z.squeeze(), pos, node_batch)
-        # graph_embedding = latent_vector
-
-
 
         return graph_embedding
 

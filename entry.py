@@ -1,6 +1,5 @@
 # Written by Yunchao "Lance" Liu (www.LiuYunchao.com)
-
-from data import DataLoaderModule, get_dataset
+from data import DataLoaderModule
 import glob
 from model import GNNModel
 from monitors import LossMonitor, \
@@ -14,9 +13,7 @@ from monitors import LossMonitor, \
     PPVMonitor,\
     PPVNoDropoutMonitor,\
     RMSEMonitor,\
-    RMSENoDropoutMonitor,\
     AccuracyMonitor,\
-    AccuracyNoDropoutMonitor,\
     F1ScoreMonitor,\
     F1ScoreNoDropoutMonitor
 
@@ -30,8 +27,6 @@ import os
 import os.path as osp
 from clearml import Task
 import time
-
-
 
 def add_args(gnn_type):
     """
@@ -60,14 +55,6 @@ def add_args(gnn_type):
 
 
     args = parser.parse_args()
-    # args.tot_iterations = round(len(get_dataset(
-    #                                             dataset_name=args.dataset_name,
-    #                                             gnn_type=gnn_type,
-    #                                             dataset_path=args.dataset_path
-    #                                             )['dataset'],
-    #                                 ) * 0.8 /args.batch_size) \
-    #                       * args.max_epochs + 1
-    # args.max_steps = args.tot_iterations + 1
 
     if use_clearml:
         task.set_name(args.task_name)
@@ -211,7 +198,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         monitor=monitoring_metric,
         dirpath=actual_training_checkpoint_dir,
         filename='best_model_metric_{epoch}_{logAUC_0.001_0.1}',
-        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
         save_top_k=1,
         mode='max',
         save_last=True,
@@ -222,7 +208,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         monitor='AUC',
         dirpath=actual_training_checkpoint_dir,
         filename='best_model_metric_{epoch}_{AUC}',
-        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
         save_top_k=1,
         mode='max',
         save_last=True,
@@ -233,7 +218,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         monitor='logAUC_0.001_0.1',
         dirpath=actual_training_checkpoint_dir,
         filename='best_model_metric_{epoch}_{logAUC_0.001_1}',
-        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
         save_top_k=1,
         mode='max',
         save_last=True,
@@ -244,7 +228,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         monitor='loss',
         dirpath=actual_training_checkpoint_dir,
         filename='best_model_metric_{epoch}_{loss}',
-        #f'{data_module.dataset_name}'+'-{# epoch}-{loss}',
         save_top_k=1,
         mode='min',
         save_last=True,
@@ -252,17 +235,7 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     )
 
 
-
-    # # Resume from the checkpoint. Temporarily disable to facilitate dubugging.
-    # if not args.test and not args.validate and os.path.exists(
-    #         f'{actual_training_checkpoint_dir}/last.ckpt'):
-    #     print('Resuming from actual training checkpoint')
-    #     args.resume_from_checkpoint = actual_training_checkpoint_dir + \
-    #         '/last.ckpt'
-
-
     prog_bar=TQDMProgressBar(refresh_rate=500)
-    # print(f'entry::accelerator:{args.accelerator}, type:{type(args.accelerator)}')
     trainer = pl.Trainer.from_argparse_args(args)
     trainer.callbacks=[prog_bar]
     trainer.callbacks.append(actual_training_checkpoint_callback)
@@ -272,8 +245,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
     trainer.callbacks.append(best_loss_callback)
 
     if use_clearml:
-        # Loss monitors
-        # trainer.callbacks.append(
         trainer.callbacks.append(LossMonitor(stage='train', logger=logger, logging_interval='epoch'))
         trainer.callbacks.append(LossMonitor(stage='valid', logger=logger, logging_interval='epoch'))
         if args.train_metric:
@@ -281,32 +252,19 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
 
         # Learning rate monitors
         trainer.callbacks.append(LearningRateMonitor(logging_interval='step'))
-        # trainer.callbacks.append(LearningRateMonitor(logging_interval='epoch'))
 
         # Other metrics monitors
         metrics = data_module.dataset['metrics']
         for metric in metrics:
             if metric == 'accuracy':
-                # Accuracy monitors
-                # trainer.callbacks.append(
-                #     AccuracyMonitor(stage='train', logger=logger,
-                #                     logging_interval='epoch'))
                 trainer.callbacks.append(AccuracyMonitor(stage='valid', logger=logger, logging_interval='epoch'))
                 continue
 
             if metric == 'RMSE':
-                # Accuracy monitors
-                # trainer.callbacks.append(
-                    # RMSEMonitor(stage='train', logger=logger,
-                    #             logging_interval='epoch'))
                 trainer.callbacks.append(RMSEMonitor(stage='valid', logger=logger, logging_interval='epoch'))
                 continue
 
             if metric == 'logAUC_0.001_0.1':
-                # LogAUC monitors
-                # trainer.callbacks.append(
-                #     LogAUC0_001to0_1Monitor(stage='train', logger=logger,
-                #                             logging_interval='epoch'))
                 trainer.callbacks.append(LogAUC0_001to0_1Monitor(stage='valid', logger=logger, logging_interval='epoch'))
                 if args.train_metric:
                     trainer.callbacks.append(
@@ -315,10 +273,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 continue
 
             if metric == 'logAUC_0.001_1':
-                # LogAUC monitors
-                # trainer.callbacks.append(
-                #     LogAUC0_001to1Monitor(stage='train', logger=logger,
-                #                             logging_interval='epoch'))
                 trainer.callbacks.append(LogAUC0_001to1Monitor(stage='valid', logger=logger, logging_interval='epoch'))
                 if args.train_metric:
                     trainer.callbacks.append(
@@ -327,10 +281,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 continue
 
             if metric == 'AUC':
-                # LogAUC monitors
-                # trainer.callbacks.append(
-                #     LogAUC0_001to1Monitor(stage='train', logger=logger,
-                #                             logging_interval='epoch'))
                 trainer.callbacks.append(AUCMonitor(stage='valid', logger=logger, logging_interval='epoch'))
                 if args.train_metric:
                     trainer.callbacks.append(
@@ -339,9 +289,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 continue
 
             if metric == 'ppv':
-                # PPV monitors
-                # trainer.callbacks.append(
-                #     PPVMonitor(stage='train', logger=logger, logging_interval='epoch'))
                 trainer.callbacks.append(PPVMonitor(stage='valid', logger=logger, logging_interval='epoch'))
                 if args.train_metric:
                     trainer.callbacks.append(
@@ -350,10 +297,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 continue
 
             if metric == 'f1_score':
-                # F1 monitors
-                # trainer.callbacks.append(
-                #     F1ScoreMonitor(stage='train', logger=logger,
-                #                    logging_interval='epoch'))
                 trainer.callbacks.append(F1ScoreMonitor(stage='valid', logger=logger, logging_interval='epoch'))
                 if args.train_metric:
                     trainer.callbacks.append(
@@ -374,9 +317,6 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
         # In testing Mode
         testing_procedure(trainer, data_module, args)
         if gnn_type=='kgnn':
-            # Save relevant data for analyses
-            # model.save_atom_encoder(dir = 'analyses/atom_encoder/',
-            # file_name='atom_encoder.pt')
             model.save_kernels(dir='analyses/atom_encoder/', file_name='kernels.pt')
             model.print_graph_embedding()
             model.save_graph_embedding('analyses/atom_encoder/graph_embedding')
@@ -406,11 +346,6 @@ def main(gnn_type, use_clearml):
     # data_module to accommodate different pretraining data
     actual_training_data_module = data_modules[0]
 
-    # Pretrain the model if pretraining is enabled
-    if enable_pretraining:
-        pretraining_data_module = data_modules[1]
-        # TODO: prepare the model for pretraining
-        # TODO: pretrain the model
 
     # Prepare model for actural training
     model = prepare_actual_model(args)
@@ -418,7 +353,6 @@ def main(gnn_type, use_clearml):
     # Start actual training
     actual_training(model, actual_training_data_module, use_clearml,
                     gnn_type, args)
-
 
 
 if __name__ == '__main__':
@@ -433,7 +367,7 @@ if __name__ == '__main__':
     # gnn_type = 'chironet'
     # gnn_type = 'dimenet_pp'
     # gnn_type = 'spherenet'
-    #gnn_type = 'schnet'
+    # gnn_type = 'schnet'
 
 
     print(f'========================')
@@ -455,7 +389,6 @@ if __name__ == '__main__':
             out_file.write('\n')
 
             logger = task.get_logger()
-            # logger = pl.loggers.tensorboard
         main(gnn_type, use_clearml)
         end = time.time()
         run_time = end-start
