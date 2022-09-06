@@ -670,7 +670,7 @@ class KernelConv(Module):
         exp_edge_attr_support_weight = torch.exp(self.edge_attr_support_sc_weight)
 
         denominator =  exp_center_attr_weight+exp_support_attr_weight\
-                      # exp_edge_attr_support_weight+ 
+                      # exp_edge_attr_support_weight+
 
 
         support_attr_sc_weight = exp_support_attr_weight/denominator
