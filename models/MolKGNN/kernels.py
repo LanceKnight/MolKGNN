@@ -20,7 +20,7 @@ class KernelConv(Module):
                  init_center_attr_sc_weight=0.2,
                  init_support_attr_sc_weight=0.2,
                  init_edge_attr_support_sc_weight=0.2,
-                 weight_requires_grad=False):
+                 weight_requires_grad=True):
         """
         Do the molecular convolution between a neighborhood and a kernel
         :param L:
@@ -375,10 +375,8 @@ class KernelConv(Module):
         # # Calculate the angle score
         best_p_support = self.get_the_permutation_with_best_alignment_id(p_support, best_support_attr_sc_index)
 
-
         # Calculate the center attribute score
         center_attr_sc = self.get_center_attribute_score(x_focal, x_center)
-
 
         # Calculate the edge attribute score
         selected_index = best_support_attr_sc_index.unsqueeze(-1).unsqueeze(-1).expand(
@@ -401,14 +399,27 @@ class KernelConv(Module):
                                                      best_p_support
                                                      )
 
+        exp_support_attr_weight = torch.exp(self.support_attr_sc_weight)
+        exp_center_attr_weight = torch.exp(self.center_attr_sc_weight)
+        exp_edge_attr_support_weight = torch.exp(self.edge_attr_support_sc_weight)
+
+        denominator =  exp_support_attr_weight\
+                      + exp_center_attr_weight\
+                      + exp_edge_attr_support_weight
+
+        support_attr_sc_weight = exp_support_attr_weight/denominator
+        center_attr_sc_weight = exp_center_attr_weight/denominator
+        edge_attr_support_sc_weight = exp_edge_attr_support_weight/denominator
+
 
         # Each score is of Shape[num_kernel, num_nodes_of_this_degree]
         sc = (
-                 support_attr_sc * self.support_attr_sc_weight
-                 + center_attr_sc * self.center_attr_sc_weight
-                 + edge_attr_support_sc * self.edge_attr_support_sc_weight
-             ) / (self.support_attr_sc_weight+self.center_attr_sc_weight +
-                  self.edge_attr_support_sc_weight)
+
+                 support_attr_sc * support_attr_sc_weight
+                 + center_attr_sc * center_attr_sc_weight
+                 + edge_attr_support_sc * edge_attr_support_sc_weight
+             ) / (support_attr_sc_weight+center_attr_sc_weight +
+                  edge_attr_support_sc_weight)
         if deg ==4:
             sc = sc * chirality_sign
         return sc

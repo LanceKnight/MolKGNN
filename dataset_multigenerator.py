@@ -62,6 +62,7 @@ if __name__ == '__main__':
     # Change this
     # Hyperparms
     dataset_list = ['435008', '1798', '435034', '1843', '2258', '463087', '488997','2689', '485290'] 
+    dataset_list = ['2258'] 
 
     input_list = []
     for id, dataset in enumerate(dataset_list):
