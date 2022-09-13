@@ -1,4 +1,6 @@
 # <ins>Mol</ins>ecular-<ins>K</ins>ernel <ins>G</ins>raph <ins>N</ins>eural <ins>N</ins>etwork (MolKGNN)
+By [Yunchao "Lance" Liu](www.LiuYunchao.com), [Yu Wang](https://yuwvandy.github.io/), [Oanh Vu](https://www.linkedin.com/in/oanhvu/), [Bobby Bodenheimer](http://www.vuse.vanderbilt.edu/~bobbyb/), [Jens Meiler](https://www.linkedin.com/in/jens-meiler-4b635339/), [Tyler Derr](https://tylersnetwork.github.io/)
+
 This repository is the official implementation of MolKGNN in paper [*Interpretable Chirality-Aware Graph Neural Network for Quantitative Structure Activity Relationship Modeling in Drug Discovery*](https://www.biorxiv.org/content/10.1101/2022.08.24.505155v1).
 
 Please cite our paper if you find MolKGNN useful in your work:
@@ -23,7 +25,7 @@ MolKGNN is a deep learning model based on Grah Neural Networks (GNNs) for molecu
   <img src="https://user-images.githubusercontent.com/5760199/186030469-28661a4e-ff48-43b3-b707-885629791032.png" />
 </p>
 
-
+My [blog](https://medium.com/@YunchaoLanceLiu/molkgnn-extending-convolution-to-molecules-b94a4d51f39f) explaining this paper. 
 
 
 # Acquire the Datasets
