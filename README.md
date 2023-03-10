@@ -1,7 +1,7 @@
 # <ins>Mol</ins>ecular-<ins>K</ins>ernel <ins>G</ins>raph <ins>N</ins>eural <ins>N</ins>etwork (MolKGNN)
 By [Yunchao "Lance" Liu](www.LiuYunchao.com), [Yu Wang](https://yuwvandy.github.io/), [Oanh Vu](https://www.linkedin.com/in/oanhvu/), [Bobby Bodenheimer](http://www.vuse.vanderbilt.edu/~bobbyb/), [Jens Meiler](https://www.linkedin.com/in/jens-meiler-4b635339/), [Tyler Derr](https://tylersnetwork.github.io/)
 
-This repository is the official implementation of MolKGNN in paper [*Interpretable Chirality-Aware Graph Neural Network for Quantitative Structure Activity Relationship Modeling in Drug Discovery*](https://www.biorxiv.org/content/10.1101/2022.08.24.505155v1). 
+This repository is the official implementation of MolKGNN in paper [*Interpretable Chirality-Aware Graph Neural Network for Quantitative Structure Activity Relationship Modeling in Drug Discovery*](https://www.biorxiv.org/content/10.1101/2022.08.24.505155v1), accpeted by AAAI23.
 
 The supplementary material can be found [here](https://github.com/LanceKnight/MolKGNN/raw/main/Supplement.pdf).
 
@@ -11,9 +11,8 @@ Please cite our paper if you find MolKGNN useful in your work:
 @article {liu2022molkgnn,
 	author = {Liu, Yunchao (Lance) and Wang, Yu and Vu, Oanh and Moretti, Rocco and Bodenheimer, Bobby and Meiler, Jens and Derr, Tyler},
 	title = {Interpretable Chirality-Aware Graph Neural Network for Quantitative Structure Activity Relationship Modeling in Drug Discovery},
-	year = {2022},
-	doi = {10.1101/2022.08.24.505155},
-	journal = {bioRxiv}
+	year = {2023},
+	journal = {AAAI23}
 } 
 </pre>
 
