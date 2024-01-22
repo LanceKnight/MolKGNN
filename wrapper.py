@@ -446,6 +446,7 @@ class QSARDataset(InMemoryDataset):
         invalid_id_series.to_csv(os.path.join(self.processed_dir, f'{self.gnn_type}-{self.dataset}-invalid_id.csv'),
                                  index=False,
                                               header=False)
+        # TODO: use following lines for collate and save data_list
         data, slices = self.collate(data_list)
         torch.save((data, slices), self.processed_paths[0])
 

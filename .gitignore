@@ -26,3 +26,8 @@ task_info
 *.png
 *.gnuplot
 table.txt
+training_molkgnn/best_model_metric_epoch=*.ckpt
+training_molkgnn/lightning_logs
+
+
+.vscode

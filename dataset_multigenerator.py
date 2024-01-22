@@ -70,8 +70,7 @@ if __name__ == '__main__':
         input_list.append(data_pair)
 
     with Pool(processes = 9) as pool:
-            pool.starmap(run, input_list)
+        pool.starmap(run, input_list)
 
     pool.join()
     print(f'all tasks finish')
-
