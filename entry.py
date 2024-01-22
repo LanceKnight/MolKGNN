@@ -44,7 +44,7 @@ def add_args(gnn_type):
     parser = DataLoaderModule.add_argparse_args(parser)
 
     # Custom arguments
-    parser.add_argument("--enable_pretraining", default=False)  # TODO: \
+    parser.add_argument("--enable_pretraining", default=False)
     parser.add_argument('--task_name', type=str, default='Unnamed')
     # Pretraining
 
@@ -150,16 +150,17 @@ def load_best_model(trainer, data_module, metric=None, args=None):
     best_result = trainer.test(model, datamodule=data_module)
     new_name = f'logs/best_{metric}_sample_scores.log'
     os.rename('logs/test_sample_scores.log', new_name)
-    return best_result
+    return best_result, model
 
 
 def testing_procedure(trainer, data_module, args):
     print(f'In Testing Mode:')
     print(f'default_root_dir:{args.default_root_dir}')
-
+    model_dict = {}
     # Load last model
     last_path = osp.join(args.default_root_dir, 'last.ckpt')
     model  = GNNModel.load_from_checkpoint(last_path, gnn_type=gnn_type, args=args)
+    model_dict['last'] = model
     print('====last_result====:\n')
     last_result = trainer.test(model, datamodule=data_module)
     os.rename('logs/test_sample_scores.log',
@@ -174,12 +175,14 @@ def testing_procedure(trainer, data_module, args):
         out_file.write(f'{str(last_result)}\n')
 
         for metric in data_module.dataset["metrics"]:
-            best_result = load_best_model(trainer=trainer, data_module=data_module, metric=metric, args=args)
+            best_result, best_model = load_best_model(trainer=trainer, data_module=data_module, metric=metric, args=args)
+            model_dict[f'{metric}_best'] = best_model
             if best_result is not False:
                 out_file.write(f'best_{metric}:\n')
                 out_file.write(f'{str(best_result)}\n')
         out_file.write(f'args:\n')
         out_file.write(f'{args}')
+    return model_dict
 
 
 def actual_training(model, data_module, use_clearml, gnn_type, args):
@@ -297,7 +300,14 @@ def actual_training(model, data_module, use_clearml, gnn_type, args):
                 continue
 
     if args.test:
-        testing_procedure(trainer, data_module, args)
+        import pickle
+        model_dict = testing_procedure(trainer, data_module, args)
+        with open('logs/model_dict.pickle', 'wb') as f:
+            pickle.dump(model_dict, f)
+        # if gnn_type=='kgnn':
+        #     model.save_kernels(dir='analyses/atom_encoder/', file_name='kernels.pt')
+        #     model.print_graph_embedding()
+        #     model.save_graph_embedding('analyses/atom_encoder/graph_embedding')
     elif args.validate:
         print(f'In Validation Mode:')
         result = trainer.validate(model, datamodule=data_module)

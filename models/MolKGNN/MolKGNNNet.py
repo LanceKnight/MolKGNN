@@ -142,7 +142,9 @@ class MolKGNNNet(torch.nn.Module):
         # print(self.dropout)
 
         graph_representation = self.pool(
-            self.graph_embedding_lin2(self.dropout(self.act(self.graph_embedding_lin1(node_representation)))),
+            self.graph_embedding_lin2(
+                self.dropout(self.act(self.graph_embedding_lin1(node_representation)))
+            ),
             batch)
 
 
@@ -174,4 +176,3 @@ class MolKGNNNet(torch.nn.Module):
         parser.add_argument('--dropout_ratio', type=float, default=0)
 
         return parent_parser
-
